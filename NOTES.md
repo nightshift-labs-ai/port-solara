@@ -28,20 +28,20 @@
 
 ## Self-test after M6 (SwiftShader, 1280x800): SELFTEST PASS, 23/23
 - perf before (M5): HIGH 168 draw calls / 42,235 tris / median 2.6-5.6 ms; LOW 110 / 26,135 /
-  0.8-0.9 ms. After (M6): HIGH 169 / 42,379 / median 2.1 ms / heap 51 MB; LOW 110 / 26,135 /
-  1.5 ms. Frame time is far inside the 70 ms budget; HIGH's 169 draw calls are over the 150
+  0.8-0.9 ms. After (M6, two runs): HIGH 169 / 42,379 / median 2.1 ms / heap 30-51 MB; LOW 110 /
+  26,135 / 1.3-1.5 ms. Frame time is far inside the 70 ms budget; HIGH's 169 draw calls are over the 150
   target but under the 200 hard cap, as in M5. (Single runs: medians vary by a few ms.)
-- Originality PASS (32 files). main.ts twice: 40 files byte-identical, dossier 1,114,667 bytes.
+- Originality PASS (32 files). main.ts twice: 40 files byte-identical, dossier 1,114,339 bytes.
   (main.ts must run without `ulimit -v 3000000`: Node's TypeScript stripper cannot get its Wasm
   memory under that cap.)
-- Shots: 1-chase.jpg 172.4 KiB (q80), 2-street.jpg 169.6 KiB (q88), 3-map.jpg 167.8 KiB (q92),
-  4-title.jpg 183.5 KiB (q84).
+- Shots: 1-chase.jpg 172.4 KiB (q80), 2-street.jpg 169.6 KiB (q88), 3-map.jpg 167.6 KiB (q92),
+  4-title.jpg 183.5 KiB (q84). The map side panel now has the slim style too (navy glass, 1 px
+  rim, gold left strip).
 
 ## Next (rest of M6)
 - Cover staging: re-aim the chase camera so the low sun sits in frame; glow on police bars and
   tail lights (a vendored bloom pass or additive light-bar halos), measured on SwiftShader.
 - Round minimap, drawn weapon icons (fists, Wasp, Hornet), dim the locked Hornet chip.
-- The map side panel still has its old 2 px white rim.
 
 ## M5 Shell and depth: done (steps 3-6 in the run of 2026-11-18 23:05-23:44 EET)
 - Step 3 settings (core/save-slots.js `DEFAULT_SETTINGS`, `GRAPHICS_PRESETS`, `applySettings`):

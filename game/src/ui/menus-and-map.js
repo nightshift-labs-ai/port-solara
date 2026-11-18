@@ -304,7 +304,7 @@ function drawCityMap(ctx, game, rect, s) {
   ctx.fillText('N ▲', rect.x + rect.w - 64 * s, rect.y + 34 * s);
   ctx.restore();
   ctx.lineWidth = 1.2 * s; ctx.strokeStyle = 'rgba(255, 241, 214, 0.5)';
-  ctx.beginPath(); ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 12 * s); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 18 * s); ctx.stroke();
 }
 
 // Story order: done, then the first open one is current, the rest locked.
@@ -333,9 +333,11 @@ function badge(ctx, x, y, r, fill, mark, s) {
 
 // The side panel: story progress, side activity counts, REP rank, cash and the last save.
 function drawSidePanel(ctx, game, r, s) {
-  ctx.fillStyle = 'rgba(20, 48, 79, 0.94)';
+  ctx.fillStyle = 'rgba(10, 20, 44, 0.9)';
   ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 18 * s); ctx.fill();
-  ctx.lineWidth = 2 * s; ctx.strokeStyle = '#fff1d6'; ctx.stroke();
+  ctx.lineWidth = 1.2 * s; ctx.strokeStyle = 'rgba(255, 241, 214, 0.5)'; ctx.stroke();
+  ctx.fillStyle = '#ffc93c';
+  ctx.fillRect(r.x + 1, r.y + 18 * s, 4 * s, r.h - 36 * s);
   const x = r.x + 24 * s;
   let y = r.y + 50 * s;
   const text = (t, size, color = '#fff8ec', weight = 800) => {
