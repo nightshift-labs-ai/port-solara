@@ -38,7 +38,8 @@ export function exposeTestHooks(game) {
     teleport(x, z, facing = 0) {
       const t = game.vehicle || game.player;
       t.x = x; t.z = z;
-      if (game.vehicle) { t.heading = facing; t.vx = t.vz = 0; t.sync(); } else { t.facing = facing; game.chase.yaw = facing; }
+      if (game.vehicle) { t.heading = facing; t.vx = t.vz = 0; t.sync(); game.chase.yaw = facing; } else { t.facing = facing; game.chase.yaw = facing; }
+      game.chase.lastMode = null;
       return this.snapshot();
     },
     // Leave any car, stand at the driver's door of a traffic car on a straight lane, press F and
@@ -59,6 +60,16 @@ export function exposeTestHooks(game) {
         driverRunning: !!runner && runner.figure.visible,
         driverDistance: runner ? +Math.hypot(runner.x - car.x, runner.z - car.z).toFixed(1) : 0,
       };
+    },
+    // In the car Wren drives: 2 s of throttle, then 0.7 s of throttle, left and handbrake.
+    drift() {
+      if (!game.vehicle) return { error: 'not in a car' };
+      const t = game.tyres, marksBefore = t.nextMark;
+      this.key('KeyW', true); this.step(120);
+      this.key('KeyA', true); this.key('Space', true); this.step(42);
+      const slip = game.vehicle.slip;
+      ['KeyW', 'KeyA', 'Space'].forEach((k) => this.key(k, false));
+      return { slip: +slip.toFixed(1), marksLaid: t.nextMark - marksBefore, puffsAlive: t.smoke.filter((s) => s.age < 1.3).length };
     },
     enterNearest() { game.input.setKey('KeyF', true); game.step(); game.input.setKey('KeyF', false); return this.snapshot(); },
     perf(frames = 30) {

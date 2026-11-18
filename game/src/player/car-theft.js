@@ -8,6 +8,7 @@ export function stealNearestCar(game) {
   const car = nearestCar(game);
   if (!car) return null;
   if (!car.ai) {
+    if (!car.owned) game.audio?.alarm();
     takeTheWheel(game, car);
     return { car, jacked: false };
   }

@@ -110,6 +110,14 @@ await test('steal', async () => {
   return s;
 });
 
+await test('skid', async () => {
+  const s = await call(() => window.__test.drift());
+  ok(!s.error, s.error);
+  ok(s.marksLaid >= 20, `${s.marksLaid} skid strips laid`);
+  ok(s.puffsAlive >= 10, `${s.puffsAlive} smoke puffs`);
+  return s;
+});
+
 await test('perf', async () => {
   await call(() => window.__test.teleport(-174.6, 0, 0));
   const p = await call(() => window.__test.perf(30));

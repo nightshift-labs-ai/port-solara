@@ -4,6 +4,7 @@ import { buildRoadNetwork } from './world/road-network.js';
 import { createSunSoakedLighting } from './world/sunlight-and-sea.js';
 import { DrivableCar } from './vehicles/car-physics.js';
 import { buildCarModel, CAR_SPECS, PARKED_PAINTS, TRAFFIC_KINDS } from './vehicles/car-models.js';
+import { SkidMarksAndSmoke } from './vehicles/skid-marks-and-smoke.js';
 import { createTrafficPool } from './traffic/traffic-drivers.js';
 import { PedestrianCrowd } from './people/pedestrian-crowd.js';
 import { PlayerOnFoot } from './player/player-on-foot.js';
@@ -12,6 +13,7 @@ import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
 import { drawMinimap, planGridRoute } from './ui/minimap.js';
 import { showTitleScreen } from './ui/menus-and-map.js';
+import { createSynthAudio } from './audio/synth-audio.js';
 import { PORT_SOLARA_NAMES, FREE_ROAM_OBJECTIVE } from './story/port-solara-lore.js';
 import { readKeyboardAndMouse, FIXED_STEP_SECONDS, MAX_SUBSTEPS } from './core/fixed-step-input.js';
 import { createSeededRandom, createSpatialHash } from './core/seeded-world-tools.js';
@@ -70,6 +72,9 @@ export function bootPortSolara() {
   game.traffic.spawnAround(game.player);
   game.crowd = new PedestrianCrowd(game);
   game.walkersNear = (x, z) => game.crowd.near(x, z);
+  game.tyres = new SkidMarksAndSmoke(scene);
+  game.audio = createSynthAudio();
+  canvas.addEventListener('pointerdown', () => game.audio.unlock());
 
   game.enterOrExit = () => {
     if (game.vehicle) {
@@ -108,6 +113,7 @@ export function bootPortSolara() {
       game.player.update(dt, { x: input.axis('KeyA', 'KeyD'), z: input.axis('KeyW', 'KeyS') }, game.chase.yaw, input.held.has('ShiftLeft') || input.held.has('ShiftRight'), game.collide);
     }
     for (const car of game.cars) if (car !== game.vehicle && !car.ai && Math.abs(car.speed) > 0.05) car.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide);
+    game.tyres.update(dt, game.vehicle);
     game.chase.update(dt, game.focus, game.collide);
   };
 
@@ -124,6 +130,7 @@ export function bootPortSolara() {
       game.light.follow(game.focus, camera.position);
     }
     renderer.render(scene, camera);
+    game.audio.update(game.mode === 'play' ? game.vehicle : null);
     if (game.mode === 'play') {
       game.districtName = PORT_SOLARA_NAMES.districts[districtAt(game.focus.x, game.focus.z)];
       game.route = planGridRoute(game.roads, game.focus, { x: LANDMARKS.quist.x, z: LANDMARKS.quist.z + 22 });
@@ -153,7 +160,7 @@ export function bootPortSolara() {
   addEventListener('resize', resize);
   resize();
 
-  showTitleScreen(game, () => { game.startPlay(); canvas.requestPointerLock?.(); });
+  showTitleScreen(game, () => { game.audio.unlock(); game.startPlay(); canvas.requestPointerLock?.(); });
 
   let last = performance.now(), acc = 0;
   const frameTimes = [];

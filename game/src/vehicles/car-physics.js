@@ -13,6 +13,9 @@ export class DrivableCar {
     this.health = 100;
     this.driver = null;
     this.drifting = false;
+    this.slip = 0;
+    this.throttle = 0;
+    this.handbrake = false;
     this.lastImpact = 0;
     this.sync();
   }
@@ -46,6 +49,9 @@ export class DrivableCar {
     this.vx = nf.x * along + latX * (1 - k);
     this.vz = nf.z * along + latZ * (1 - k);
     const slip = Math.abs(this.vx * nf.z - this.vz * nf.x);
+    this.slip = slip;
+    this.throttle = throttle;
+    this.handbrake = !!controls.handbrake;
     this.drifting = slip > 3.5;
     this.speed = Math.hypot(this.vx, this.vz) * Math.sign(along || 1);
 

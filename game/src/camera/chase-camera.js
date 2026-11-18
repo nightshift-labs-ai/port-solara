@@ -29,14 +29,24 @@ export class ChaseCamera {
     const cam = this.camera;
     if (this.mode === 'car') {
       const car = focus;
+      const speed = Math.abs(car.speed);
       this.lookOffset *= Math.pow(0.35, dt);
+      // Heading lag: the arm swings after the car, looser in a slide so its flank shows.
       let d = car.heading + this.lookOffset - this.yaw;
       d = Math.atan2(Math.sin(d), Math.cos(d));
-      this.yaw += d * Math.min(1, dt * 3.2);
-      const back = 8, up = 3.5;
-      this.pos.set(car.x + Math.sin(this.yaw) * back, up, car.z + Math.cos(this.yaw) * back);
-      this.target.set(car.x - Math.sin(this.yaw) * 6, 1.3, car.z - Math.cos(this.yaw) * 6);
-      cam.fov += ((65 + Math.min(10, Math.abs(car.speed) * 0.18)) - cam.fov) * Math.min(1, dt * 2);
+      this.yaw += d * Math.min(1, dt * (car.drifting ? 1.7 : 3.2));
+      const back = CAR_BACK + Math.min(0.8, speed * 0.02), up = CAR_UP;
+      const wx = car.x + Math.sin(this.yaw) * back, wz = car.z + Math.cos(this.yaw) * back;
+      // Position lag: a stiff spring, so hard acceleration stretches the arm a little.
+      if (this.lastMode !== 'car') this.pos.set(wx, up, wz);
+      else {
+        const k = Math.min(1, dt * POSITION_SPRING);
+        this.pos.set(this.pos.x + (wx - this.pos.x) * k, up, this.pos.z + (wz - this.pos.z) * k);
+      }
+      // Look-ahead: aim further down the road as speed rises, leaning into the velocity.
+      const ahead = 6 + Math.min(7, speed * 0.2);
+      this.target.set(car.x - Math.sin(this.yaw) * ahead + car.vx * 0.08, 1.3, car.z - Math.cos(this.yaw) * ahead + car.vz * 0.08);
+      cam.fov += ((65 + Math.min(12, speed * 0.24)) - cam.fov) * Math.min(1, dt * 2);
     } else {
       const p = focus;
       const side = 0.7, height = 1.75;
@@ -54,13 +64,16 @@ export class ChaseCamera {
       this.target.set(p.x + rx * side + fx * 4, height - 0.1, p.z + rz * side + fz * 4);
       cam.fov += (62 - cam.fov) * Math.min(1, dt * 3);
     }
+    cam.position.copy(this.pos);
     if (this.shake > 0) {
-      this.pos.x += (Math.sin(performance.now() * 0.09) * this.shake) * 0.3;
-      this.pos.y += (Math.cos(performance.now() * 0.11) * this.shake) * 0.3;
+      cam.position.x += (Math.sin(performance.now() * 0.09) * this.shake) * 0.3;
+      cam.position.y += (Math.cos(performance.now() * 0.11) * this.shake) * 0.3;
       this.shake = Math.max(0, this.shake - dt * 2);
     }
-    cam.position.copy(this.pos);
     cam.lookAt(this.target);
     cam.updateProjectionMatrix();
+    this.lastMode = this.mode;
   }
 }
+
+const CAR_BACK = 8, CAR_UP = 3.5, POSITION_SPRING = 12;
