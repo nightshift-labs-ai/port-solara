@@ -69,7 +69,7 @@ export function exposeTestHooks(game) {
       this.key('KeyA', true); this.key('Space', true); this.step(42);
       const slip = game.vehicle.slip;
       ['KeyW', 'KeyA', 'Space'].forEach((k) => this.key(k, false));
-      return { slip: +slip.toFixed(1), marksLaid: t.nextMark - marksBefore, puffsAlive: t.smoke.filter((s) => s.age < 1.3).length };
+      return { slip: +slip.toFixed(1), marksLaid: t.nextMark - marksBefore, puffsAlive: t.smoke.filter((s) => s.age < 1).length };
     },
     enterNearest() { game.input.setKey('KeyF', true); game.step(); game.input.setKey('KeyF', false); return this.snapshot(); },
     perf(frames = 30) {

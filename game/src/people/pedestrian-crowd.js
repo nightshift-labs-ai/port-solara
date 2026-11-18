@@ -86,6 +86,30 @@ export class PedestrianCrowd {
     for (const w of this.walkers) if (Math.hypot(w.x - x, w.z - z) < radius) w.flee = 3;
   }
 
+  // Staging (shots and tests): put `count` walkers on the block rings closest to a spot, each at
+  // the ring point nearest it plus a seeded spread, so a scene can start with a busy corner.
+  gatherNear(x, z, count, spread = 14) {
+    const blocks = [...this.game.roads.blocks].sort((a, b) => Math.hypot(a.cx - x, a.cz - z) - Math.hypot(b.cx - x, b.cz - z));
+    for (let i = 0; i < Math.min(count, this.walkers.length); i++) {
+      const w = this.walkers[i], b = blocks[i % 2];
+      w.ring = { minX: b.minX - 1.5, maxX: b.maxX + 1.5, minZ: b.minZ - 1.5, maxZ: b.maxZ + 1.5 };
+      const r = w.ring, a = r.maxX - r.minX, h = r.maxZ - r.minZ;
+      r.len = 2 * (a + h);
+      // Ring parameter of the corner point nearest the spot, then walk a little way from it.
+      const cx = Math.max(r.minX, Math.min(r.maxX, x)), cz = Math.max(r.minZ, Math.min(r.maxZ, z));
+      let u;
+      if (cz === r.minZ) u = cx - r.minX;
+      else if (cx === r.maxX) u = a + (cz - r.minZ);
+      else if (cz === r.maxZ) u = a + h + (r.maxX - cx);
+      else u = 2 * a + h + (r.maxZ - cz);
+      w.u = u + this.random.range(-spread, spread);
+      w.dir = this.random.chance(0.5) ? 1 : -1;
+      w.speed = this.random.range(1.1, 1.6);
+      w.flee = 0; w.side = 0;
+      this.place(w);
+    }
+  }
+
   near(x, z, radius = 30) {
     return this.walkers.filter((w) => w.ring && Math.abs(w.x - x) < radius && Math.abs(w.z - z) < radius);
   }

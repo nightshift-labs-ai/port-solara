@@ -12,7 +12,7 @@ export class SkidMarksAndSmoke {
       polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
     }), MARKS);
     this.puffs = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshLambertMaterial({
-      color: 0xeeebe4, transparent: true, opacity: 0.5, depthWrite: false,
+      color: 0xeeebe4, transparent: true, opacity: 0.38, depthWrite: false,
     }), PUFFS);
     this.marks.frustumCulled = this.puffs.frustumCulled = false;
     this.marks.renderOrder = 1;
@@ -40,8 +40,8 @@ export class SkidMarksAndSmoke {
     if (sliding) {
       const wheels = rearWheels(car);
       if (this.prev && this.prev.car === car) wheels.forEach((w, i) => this.layStrip(this.prev.wheels[i], w));
-      const heavy = Math.min(1, car.slip / 7);
-      wheels.forEach((w, i) => { if (heavy > 0.45 || (this.ticks + i) % 2 === 0) this.emit(w, car, i); });
+      const every = car.slip > 5 ? 3 : 5;
+      wheels.forEach((w, i) => { if ((this.ticks + i * 2) % every === 0) this.emit(w, car, i); });
       this.prev = { car, wheels };
     } else this.prev = null;
 
@@ -52,7 +52,7 @@ export class SkidMarksAndSmoke {
       s.x += s.vx * dt; s.y += s.vy * dt; s.z += s.vz * dt;
       s.vx *= 0.97; s.vz *= 0.97;
       const k = s.age / LIFE;
-      const size = k >= 1 ? 0 : (0.45 + k * 1.9) * (k > 0.7 ? (1 - k) / 0.3 : 1);
+      const size = k >= 1 ? 0 : (0.3 + k * 1.15) * (k > 0.6 ? (1 - k) / 0.4 : 1);
       this.p.set(s.x, s.y, s.z);
       this.s.setScalar(size);
       this.m.compose(this.p, this.q.identity(), this.s);
@@ -78,10 +78,10 @@ export class SkidMarksAndSmoke {
     const s = this.smoke[this.nextPuff];
     this.nextPuff = (this.nextPuff + 1) % PUFFS;
     const r1 = hash(this.ticks * 2 + i), r2 = hash(this.ticks * 2 + i + 0.5);
-    s.x = w.x; s.y = 0.35; s.z = w.z;
-    s.vx = -car.vx * 0.12 + (r1 - 0.5) * 1.6;
-    s.vz = -car.vz * 0.12 + (r2 - 0.5) * 1.6;
-    s.vy = 0.9 + r1 * 0.8;
+    s.x = w.x; s.y = 0.3; s.z = w.z;
+    s.vx = car.vx * 0.35 + (r1 - 0.5) * 1.4;
+    s.vz = car.vz * 0.35 + (r2 - 0.5) * 1.4;
+    s.vy = 0.6 + r1 * 0.6;
     s.age = 0;
   }
 }
@@ -96,4 +96,4 @@ function rearWheels(car) {
 const hash = (n) => { const v = Math.sin(n * 12.9898) * 43758.5453; return v - Math.floor(v); };
 
 export const MARKS = 600;
-const PUFFS = 72, LIFE = 1.3, MARK_Y = 0.085;
+const PUFFS = 48, LIFE = 1.0, MARK_Y = 0.085;

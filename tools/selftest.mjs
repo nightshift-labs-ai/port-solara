@@ -1,4 +1,5 @@
-// Headless self-test: boot, walk, drive and perf through the ?test=1&seed=1 hooks.
+// Headless self-test through the ?test=1&seed=1 hooks: boot, walk, drive, traffic, peds, steal,
+// skid and perf.
 // Fails on any console error, page error or non-localhost request. Writes tools/selftest-report.json.
 // Env: PW_NODE_MODULES (a Playwright install), SHOT_BASE_URL (default http://127.0.0.1:8806/).
 import { createRequire } from 'node:module';

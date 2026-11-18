@@ -14,14 +14,16 @@ export function stageScreenshotScene(game, name) {
 }
 
 export const SCENES = {
-  // Driving the Albacore north up Palmline Boulevard, the Sundial Tower ahead.
+  // The Albacore, just taken from the curb, handbrake-drifts through the Palmline crossing with
+  // Rua 5: skid marks and smoke, traffic held at the lights, walkers on the corners jumping clear.
   chase(game, hold) {
+    hold([], 600);
+    game.crowd.gatherNear(-170, -26, 8, 9);
     game.startPlay();
-    game.player.x = game.albacore.x + 2; game.player.z = game.albacore.z;
+    game.player.x = game.albacore.x - 2.2; game.player.z = game.albacore.z;
     game.enterOrExit();
-    hold(['KeyW'], 200);
-    hold(['KeyW', 'KeyA'], 10);
-    hold(['KeyW'], 30);
+    hold(['KeyW'], 144);
+    hold(['KeyW', 'KeyD', 'Space'], 22);
   },
   // Wren on foot in Old Mercado's market square, the Clock Arch ahead and a Pipit to take.
   street(game, hold) {
