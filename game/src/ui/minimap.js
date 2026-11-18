@@ -60,6 +60,16 @@ export function drawMinimap(ctx, game, x, y, size) {
     ctx.setLineDash([]);
   }
   for (const car of game.cars) if (car !== game.vehicle) blip(ctx, car.x, car.z, 4.5 / scale * s, '#ffffff', '#14304f');
+  // SPD blips flash red/blue (a roadblock unit stays amber); clamped to the map edge when far.
+  if (game.police) {
+    const half = size / 2 / scale - 8 / scale;
+    for (const u of game.police.active) {
+      const dx = u.car.x - focus.x, dz = u.car.z - focus.z, k = Math.min(1, half / Math.max(Math.abs(dx), Math.abs(dz), 1e-3));
+      const flash = Math.floor(game.time * 4 + u.index) % 2;
+      const fill = u.state === 'ROADBLOCK' ? '#e0a21f' : flash ? '#ff3b3b' : '#3b7bff';
+      blip(ctx, focus.x + dx * k, focus.z + dz * k, 7 / scale * s, fill, '#ffffff');
+    }
+  }
   ctx.restore();
 
   // Player arrow, always centred and pointing up.

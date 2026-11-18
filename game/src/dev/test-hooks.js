@@ -20,6 +20,8 @@ export function exposeTestHooks(game) {
     wanted() {
       const wl = game.wantedLevel, p = game.focus;
       wl.clear();
+      game.police.enabled = false; // decay with no cop anywhere near: the escape timer alone
+      game.police.reset();
       const unseen = wl.commit('theft', p.x, p.z, 0) ? wl.pips : 0;
       game.crowd.gatherNear(p.x, p.z, 6, 10);
       const witnesses = countWitnesses(game, p.x, p.z);
@@ -28,7 +30,31 @@ export function exposeTestHooks(game) {
       const pips = wl.pips, escape = wl.escapeSeconds, searching = !wl.inSight, t0 = game.time;
       let n = 0;
       while (wl.pips > 0 && n++ < 2000) game.step();
+      game.police.enabled = true;
       return { unseen, witnesses, pips, escape, searching, clearedAfter: Math.round((game.time - t0) * 10) / 10, pipsAfter: wl.pips };
+    },
+    // WANTED 3 on foot at a Palmline corner: count the units that answer within 30 s and how
+    // close the nearest gets, sampled each second (stops once one is within 14 m).
+    police() {
+      const wl = game.wantedLevel, pol = game.police;
+      if (game.vehicle) this.enterNearest();
+      this.teleport(-168.6, -40, 0);
+      pol.reset(); wl.clear();
+      wl.commit('copAssault', game.focus.x, game.focus.z); wl.commit('theft', game.focus.x, game.focus.z);
+      const samples = [];
+      let maxActive = 0, firstNearest = null, nearest = Infinity, roadblock = false, inSight = false;
+      for (let sec = 0; sec < 30 && nearest > 14; sec++) {
+        for (let i = 0; i < 60; i++) game.step();
+        const act = pol.active, chasing = act.filter((u) => u.state !== 'ROADBLOCK');
+        maxActive = Math.max(maxActive, chasing.length);
+        roadblock ||= act.some((u) => u.state === 'ROADBLOCK');
+        inSight ||= wl.inSight;
+        const d = Math.min(...chasing.map((u) => u.dist));
+        if (firstNearest === null && Number.isFinite(d)) firstNearest = d;
+        nearest = Math.min(nearest, d);
+        samples.push(Math.round(d));
+      }
+      return { pips: wl.pips, maxCruisers: maxActive, roadblock, firstNearest: Math.round(firstNearest), nearest: Math.round(nearest), inSight, seconds: samples.length, samples };
     },
     // Walkers placed near the focus, and how many stand inside a building box.
     peds() {

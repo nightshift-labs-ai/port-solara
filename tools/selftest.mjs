@@ -128,6 +128,14 @@ await test('skid', async () => {
   return s;
 });
 
+await test('police', async () => {
+  const s = await call(() => window.__test.police());
+  ok(s.maxCruisers >= 4, `${s.maxCruisers} cruisers answered WANTED 3`);
+  ok(s.nearest < s.firstNearest - 20 && s.nearest <= 30, `units did not close in (${s.firstNearest} m -> ${s.nearest} m)`);
+  ok(s.inSight, 'no unit ever had line of sight');
+  return s;
+});
+
 await test('perf', async () => {
   await call(() => window.__test.teleport(-174.6, 0, 0));
   const p = await call(() => window.__test.perf(30));

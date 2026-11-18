@@ -12,6 +12,7 @@ import { stealNearestCar, updateCarTheft, nearestCar } from './player/car-theft.
 import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
 import { WantedLevel } from './police/wanted-level.js';
+import { dispatchPoliceUnits } from './police/police-ai.js';
 import { drawMinimap, planGridRoute } from './ui/minimap.js';
 import { showTitleScreen } from './ui/menus-and-map.js';
 import { createSynthAudio } from './audio/synth-audio.js';
@@ -75,7 +76,8 @@ export function bootPortSolara() {
   game.walkersNear = (x, z) => game.crowd.near(x, z);
   game.tyres = new SkidMarksAndSmoke(scene);
   game.wantedLevel = new WantedLevel();
-  game.copsSee = () => false; // replaced by the police line-of-sight check in M3 step 2
+  game.police = dispatchPoliceUnits(game, (spec, model, x, z, heading) => new DrivableCar({ spec, model, x, z, heading }));
+  game.copsSee = () => game.police.seesPlayer;
   game.audio = createSynthAudio();
   canvas.addEventListener('pointerdown', () => game.audio.unlock());
 
@@ -117,6 +119,7 @@ export function bootPortSolara() {
     }
     for (const car of game.cars) if (car !== game.vehicle && !car.ai && Math.abs(car.speed) > 0.05) car.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide);
     game.tyres.update(dt, game.vehicle);
+    game.police.update(dt);
     game.wantedLevel.update(dt, game.focus, game.copsSee());
     game.wanted = game.wantedLevel.pips;
     game.chase.update(dt, game.focus, game.collide);

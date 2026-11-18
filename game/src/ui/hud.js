@@ -34,6 +34,35 @@ export function drawHud(ctx, game, drawMinimap) {
     ctx.globalAlpha = 1;
   }
 
+  // SPD RESPONSE: the live units nearest first, call sign, distance and a coloured state tag.
+  const units = game.police ? game.police.active.slice().sort((a, b) => a.dist - b.dist) : [];
+  if (units.length) {
+    const rows = units.slice(0, DISPATCH_ROWS), more = units.length - rows.length;
+    const px = mx, py = my + 206 * s, pw = 356 * s, ph = (48 + rows.length * 34 + (more > 0 ? 28 : 0)) * s;
+    panel(ctx, px, py, pw, ph);
+    ctx.fillStyle = GOLD; ctx.font = font(21 * s);
+    ctx.fillText(`SPD RESPONSE · ${units.length} UNIT${units.length > 1 ? 'S' : ''}`, px + 16 * s, py + 31 * s);
+    rows.forEach((u, i) => {
+      const ry = py + (48 + i * 34) * s;
+      ctx.fillStyle = WHITE; ctx.font = font(20 * s);
+      ctx.fillText(u.call, px + 16 * s, ry + 22 * s);
+      ctx.font = font(19 * s, 700); ctx.fillStyle = 'rgba(255,248,236,0.85)';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${Math.round(u.dist)} m`, px + 196 * s, ry + 22 * s);
+      ctx.textAlign = 'left';
+      const [bg, fg] = STATE_COLORS[u.state] || STATE_COLORS.RESPONDING;
+      ctx.font = font(15 * s);
+      const tw = ctx.measureText(u.state).width + 14 * s;
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.roundRect(px + pw - 16 * s - tw, ry + 3 * s, tw, 24 * s, 6 * s); ctx.fill();
+      ctx.fillStyle = fg; ctx.fillText(u.state, px + pw - 9 * s - tw, ry + 21 * s);
+    });
+    if (more > 0) {
+      ctx.fillStyle = 'rgba(255,248,236,0.8)'; ctx.font = font(17 * s, 700);
+      ctx.fillText(`+${more} more unit${more > 1 ? 's' : ''} in the search zone`, px + 16 * s, py + ph - 12 * s);
+    }
+  }
+
   // Minimap, WANTED shields and cash.
   const size = 230 * s;
   const mapX = w - mx - size, mapY = my;
@@ -105,6 +134,12 @@ export function drawHud(ctx, game, drawMinimap) {
 }
 
 export const CARD_SECONDS = 4.5;
+export const DISPATCH_ROWS = 4;
+// State tag colours [background, text].
+export const STATE_COLORS = {
+  PURSUIT: ['#d8323c', '#fff8ec'], RAMMING: ['#ff7a1a', '#14304f'], ROADBLOCK: ['#e0a21f', '#14304f'],
+  SEARCHING: ['#3b7bff', '#fff8ec'], RESPONDING: ['#6b86a8', '#fff8ec'], LEAVING: ['#4a5566', '#fff8ec'],
+};
 export const GOLD = '#ffc93c';
 export const WHITE = '#fff8ec';
 export const NAVY_GLASS = 'rgba(14, 30, 60, 0.65)';
