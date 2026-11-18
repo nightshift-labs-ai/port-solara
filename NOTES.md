@@ -1,5 +1,46 @@
 # PORT SOLARA build notes
 
+## M5 steps 1-2 Pause, map, saves: done (short run of 2026-11-18 22:28-22:48 EET)
+- Step 1 ui/menus-and-map.js `installPauseAndMap`: Esc (or P) pauses with RESUME, MAP, SETTINGS,
+  SAVE, QUIT TO TITLE (arrows + Enter or a click); Tab (or M) opens the full map. Pausing freezes
+  the fixed step (no sim time passes), clears held keys and leaves pointer lock; losing pointer lock
+  in play pauses too, because a real browser eats the Esc that ends the lock. `drawCityMap` draws the
+  map north-up from the city data: shore from coastX, blocks, roads, district names at the middle of
+  each district's blocks (from the same districtAt the game uses, nudged off the story rings), place
+  marks from `SPOT_PLAN` snapped to the nearest road crossing (H Calloway Salvage safehouse, $ Quist
+  Auto, G Brass & Barrel gun shop, P SPD station, R Pelican Fuel respray, F four ring-road race
+  starts), the five story rings (grey tick done, big gold current, dim locked) and Wren's arrow.
+  The side panel shows STORY n/5 with the mission list, Races n/4 and Courier n/10 (game.progress),
+  REP RANK with its name and bar, cash, the last save time and place, and a legend.
+- Step 2 core/save-slots.js: three localStorage slots. Slot 1 is the autosave after every finished
+  story mission (MissionRunner.finish); slots 2 and 3 take turns for manual saves. A save holds the
+  story (completed ids, step n/5), cash, REP, weapon slot and ammo, owned cars, race/courier counts
+  and best laps, sim time and Wren's spot. [E] SAVE AT CALLOWAY SALVAGE shows at the safehouse door;
+  pause SAVE works anywhere except during a job or while WANTED. The title shows CONTINUE from the
+  newest slot ("CONTINUE - Story 3/5 - $21,000" from a real save in the probe); NEW GAME after a
+  quit to title starts over from the boot state. Probe (out/, not committed): save, reload, CONTINUE
+  gives back the same cash, REP, story, spot and counts; no console errors.
+
+## Self-test after M5 steps 1-2 (SwiftShader, 1280x800): SELFTEST PASS, 19/19
+- The script has 19 tests (boot ... clean-console); the "20/20" in the M4 notes was a miscount, not a
+  lost test. perf 195 draw calls / 44,801 triangles / median 4.4 ms / heap 23 MB (same view as M4).
+- Not run this short run: main.ts twice, originality check, shots. 1-chase.jpg and 2-street.jpg were
+  not re-staged. 4-title.jpg is unchanged (its shot boots with empty storage, so no CONTINUE line yet).
+
+## Next (rest of M5)
+- Step 3 settings (volume master/music/effects, mouse sensitivity, graphics low/high) stored with the
+  save; the pause SETTINGS item only shows a note for now.
+- Step 4 side activities (races, courier, Quist Auto sales, gun shop, respray, REP unlocks); the map
+  marks and counters are already in place for them.
+- Step 5 tests (save round-trip, settings persist, race, respray) and shots: 3-map.jpg from the Tab
+  map, 4-title.jpg with CONTINUE from one seeded save shared by all four shots.
+
+## Bugs / debts (M5 steps 1-2)
+- Lantern Point's label sits over the sea on the map: the lighthouse spit is not drawn there.
+- Race start 4 snaps to the crossing next to story ring 1 and Wren's start, so the marks crowd.
+- The save clock is the browser's local wall time (UTC in headless Chromium).
+- No slot picker yet: manual saves rotate between slots 2 and 3; CONTINUE takes the newest.
+
 ## M4 Combat and story: done (steps 2-6, run of 2026-11-18 22:01-22:42 EET)
 - Step 2 combat/enemies.js `EnemyCrews`: a pool of 6 one-mesh figures (merged vertex-coloured boxes,
   1 draw call each, hidden when free). `CREWS.tidewater` (teal bandana, 70 hp, flee under 22,
