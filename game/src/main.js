@@ -3,7 +3,7 @@ import { buildCityDistricts, districtAt, LANDMARKS } from './world/city-builder.
 import { buildRoadNetwork } from './world/road-network.js';
 import { createSunSoakedLighting } from './world/sunlight-and-sea.js';
 import { DrivableCar } from './vehicles/car-physics.js';
-import { buildCarModel, CAR_SPECS, PARKED_PAINTS, TRAFFIC_KINDS } from './vehicles/car-models.js';
+import { buildCarModel, createTailGlow, CAR_SPECS, PARKED_PAINTS, TRAFFIC_KINDS } from './vehicles/car-models.js';
 import { SkidMarksAndSmoke } from './vehicles/skid-marks-and-smoke.js';
 import { createTrafficPool } from './traffic/traffic-drivers.js';
 import { PedestrianCrowd } from './people/pedestrian-crowd.js';
@@ -57,6 +57,7 @@ export function bootPortSolara() {
   const t0 = performance.now();
   buildRoadNetwork(game);
   game.light = createSunSoakedLighting(game);
+  game.tailGlow = createTailGlow(game);
   buildCityDistricts(game);
   game.cityBuildMs = performance.now() - t0;
 
@@ -239,6 +240,7 @@ export function bootPortSolara() {
       game.chase.update(0, game.focus, game.collide);
       game.light.follow(game.focus, camera.position);
     }
+    game.tailGlow.update();
     renderer.render(scene, camera);
     const copDistance = game.police.active.reduce((d, u) => Math.min(d, u.dist), Infinity);
     game.audio.update(game.mode === 'play' ? game.vehicle : null, game.mode === 'play' ? copDistance : Infinity, game.radioIndex());

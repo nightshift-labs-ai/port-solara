@@ -25,18 +25,22 @@
   out/ab/run3-ab-*.jpg): the new cover is clearly warmer (sun and glow in frame, orange-rose
   horizon over the sea, lit bars) and every panel reads the same, so it stays. It shows 93 km/h
   (was 145); that is the real speed of the staged state.
+- Tail-light glow (vehicles/car-models.js `createTailGlow`, updated in main.js's render): two small
+  additive red point sprites (size 1.1) over the driven car's own TAIL lamp boxes, read from its
+  spec; off on foot, outside play and at graphics LOW. +1 draw call while driving. In the cover the
+  coupe's tail lights now carry a soft red halo (A/B against out/ab/run3-try4.jpg: kept).
 - Self-test (SwiftShader, 1280x800): SELFTEST PASS 23/23. Perf before (last run): HIGH 169 draw
-  calls / 42,379 tris / median 2.1 ms; LOW 110 / 26,135 / 1.3-1.5 ms. After: HIGH 166 / 41,655 /
-  median 1.4 ms / heap 45 MB; LOW 108 / 25,743 / 1.5 ms (the stray in-road palms were instances, so
-  three fewer calls and fewer tris). Inside the 4 ms target and the brief's budget.
-- Originality PASS (32 files). main.ts twice: 40 files byte-identical, dossier 1,112,905 bytes.
-- Shots: 1-chase.jpg 172.2 KiB, 2-street.jpg 168.7 KiB, 3-map.jpg 167.5 KiB, 4-title.jpg 183.7 KiB
+  calls / 42,379 tris / median 2.1 ms; LOW 110 / 26,135 / 1.3-1.5 ms. After, two runs: HIGH 166 /
+  41,655 / median 1.4-2.0 ms / heap 36-45 MB; LOW 108 / 25,743 / 1.5-2.8 ms (the stray in-road
+  palms were instances, so fewer calls and tris; the perf view does not have Wren in a car, so the
+  tail glow's +1 call is not in its count). Inside the 4 ms target and the brief's budget.
+- Originality PASS (32 files). main.ts twice: 40 files byte-identical, dossier 1,113,826 bytes.
+- Shots: 1-chase.jpg 172.9 KiB, 2-street.jpg 168.7 KiB, 3-map.jpg 167.5 KiB, 4-title.jpg 183.7 KiB
   (each at its usual quality). Judge sheet rebuilt: at 50% the cover reads as a sunset police chase
   with the helicopter; street, map and title keep their purpose.
-- Next: round minimap, drawn weapon icons, a play-time controls strip (from the earlier list);
-  tail-light glow on the player car (the shared bar-glow Points has one size, so it would need its
-  own smaller sprite set); a pedestrian or two in the cover's view (the corner crowd sits behind
-  the SPD panel). Graphics LOW still keeps the sun halo and bar glows (two cheap draw calls).
+- Next: round minimap, drawn weapon icons, a play-time controls strip (from the earlier list); a
+  pedestrian or two in the cover's view (the corner crowd sits behind the SPD panel). Graphics LOW
+  still keeps the sun halo and bar glows (two cheap draw calls); the tail glow is off at LOW.
 
 ## M6 Polish and freeze: steps 1, 2, 4, 5, 6 (run of 2026-11-18 23:24-23:50 EET); step 3 in the run above
 - Step 1 golden hour (world/sunlight-and-sea.js): sun about 15 degrees up in the WSW (was 28),

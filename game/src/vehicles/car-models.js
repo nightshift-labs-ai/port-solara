@@ -14,6 +14,40 @@ export function buildCarModel(kind, paint) {
   return group;
 }
 
+// The driven car's tail lights glow: two small additive point sprites over the lamps (one draw
+// call). Off on foot and at graphics LOW (the brief's "LOW turns bloom off").
+export function createTailGlow(game) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.3, 'rgba(255,255,255,0.45)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(6), 3));
+  const points = new THREE.Points(geo, new THREE.PointsMaterial({ size: 1.1, color: 0xff4a2a, map: new THREE.CanvasTexture(canvas),
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  points.frustumCulled = false;
+  game.scene.add(points);
+  const p = new THREE.Vector3(), lamps = {};
+  // Each kind's own tail-lamp boxes (the TAIL glow boxes in its spec), found once.
+  const tailsOf = (kind) => lamps[kind] ??= CAR_SPECS[kind] ? CAR_SPECS[kind].boxes(new THREE.Color()).filter((b) => b.glow && b.c === TAIL) : [];
+  return {
+    update() {
+      const car = game.vehicle, tails = car ? tailsOf(car.model.userData.kind) : [];
+      points.visible = tails.length === 2 && game.mode === 'play' && game.settings?.graphics !== 'low';
+      if (!points.visible) return;
+      car.model.updateMatrixWorld();
+      const pos = geo.attributes.position;
+      tails.forEach((b, k) => {
+        car.model.localToWorld(p.set(b.x, b.y, b.z + 0.1));
+        pos.setXYZ(k, p.x, p.y, p.z);
+      });
+      pos.needsUpdate = true;
+    },
+  };
+}
+
 const BODY_MATERIAL = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0.15 });
 const LIGHT_MATERIAL = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
 
