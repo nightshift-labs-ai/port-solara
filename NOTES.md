@@ -1,5 +1,29 @@
 # PORT SOLARA build notes
 
+## M6 cover pass: framing and bounce done, road streak reverted again (run of 2026-11-19 00:45-00:56 EET)
+- (1) Framing (screenshot-scenes.js chase): the Albacore starts at x -138 on Rua 5 (was -122; -130
+  still left the OSTRA BANK board's corner under the minimap), so the board passes out of frame and
+  no sign is cut by a HUD panel. Sun, both flanking Beacons and SKYLARK 1 stay in frame; a crosswalk
+  now runs under the coupe and the beach palms replace the left-hand buildings. SPD list row 4 is now
+  MERCADO 3 31 m PURSUIT (real distance). A/B vs out/ab/run5-before-1-chase.jpg: kept.
+- (2) Bounce light (world/sunlight-and-sea.js): a warm shadowless DirectionalLight (0xffc49a, 0.9)
+  from opposite the low sun. The coupe's rear now reads red instead of near-black in the chase toward
+  the sun, and the cruisers' bodies read better. On at every graphics level (no extra draw calls).
+  A/B: kept. All four shots re-shot with it.
+- (3) Road glare streak: tried again (a flat additive 9 x 140 m strip from the eye along the sun's
+  bearing at y 0.15, depthWrite false, renderOrder 6, frustumCulled false, positioned in
+  `light.follow`) and **reverted**: still nothing visible in the cover. Next suspect: the road or
+  crosswalk materials draw after renderOrder 6 or with polygonOffset, or the strip lies left of the
+  view (the arm looks 0.2 rad right of the sun); test it alone in an ad-hoc frame with a bright colour.
+- Self-test (SwiftShader, 1280x800): SELFTEST PASS 23/23. Perf: HIGH 166 draw calls / 41,751 tris /
+  median 1.8 ms / heap 40 MB; LOW 108 / 25,743 / 1.5 ms (before: 166 / 1.7 ms, 108 / 1.8 ms).
+- Originality PASS (32 files). main.ts twice: 40 files byte-identical, dossier 1,119,191 bytes
+  (it must run without `ulimit -v`, as noted before).
+- Shots: 1-chase.jpg 173.3 KiB, 2-street.jpg 173.9 KiB, 3-map.jpg 167.5 KiB, 4-title.jpg 188.6 KiB.
+  Judge sheet rebuilt and read at 50%: the red coupe reads, no cut signs.
+- Next: the road streak debug above, visible lane dashes, real-speed streaks; round minimap, drawn
+  weapon icons, a play-time controls strip.
+
 ## M6 cover detail: done except the road streak (run of 2026-11-19 00:31-00:54 EET)
 - (1) SKYLARK 1 (police/police-ai.js, screenshot-scenes.js `FRAME`): staged at NDC (0.14, 0.66) and
   30 m up (was 0.2, 0.5, 14 m), so it is about half the size on screen, higher and right of the sun,
