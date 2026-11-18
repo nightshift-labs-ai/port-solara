@@ -38,8 +38,8 @@ export const SCENES = {
     hold(['KeyW'], 100);
     // The pursuit closes up around the Albacore: one alongside, two ahead, SKYLARK 1 on its orbit.
     const v = Math.abs(car.speed);
-    pol.place(1, car.x - 3.8, car.z + 1.0, 0, v);
-    pol.place(0, car.x + 3.6, car.z - 10, 0, v - 1);
+    pol.place(1, car.x - 4.2, car.z - 2.5, 0, v);
+    pol.place(0, car.x + 3.8, car.z - 16, 0, v + 1);
     pol.place(2, car.x - 3.8, car.z - 24, 0, v - 2);
     pol.placeHelicopter(car.x + 13.8, car.z - 27.6);
     hold(['KeyW'], 20);

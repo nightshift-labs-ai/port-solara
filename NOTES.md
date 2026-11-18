@@ -39,7 +39,8 @@
   3: 4 cruisers + roadblock + helicopter, nearest 69 -> 8 m in 4 s, IN SIGHT), custody (after 2.53 s,
   bail 400, pips 0, respawned on foot at -169,13), perf 152 draw calls / 45,047 triangles / median
   1.1 ms / heap 20 MB in the perf view (171 draw calls with all police and the helicopter up), clean.
-- Originality PASS (25 files). main.ts twice: 32 output files byte-identical, dossier 894,677 bytes.
+- Originality PASS (25 files). main.ts twice: 32 output files byte-identical, dossier 894,629 bytes
+  (after the last cover tweak: TIDE 14 alongside left in full, GULL 11 ahead in PURSUIT).
 - Shots: 1-chase.jpg 174.2 KiB (q80), 2-street.jpg 172.1 KiB (q88), 4-title.jpg 189.6 KiB (q76).
   Judge sheet rebuilt; at 50% the cover reads chase, police, helicopter, WANTED, minimap, banner.
 
@@ -48,8 +49,8 @@
   then the cover banner as STORY 3/5 - THE HARBOR RUN (no mission text in shots until it exists).
 
 ## Bugs / debts (M3a)
-- Cover: the alongside cruisers are cut by the frame edges and hug the camera (their bars are out of
-  frame); the bars that read are on GULL 11 ahead. A median palm trunk fills the left foreground.
+- Cover: MERCADO 3 hugs the right frame edge next to the camera (its bar is out of frame); the bars
+  that read are on GULL 11 and the roadblock ahead. A median palm trunk fills the left foreground.
 - Tyre smoke is still grey low-poly balls; at the low cover camera they sit in front of the car.
 - Police cars do not collide with traffic cars or parked cars (only with buildings and Wren).
 - Level 2 "they shoot" waits for combat (M4); respray not in yet.
