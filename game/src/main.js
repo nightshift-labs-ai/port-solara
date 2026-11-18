@@ -89,7 +89,7 @@ export function bootPortSolara() {
   game.enemies = new EnemyCrews(game);
   game.blasts = new CarExplosions(game);
   // Mission props, built once and parked out of sight: the Tidewater van and two Aurum SUVs.
-  const props = { van: addCar('dockhand', 1e5, 1e5, 0), aurumA: addCar('aurum', 1e5, 1e5, 0), aurumB: addCar('aurum', 1e5, 1e5, 0) };
+  const props = { van: addCar('dockhand', 1e5, 1e5, 0, 0x1f8a86),aurumA: addCar('aurum', 1e5, 1e5, 0), aurumB: addCar('aurum', 1e5, 1e5, 0) };
   for (const p of Object.values(props)) p.model.visible = false;
   props.albacore = game.albacore;
   game.placeProp = (name, x, z, heading) => {

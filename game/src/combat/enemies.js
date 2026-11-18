@@ -66,10 +66,10 @@ export class EnemyCrews {
   pickSpot(e) {
     if (!e.cover) { e.spot = { x: e.x, z: e.z }; return; }
     const w = this.game.focus, dx = e.cover.x - w.x, dz = e.cover.z - w.z, d = Math.hypot(dx, dz) || 1;
-    const side = (this.pool.indexOf(e) % 3) - 1, lean = this.pool.indexOf(e) % 2 ? 1 : -1;
+    const k = this.pool.indexOf(e) % 3, side = k - 1, lean = k === 1 ? 1 : -1, out = PEEK + k * 0.9;
     e.spot = { x: e.cover.x + dx / d * 1.7 - dz / d * side * 1.3, z: e.cover.z + dz / d * 1.7 + dx / d * side * 1.3 };
     // The peek: step out past the cover's end (a van hides a standing man) to shoot.
-    e.peekSpot = { x: e.spot.x - dz / d * lean * 2.6, z: e.spot.z + dx / d * lean * 2.6 };
+    e.peekSpot = { x: e.cover.x + dx / d * 1.7 - dz / d * lean * out, z: e.cover.z + dz / d * 1.7 + dx / d * lean * out };
   }
 
   // One fixed tick.
@@ -170,7 +170,8 @@ export const CREWS = {
   tidewater: { id: 'tidewater', label: 'TIDEWATER GUNMAN', health: 70, fleeAt: 22, damage: 6, rate: 0.42, spread: 0.06, range: 45, shirt: 0x2f3e46, pants: 0x3b3a36, mark: 0x16b3a6, skin: 0xc58c66 },
   gilded: { id: 'gilded', label: 'GILDED HAND GUARD', health: 90, fleeAt: 18, damage: 8, rate: 0.3, spread: 0.05, range: 50, shirt: 0x15171c, pants: 0x1f2128, mark: 0xf2c230, skin: 0xd9a782 },
 };
-export const POOL = 6, CLINIC_FEE = 250;
+// PEEK: how far a gunman steps sideways out of cover to shoot (past a van's half length).
+export const POOL = 6, CLINIC_FEE = 250, PEEK = 3.4;
 
 const FIGURE_MATERIAL = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 });
 

@@ -1,5 +1,80 @@
 # PORT SOLARA build notes
 
+## M4 Combat and story: done (steps 2-6, run of 2026-11-18 22:01-22:42 EET)
+- Step 2 combat/enemies.js `EnemyCrews`: a pool of 6 one-mesh figures (merged vertex-coloured boxes,
+  1 draw call each, hidden when free). `CREWS.tidewater` (teal bandana, 70 hp, flee under 22,
+  6 dmg, 0.42 s, spread 0.06) and `CREWS.gilded` (black suit, gold pin, 90 hp, 8 dmg). States: move
+  (run to the crouch spot 1.7 m past the cover on the far side from Wren), cover (crouched, 0.66
+  height, timer), peek (step `PEEK` 3.4 m + 0.9 m per slot sideways past the cover's end, shoot
+  with spread that grows with range), flee (run off, retired after 7 s or 60 m), down (slump flat,
+  sink after 3 s, retired at 5.5 s; no gore). A hit while in cover draws a peek. Rounds at Wren
+  hit inside 0.42 m of her chest unless a wall/car is nearer (fireWeapon now takes an `ignore`);
+  armour soaks 60%. LIGHTS OUT at 0 health: -$250 St. Elmo Clinic fee, a running job fails with
+  "LIGHTS OUT · ST. ELMO CLINIC -$250", crews cleared. Effects share Wren's pools
+  (`PlayerWeapons.showEffect`, tracers 4 -> 6). `PlayerWeapons.give(id)` for mission hand-outs.
+- Step 3 combat/car-explosions.js `CarExplosions`: under 45 health a car smokes from the hood,
+  under 22 it burns (orange puffs fading to soot), at 0 it blows: additive flash sprite (0.4 s),
+  12 instanced debris boxes with gravity and bounce, camera shake by distance (70 m), walkers
+  panic within 40 m, combat targets within 6 m take 90, Wren in the car is thrown out (-45),
+  on foot within 6 m takes up to 40. Civilian cars stay as scorched shells (original materials
+  kept in userData for prop reuse); traffic cars leave the pool; SPD units keep livery and the
+  police hook makes a blown Beacon +2 WANTED (ticked before the police). 3 draw calls.
+- Step 4 missions: the runner's `eliminate` (props + squad by offsets from the step's spot, done
+  when none of the squad still fights) and `defend` (waves on timers, `hold` seconds) are real;
+  steps may `give` a weapon; the gold beam hides during fights (GPS keeps the spot); props
+  (Tidewater van painted teal, two new Aurum SUVs: black with a gold waist line and grille) are
+  parked out of sight and cleared when a job ends. Missions: 2 Market Day (Mara hands over the
+  Wasp, walk the market, Tidewater ambush behind their van, $3,000 / 90 REP); 3 The Harbor Run's
+  Mercado fight is now three gunmen at the van with the Albacore parked by the stalls (Ilse, then
+  "The cargo's in their van - grab it!"); 4 Ledger at Lantern Point (Ilse gives the Hornet, reach
+  the crossing nearest the lighthouse, hold 20 s against two Gilded Hand waves from two Aurum
+  SUVs with Pell on the radio, $12,000 / 400 REP); 5 Sundown (take a fast car, WANTED 5 to the
+  crossing nearest the Gull Bridge's south landing in 4:00 with Roarke and Mara, lose the SPD,
+  then the SOLARA COURIER front-page card '"PELL LEDGER SINKS OSTRA BANK" · ROARKE SUSPENDED'
+  with cash and REP, then free roam; $25,000 / 600 REP). Portraits: Pell added (swept silver
+  hair, black suit, gold pin) beside Mara, Ilse and Roarke.
+- SKYLARK 1 is built at `HELI_SCALE` 2 (flies at 22 m; cone and beacons scaled). Cover: placed at
+  the screen point NDC (-0.08, 0.40) 13 m up, so it hangs over Palmline above the vanishing point
+  with its searchlight cone on the Albacore; the cover now runs 200 ticks on foot first so the
+  district card is gone. The "[F] STEAL ..." prompt slides left of the minimap/WANTED column
+  instead of covering it.
+- Step 5 tests (tools/selftest.mjs): `enemy` (a Tidewater gunman 12 m up the crosshair: first
+  Wasp shot hits, hit marker, down in 3 shots, he fires back, retired to the pool), `blast`
+  (smoke at 30 health, blast with shake and debris at 0, a blown Beacon = +2), `autopilot`
+  (mission 1 to JOB DONE and mission 5 to the SOLARA COURIER card through test-only moves),
+  `mission-list` (all five start with their panel; eliminate and defend steps exist).
+  2-street.jpg staged per section 3: mission 3 stage 2/6 at WANTED 1, Wren on the left third in
+  the shoulder aim with the Wasp, Tidewater gunmen stepping out past the teal Dockhand van under
+  the Clock Arch, muzzle flash, an enemy tracer, sparks, the gold hit marker on a gunman, Mara's
+  subtitle "The cargo's in their van - grab it!", "[F] STEAL ALBACORE GT" over the parked coupe.
+
+## Self-test after M4 (SwiftShader, 1280x800): SELFTEST PASS, 20/20
+- All M1-M3 tests unchanged; combat 5 shots / clip 7 / WANTED 1; enemy 3 shots, Wren 97.6 hp;
+  blast PASS (+2 from a Beacon); autopilot m1 JOB DONE in 596 ticks, m5 front page; mission-list 5.
+- perf 196 draw calls / 44,945 triangles / median 1.7-3.1 ms / heap 22-23 MB (was 135 at the
+  first run of this session; under the 200 cap, over the 150 target; see debts).
+- Originality PASS (30 files). main.ts twice: 37 output files byte-identical, dossier 920,477 bytes.
+- Shots: 1-chase.jpg 183.1 KiB (q80), 2-street.jpg 179.2 KiB (q88), 4-title.jpg 189.0 KiB (q76).
+  Judge sheet rebuilt; at 50% the cover reads mission, chase, police, helicopter, WANTED, minimap,
+  subtitle, radio; the street cell reads on-foot combat, the van, the coupe prompt and Mara.
+
+## Next (M5 Shell and depth)
+- Pause, the Tab map (3-map.jpg), save slots, settings, gun shop, respray, side activities, REP
+  unlocks; CONTINUE on the title (4-title.jpg final). Breaker shotgun (still cut).
+
+## Bugs / debts (M4)
+- Perf view draw calls went to 196 late in the test run (135 earlier the same session): find out
+  what stays visible after the autopilot / mission-list tests (scorched shells, police after
+  WANTED 5) and trim back toward 150.
+- Story gating: every ring is open from the start (missions 2-5 do not wait for the one before).
+- Defend has no "leave the point = fail" rule; Aurum SUVs are parked props, they do not drive in.
+- Enemies do not collide with cars (they stand where the cover math puts them); crates as cover
+  are not in (cars only).
+- The autopilot moves the focus straight to each marker (test-only), not along the GPS.
+- In the street shot two of the gunmen overlap at the van's left end; the third (right end) sits
+  behind the WANTED panel.
+- SKYLARK 1 in the cover is seen nose-on and still crosses palm fronds.
+
 ## M4 step 1 Weapons + cover QA: done (short run of 2026-11-18 21:17-21:44 EET)
 - File name: the run brief said src/combat/weapons.js, but the brief's file table (row 14) names
   **src/combat/weapons-and-damage.js** with `fireWeapon`, so that is the file (`fireWeapon` first).

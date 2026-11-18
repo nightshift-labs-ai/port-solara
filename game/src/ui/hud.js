@@ -238,7 +238,11 @@ export function drawHud(ctx, game, drawMinimap) {
     const p = game.prompt;
     ctx.font = font(26 * s);
     const tw = ctx.measureText(p.text).width + 30 * s;
-    const px = Math.max(mx, Math.min(w - mx - tw, p.x - tw / 2)), py = Math.max(my, p.y - 50 * s);
+    let px = Math.max(mx, Math.min(w - mx - tw, p.x - tw / 2));
+    const py = Math.max(my, p.y - 50 * s);
+    // Never over the minimap / WANTED column: slide left beside it instead.
+    const colLeft = w - mx - 240 * s;
+    if (py < 450 * s && px + tw > colLeft) px = Math.max(mx, colLeft - tw - 8 * s);
     panel(ctx, px, py, tw, 42 * s);
     ctx.fillStyle = WHITE; ctx.fillText(p.text, px + 15 * s, py + 30 * s);
   }

@@ -15,7 +15,7 @@ export function stageScreenshotScene(game, name) {
 
 // Cover framing: the arm behind and above the Albacore (it fills about 28% of the width), TIDE 14's
 // offset ahead/left of it, and SKYLARK 1's screen point (NDC) and height.
-const FRAME = { back: 2.8, up: 1.55, tideAhead: 8, tideLeft: -3.4, heliX: -0.1, heliY: 0.39, heliUp: 21 };
+const FRAME = { back: 2.8, up: 1.55, tideAhead: 8, tideLeft: -3.4, heliX: -0.08, heliY: 0.4, heliUp: 13 };
 // Where Wren stands for the Mercado fight (south of the van, facing the Clock Arch).
 const STREET = { x: 153.2, z: 75.5 };
 
@@ -111,9 +111,8 @@ export const SCENES = {
     for (let i = 0; i < 2; i++) {
       aim(); hold(['Mouse0'], 1); aim(); hold([], 60);
     }
-    // Keep the gunmen in the fight for the frame: the two at the van peek out at either end, the
-    // third stays down in cover.
-    game.enemies.active.forEach((e, i) => { e.health = Math.max(e.health, 60); e.state = i < 2 ? 'peek' : 'cover'; e.timer = 9; });
+    // Keep the gunmen in the fight for the frame: all three step out past the van's ends to shoot.
+    game.enemies.active.forEach((e) => { e.health = Math.max(e.health, 60); e.state = 'peek'; e.timer = 9; });
     hold([], 50);
     aim(); hold(['Mouse0'], 1); hold([], 2);
   },
