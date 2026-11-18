@@ -4,6 +4,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #f3c9a0; fon
 #city-view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 #title-screen { position: fixed; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 4vw 6vh; color: #fff8ec; }
 #title-screen[hidden] { display: none; }
+#pause-map { position: fixed; inset: 0; z-index: 5; }
+#pause-map[hidden] { display: none; }
+#pause-map canvas.pause-canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
 #title-screen canvas.wordmark { position: absolute; left: 4vw; top: 6vh; }
 .title-menu { list-style: none; margin: 0 0 3vh; padding: 0; }
 .title-menu li { font: 800 34px "DejaVu Sans", Verdana, sans-serif; letter-spacing: 3px; margin: 8px 0; padding: 8px 22px; width: max-content;

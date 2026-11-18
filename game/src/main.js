@@ -19,7 +19,7 @@ import { MissionRunner } from './missions/mission-runner.js';
 import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
 import { drawMinimap } from './ui/minimap.js';
-import { showTitleScreen } from './ui/menus-and-map.js';
+import { showTitleScreen, installPauseAndMap } from './ui/menus-and-map.js';
 import { createSynthAudio, RADIO_STATIONS, SONG_SECONDS } from './audio/synth-audio.js';
 import { PORT_SOLARA_NAMES, FREE_ROAM_OBJECTIVE } from './story/port-solara-lore.js';
 import { readKeyboardAndMouse, FIXED_STEP_SECONDS, MAX_SUBSTEPS } from './core/fixed-step-input.js';
@@ -43,6 +43,8 @@ export function bootPortSolara() {
     time: 0, tick: 0,
     mode: 'title',
     cash: 18450, wanted: 0,
+    // Side activity counts for the map panel (the activities themselves arrive in M5 step 4).
+    progress: { races: 0, racesOf: 4, courier: 0, courierOf: 10, savedAt: null },
     objective: FREE_ROAM_OBJECTIVE,
     cars: [], vehicle: null, prompt: null, route: null,
     districtAt, districtName: '',
@@ -163,6 +165,7 @@ export function bootPortSolara() {
   game.step = () => {
     const dt = FIXED_STEP_SECONDS;
     const input = game.input;
+    if (game.mode === 'paused') { input.takePresses(); input.takeLook(); return; } // the city holds still
     game.time += dt; game.tick++;
     game.roads.signals.update(game.time);
     game.traffic.update(dt, game.focus);
@@ -260,7 +263,14 @@ export function bootPortSolara() {
   addEventListener('resize', resize);
   resize();
 
-  showTitleScreen(game, () => { game.audio.unlock(); game.startPlay(); canvas.requestPointerLock?.(); });
+  game.onNewGame = () => { game.audio.unlock(); game.startPlay(); canvas.requestPointerLock?.(); };
+  game.quitToTitle = () => {
+    game.mode = 'title';
+    document.getElementById('hud-overlay').hidden = true;
+    showTitleScreen(game, game.onNewGame);
+  };
+  installPauseAndMap(game);
+  showTitleScreen(game, game.onNewGame);
 
   let last = performance.now(), acc = 0;
   const frameTimes = [];
