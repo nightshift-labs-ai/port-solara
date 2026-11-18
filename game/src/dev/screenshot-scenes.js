@@ -26,7 +26,8 @@ export const SCENES = {
     const car = game.albacore;
     game.player.x = car.x - 2.2; game.player.z = car.z;
     game.enterOrExit();
-    car.x = -174.6; car.z = 60; car.heading = 0; car.vx = 0; car.vz = -26; car.speed = 26; car.sync();
+    // z sits half a palm spacing (16 m) on from M3a so the camera falls between two median trunks.
+    car.x = -174.6; car.z = 56; car.heading = 0; car.vx = 0; car.vz = -26; car.speed = 26; car.sync();
     game.chase.framing = { back: 4.6, up: 1.9 };
     game.chase.yaw = 0.1; game.chase.lastMode = null;
     const wl = game.wantedLevel;
@@ -44,6 +45,9 @@ export const SCENES = {
     pol.placeHelicopter(car.x + 13.8, car.z - 27.6);
     hold(['KeyW'], 20);
     hold(['KeyW', 'KeyD', 'Space'], 12);
+    // SKYLARK 1 on its orbit ahead and up, re-set after the sim so it is in frame on any start z.
+    pol.placeHelicopter(car.x + 7, car.z - 30);
+    game.step();
   },
   // Wren on foot in Old Mercado's market square, the Clock Arch ahead and a Pipit to take.
   street(game, hold) {

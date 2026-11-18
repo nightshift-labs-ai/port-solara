@@ -118,9 +118,7 @@ export function drawHud(ctx, game, drawMinimap) {
   bar(ctx, mx + 16 * s, by + 40 * s, 388 * s, 12 * s, player.armour / 100, '#5fb7ff');
   ctx.fillStyle = WHITE; ctx.font = font(26 * s);
   ctx.fillText('FISTS', mx + 16 * s, by + 84 * s);
-  ctx.fillStyle = GOLD; ctx.textAlign = 'right';
-  ctx.fillText(game.districtName, mx + 404 * s, by + 84 * s);
-  ctx.textAlign = 'left';
+  // The right of this row is kept for ammo and REP (the district lives only in the title card).
 
   // Speed arc and car name, or nothing on foot.
   const car = game.vehicle;
