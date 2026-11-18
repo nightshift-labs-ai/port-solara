@@ -63,12 +63,32 @@ export function createSynthAudio() {
     hiss.connect(band).connect(squeal).connect(audio.master);
     hiss.start();
     audio.tyres = { band, squeal };
+
+    // The SPD siren: one square voice through a band-pass, our own four-beat pattern
+    // (low, high, low, then a glide up), loudness from the nearest unit's distance.
+    const wail = ctx.createOscillator();
+    wail.type = 'square'; wail.frequency.value = SIREN_NOTES[0];
+    const horn = ctx.createBiquadFilter();
+    horn.type = 'bandpass'; horn.frequency.value = 1150; horn.Q.value = 0.9;
+    const sirenLevel = ctx.createGain(); sirenLevel.gain.value = 0;
+    wail.connect(horn).connect(sirenLevel).connect(audio.master);
+    wail.start();
+    audio.siren = { wail, level: sirenLevel, beat: -1 };
   };
 
-  // Once per frame with the car Wren drives (or null on foot and in menus).
-  audio.update = (car) => {
+  // Once per frame with the car Wren drives (or null on foot and in menus) and the distance to
+  // the nearest SPD unit with its siren on (Infinity when none).
+  audio.update = (car, copDistance = Infinity) => {
     if (!audio.ctx || audio.ctx.state !== 'running') return;
-    const t = audio.ctx.currentTime, e = audio.engine, ty = audio.tyres;
+    const t = audio.ctx.currentTime, e = audio.engine, ty = audio.tyres, sn = audio.siren;
+    const beat = Math.floor(t / SIREN_BEAT);
+    if (beat !== sn.beat) {
+      sn.beat = beat;
+      const note = beat % SIREN_NOTES.length;
+      sn.wail.frequency.setValueAtTime(SIREN_NOTES[note], t);
+      if (note === SIREN_NOTES.length - 1) sn.wail.frequency.linearRampToValueAtTime(SIREN_NOTES[1] * 1.12, t + SIREN_BEAT);
+    }
+    sn.level.gain.setTargetAtTime(0.075 * Math.max(0, 1 - copDistance / 170), t, 0.1);
     if (!car) {
       e.level.gain.setTargetAtTime(0, t, 0.2);
       ty.squeal.gain.setTargetAtTime(0, t, 0.1);
@@ -95,3 +115,6 @@ export function createSynthAudio() {
 }
 
 const GEARS = 5;
+// SPD siren notes in Hz, one per beat; the last glides up into the next bar.
+const SIREN_NOTES = [740, 990, 740, 880];
+const SIREN_BEAT = 0.34;

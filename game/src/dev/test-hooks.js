@@ -77,6 +77,23 @@ export function exposeTestHooks(game) {
       }
       return { active: game.traffic.active.length, waitingAtRed: game.traffic.waitingAtRed(), overlaps, closest: Math.round(closest * 100) / 100, pair };
     },
+    // WANTED 1 on foot, a Beacon stopped 5 m away: standing still must end in custody within
+    // 2.5 s (+ a tick), bail taken, heat gone, and Wren back on foot at an SPD post after the card.
+    custody() {
+      const wl = game.wantedLevel, pol = game.police;
+      if (game.vehicle) this.enterNearest();
+      this.teleport(-168.6, -60, 0);
+      pol.reset(); wl.clear(); game.custody = null;
+      wl.commit('theft', game.focus.x, game.focus.z, 1);
+      pol.place(0, -173.5, -60, 0, 0);
+      const cash0 = game.cash, t0 = game.time;
+      let n = 0;
+      while (!game.custody && n++ < 600) game.step();
+      const after = Math.round((game.time - t0) * 100) / 100, card = game.custody && game.custody.title;
+      for (let i = 0; i < 300; i++) game.step();
+      const p = game.player;
+      return { custody: !!card, card, after, bail: cash0 - game.cash, pipsAfter: wl.pips, cardGone: !game.custody, onFoot: !game.vehicle, at: [Math.round(p.x), Math.round(p.z)], insideBuilding: game.collide.pointInside(p.x, p.z) };
+    },
     step(n = 1) { for (let i = 0; i < n; i++) game.step(); return this.snapshot(); },
     key(code, down) { game.input.setKey(code, down); },
     teleport(x, z, facing = 0) {

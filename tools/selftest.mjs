@@ -137,6 +137,15 @@ await test('police', async () => {
   return s;
 });
 
+await test('custody', async () => {
+  const s = await call(() => window.__test.custody());
+  ok(s.custody && s.card === 'IN CUSTODY', 'standing beside a cop at WANTED 1 did not end in custody');
+  ok(s.after >= 2.5 && s.after < 3.2, `custody after ${s.after} s (want 2.5 s)`);
+  ok(s.bail === 400 && s.pipsAfter === 0, `bail ${s.bail}, pips ${s.pipsAfter}`);
+  ok(s.cardGone && s.onFoot && !s.insideBuilding, 'no clean respawn at the SPD post');
+  return s;
+});
+
 await test('perf', async () => {
   await call(() => window.__test.teleport(-174.6, 0, 0));
   const p = await call(() => window.__test.perf(30));

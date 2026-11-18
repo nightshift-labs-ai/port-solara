@@ -131,7 +131,25 @@ export function drawHud(ctx, game, drawMinimap) {
     panel(ctx, px, py, tw, 42 * s);
     ctx.fillStyle = WHITE; ctx.fillText(p.text, px + 15 * s, py + 30 * s);
   }
+
+  // Custody card: the screen fades to navy, the card holds, then fades back on the new spot.
+  const cu = game.custody;
+  if (cu) {
+    const age = game.time - cu.at, hold = CUSTODY_FADE;
+    const a = Math.max(0, Math.min(1, age / hold, (cu.end ?? 4.2) - age));
+    ctx.fillStyle = `rgba(8, 18, 38, ${0.88 * a})`;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalAlpha = a;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = WHITE; ctx.font = font(76 * s);
+    ctx.fillText(cu.title, w / 2, h * 0.47);
+    ctx.fillStyle = GOLD; ctx.font = font(28 * s);
+    ctx.fillText(cu.sub, w / 2, h * 0.47 + 52 * s);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
 }
+
+export const CUSTODY_FADE = 0.6;
 
 export const CARD_SECONDS = 4.5;
 export const DISPATCH_ROWS = 4;

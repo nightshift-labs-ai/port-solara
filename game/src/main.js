@@ -104,11 +104,14 @@ export function bootPortSolara() {
     game.traffic.update(dt, game.focus);
     game.crowd.update(dt, game.focus);
     if (game.mode !== 'play') { game.input.takePresses(); return; }
-    for (const code of input.takePresses()) if (code === 'KeyF' && !game.theft) game.enterOrExit();
+    const inCustody = game.police.updateCustody(dt);
+    for (const code of input.takePresses()) if (code === 'KeyF' && !game.theft && !inCustody) game.enterOrExit();
     const look = input.takeLook();
     game.chase.look(look.x, look.y);
     updateCarTheft(game, dt);
-    if (game.theft) {
+    if (inCustody) {
+      if (game.vehicle) game.vehicle.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide);
+    } else if (game.theft) {
       // Wren is busy at the driver's door; the tween owns her until the car is hers.
     } else if (game.vehicle) {
       game.vehicle.update(dt, { throttle: input.axis('KeyS', 'KeyW'), steer: input.axis('KeyA', 'KeyD'), handbrake: input.held.has('Space') }, game.collide);
@@ -127,8 +130,14 @@ export function bootPortSolara() {
     const district = PORT_SOLARA_NAMES.districts[districtAt(game.focus.x, game.focus.z)];
     if (district !== game.districtName) {
       game.districtName = district;
-      game.districtCard = { name: district, sub: nearestRoadName(game.roads, game.focus.x, game.focus.z) || 'PORT SOLARA', at: game.time };
+      game.districtCard = { name: district, sub: PORT_SOLARA_NAMES.districtLines[district] || nearestRoadName(game.roads, game.focus.x, game.focus.z) || 'PORT SOLARA', at: game.time };
     }
+    // While WANTED the banner carries the real escape goal and its timer.
+    const wl = game.wantedLevel;
+    game.objective = wl.pips > 0 ? {
+      title: 'LOSE THE SPD - BREAK LINE OF SIGHT',
+      detail: wl.inSight ? `In sight · stay unseen ${wl.escapeSeconds}s to escape` : `Unseen ${Math.floor(wl.unseenFor)}s of ${wl.escapeSeconds}s · leave the search zone`,
+    } : FREE_ROAM_OBJECTIVE;
   };
 
   const v = new THREE.Vector3();
@@ -144,7 +153,8 @@ export function bootPortSolara() {
       game.light.follow(game.focus, camera.position);
     }
     renderer.render(scene, camera);
-    game.audio.update(game.mode === 'play' ? game.vehicle : null);
+    const copDistance = game.police.active.reduce((d, u) => Math.min(d, u.dist), Infinity);
+    game.audio.update(game.mode === 'play' ? game.vehicle : null, game.mode === 'play' ? copDistance : Infinity);
     if (game.mode === 'play') {
       game.route = planGridRoute(game.roads, game.focus, { x: LANDMARKS.quist.x, z: LANDMARKS.quist.z + 22 });
       const near = game.vehicle || game.theft ? null : nearestCar(game);

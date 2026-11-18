@@ -43,6 +43,39 @@ export function dispatchPoliceUnits(game, makeCar) {
       u.state = state;
       return u;
     },
+    // IN CUSTODY: slower than 2 m/s for 2.5 s with a unit within 6 m. The card fades in, Wren is
+    // booked at the nearest SPD post (bail $400) and walks out of it on foot. Returns true while
+    // the sequence owns the controls.
+    arrestFor: 0, arrests: 0, lastFocus: null,
+    updateCustody(dt) {
+      const p = game.focus, last = police.lastFocus || { x: p.x, z: p.z };
+      const speed = Math.hypot(p.x - last.x, p.z - last.z) / dt;
+      police.lastFocus = { x: p.x, z: p.z };
+      const cu = game.custody;
+      if (cu) {
+        const age = game.time - cu.at;
+        if (!cu.respawned && age > CUSTODY_CARD * 0.55) {
+          if (game.vehicle) game.enterOrExit();
+          game.player.x = cu.station.x; game.player.z = cu.station.z; game.player.facing = cu.station.facing;
+          game.chase.yaw = cu.station.facing; game.chase.lastMode = null;
+          police.lastFocus = null;
+          cu.respawned = true;
+        }
+        if (age > CUSTODY_CARD) game.custody = null;
+        return true;
+      }
+      const pips = police.enabled ? game.wantedLevel.pips : 0;
+      const near = units.some((u) => u.active && u.state !== 'LEAVING' && u.dist < ARREST_RANGE);
+      if (pips > 0 && near && speed < 2) police.arrestFor += dt; else police.arrestFor = 0;
+      if (police.arrestFor < CUSTODY_SECONDS) return false;
+      const station = SPD_POSTS.reduce((a, b) => (Math.hypot(b.x - p.x, b.z - p.z) < Math.hypot(a.x - p.x, a.z - p.z) ? b : a));
+      game.custody = { at: game.time, title: 'IN CUSTODY', sub: `BOOKED AT ${station.name} · BAIL -$${BAIL}`, station, end: CUSTODY_CARD, respawned: false };
+      game.cash = Math.max(0, game.cash - BAIL);
+      game.wantedLevel.clear();
+      police.reset();
+      police.arrestFor = 0; police.arrests++;
+      return true;
+    },
     reset() { units.forEach(deactivate); police.roadblock = null; air.active = false; air.car.x = air.car.z = 1e5; air.dist = 1e9; },
     toast(text) { police.events.push({ text, at: game.time }); if (police.events.length > 4) police.events.shift(); },
   };
@@ -285,6 +318,12 @@ export const POLICE_SPECS = {
 };
 export const SIGHT_RANGE = 90, PURSUIT_RANGE = 40, DESPAWN_RANGE = 230, ROADBLOCK_AHEAD = 85;
 export const HELI_SIGHT = 140, HELI_HEIGHT = 22;
+export const ARREST_RANGE = 6, CUSTODY_SECONDS = 2.5, CUSTODY_CARD = 4.2, BAIL = 400;
+// Where the SPD books Wren: sidewalk spots beside two posts (the nearest one is used).
+export const SPD_POSTS = [
+  { name: 'SPD PALMLINE POST', x: -168.6, z: 13, facing: 0 },
+  { name: 'SPD MERCADO STATION', x: 67.5, z: 60, facing: Math.PI },
+];
 const DOWN = new THREE.Vector3(0, -1, 0);
 
 // SKYLARK 1: a navy-and-white cabin, tail boom, fin and skids in one mesh, two rotors, and the

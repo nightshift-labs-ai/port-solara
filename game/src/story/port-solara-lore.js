@@ -8,6 +8,16 @@ export const PORT_SOLARA_NAMES = {
     saltworks: 'SALTWORKS DOCKS',
     lantern: 'LANTERN POINT',
   },
+  // One line per district for its title card.
+  districtLines: {
+    'PALMLINE BEACH': 'Double palms and the Hotel Meridiana',
+    'CORAL HEIGHTS': 'Glass towers under the Sundial',
+    'OLD MERCADO': 'Tiled facades and the Clock Arch',
+    'SALTWORKS DOCKS': 'Coral-red cranes and salt pyramids',
+    'LANTERN POINT': 'A lighthouse on the headland',
+  },
+  // The clock starts on a Friday at 17:20; one game minute passes per second of play.
+  clock: { weekday: 'FRI', day: 1, startMinutes: 17 * 60 + 20 },
   streets: { boulevard: 'PALMLINE BOULEVARD', ring: 'SOLARA RING ROAD' },
   landmarks: ['Sundial Tower', 'Hotel Meridiana', 'Clock Arch', 'Gull Bridge', 'Lantern Point Lighthouse'],
   player: { name: 'Wren Calloway', look: 'saffron windbreaker' },
