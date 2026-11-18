@@ -3,7 +3,8 @@ import { buildCityDistricts, districtAt, LANDMARKS } from './world/city-builder.
 import { buildRoadNetwork } from './world/road-network.js';
 import { createSunSoakedLighting } from './world/sunlight-and-sea.js';
 import { DrivableCar, ENTER_RANGE } from './vehicles/car-physics.js';
-import { buildCarModel, CAR_SPECS, PARKED_PAINTS } from './vehicles/car-models.js';
+import { buildCarModel, CAR_SPECS, PARKED_PAINTS, TRAFFIC_KINDS } from './vehicles/car-models.js';
+import { createTrafficPool } from './traffic/traffic-drivers.js';
 import { PlayerOnFoot } from './player/player-on-foot.js';
 import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
@@ -57,6 +58,14 @@ export function bootPortSolara() {
   game.albacore = addCar('albacore', -174.6, 10, 0);
   PARKED_SPOTS.forEach(([kind, x, z, h], i) => addCar(kind, x, z, h, PARKED_PAINTS[i % PARKED_PAINTS.length]));
   game.focus = game.player;
+  game.traffic = createTrafficPool(game, () => {
+    const kind = game.random.pick(TRAFFIC_KINDS);
+    const paint = kind === 'pipit' || kind === 'promenade' ? game.random.pick(PARKED_PAINTS) : undefined;
+    const car = addCar(kind, 1e5, 1e5, 0, paint);
+    car.model.visible = false;
+    return car;
+  });
+  game.traffic.spawnAround(game.player);
 
   game.enterOrExit = () => {
     if (game.vehicle) {
@@ -72,6 +81,7 @@ export function bootPortSolara() {
     }
     const car = nearestCar(game);
     if (!car) return;
+    if (car.ai) game.traffic.detach(car);
     game.vehicle = car;
     game.player.setVisible(false);
     game.chase.mode = 'car';
@@ -84,6 +94,7 @@ export function bootPortSolara() {
     const input = game.input;
     game.time += dt; game.tick++;
     game.roads.signals.update(game.time);
+    game.traffic.update(dt, game.focus);
     if (game.mode !== 'play') { game.input.takePresses(); return; }
     for (const code of input.takePresses()) if (code === 'KeyF') game.enterOrExit();
     const look = input.takeLook();
@@ -95,7 +106,7 @@ export function bootPortSolara() {
     } else {
       game.player.update(dt, { x: input.axis('KeyA', 'KeyD'), z: input.axis('KeyW', 'KeyS') }, game.chase.yaw, input.held.has('ShiftLeft') || input.held.has('ShiftRight'), game.collide);
     }
-    for (const car of game.cars) if (car !== game.vehicle && Math.abs(car.speed) > 0.05) car.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide);
+    for (const car of game.cars) if (car !== game.vehicle && !car.ai && Math.abs(car.speed) > 0.05) car.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide);
     game.chase.update(dt, game.focus, game.collide);
   };
 

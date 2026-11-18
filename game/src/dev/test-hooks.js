@@ -9,7 +9,23 @@ export function exposeTestHooks(game) {
         player: { x: p.x, z: p.z, insideBuilding: !car && game.collide.pointInside(p.x, p.z) },
         car: car ? { name: car.name, x: car.x, z: car.z, speed: car.speed, health: car.health } : null,
         cars: game.cars.length,
+        traffic: this.traffic(),
       };
+    },
+    // Active traffic, cars stopped at a red, and pairs of visible cars whose bodies overlap
+    // (the other car's centre inside this car's footprint grown by the other's half size).
+    traffic() {
+      const live = game.cars.filter((c) => c.model.visible);
+      let overlaps = 0, closest = Infinity, pair = null;
+      for (let i = 0; i < live.length; i++) for (let j = 0; j < live.length; j++) {
+        if (i === j) continue;
+        const a = live[i], b = live[j], f = a.forward;
+        const dx = b.x - a.x, dz = b.z - a.z;
+        const along = Math.abs(dx * f.x + dz * f.z), side = Math.abs(dx * f.z - dz * f.x);
+        if (i < j) { const d = Math.hypot(dx, dz); if (d < closest) { closest = d; pair = [a.name, b.name]; } }
+        if (along < (a.spec.length + Math.min(b.spec.length, b.spec.width)) / 2 - 0.2 && side < (a.spec.width + b.spec.width) / 2 - 0.15) { overlaps++; pair = [a, b].map((c) => `${c.name}${c.ai ? '*' : ''}@${c.x.toFixed(1)},${c.z.toFixed(1)},${c.heading.toFixed(2)},${c.speed.toFixed(1)}`); }
+      }
+      return { active: game.traffic.active.length, waitingAtRed: game.traffic.waitingAtRed(), overlaps, closest: Math.round(closest * 100) / 100, pair };
     },
     step(n = 1) { for (let i = 0; i < n; i++) game.step(); return this.snapshot(); },
     key(code, down) { game.input.setKey(code, down); },

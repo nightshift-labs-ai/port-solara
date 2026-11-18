@@ -66,7 +66,7 @@ export function buildRoadNetwork(game) {
       blocks.push({ minX, maxX, minZ, maxZ, cx: (minX + maxX) / 2, cz: (minZ + maxZ) / 2 });
     }
   }
-  const network = { roads, blocks, coastX, boulevardX: BOULEVARD_X, nsRoads: NS_ROADS, ewRoads: EW_ROADS };
+  const network = { roads, blocks, coastX, boulevardX: BOULEVARD_X, nsRoads: NS_ROADS, ewRoads: EW_ROADS, pointOnLane, turnChoices, signalColor };
   buildLaneGraph(network);
   network.signals = raiseTrafficSignals(group, network);
   game.roads = network;

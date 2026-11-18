@@ -75,7 +75,46 @@ export const CAR_SPECS = {
       ...lightsFor(1.85, 4.7, 0.75),
     ],
   },
+  saltrunner: {
+    name: 'SALTRUNNER', paint: 0x2f6f8f, topSpeed: 44, accel: 8.5, grip: 5.5, length: 5.1, width: 2.0,
+    boxes: (c) => [
+      { w: 2.0, h: 0.75, d: 5.1, x: 0, y: 0.75, z: 0, c },
+      { w: 1.86, h: 0.62, d: 1.9, x: 0, y: 1.45, z: -0.45, c: GLASS },
+      { w: 1.92, h: 0.1, d: 1.8, x: 0, y: 1.8, z: -0.45, c },
+      { w: 1.96, h: 0.34, d: 2.0, x: 0, y: 1.29, z: 1.5, c: TRIM },
+      { w: 2.05, h: 0.16, d: 5.15, x: 0, y: 0.42, z: 0, c: TRIM },
+      ...wheels(2.0, 1.7, 0.4),
+      ...lightsFor(2.0, 5.1, 0.95),
+    ],
+  },
+  dockhand: {
+    name: 'DOCKHAND', paint: 0xf4f1ea, topSpeed: 36, accel: 6.5, grip: 5, length: 5.4, width: 2.1,
+    boxes: (c) => [
+      { w: 2.1, h: 1.9, d: 4.2, x: 0, y: 1.35, z: 0.55, c },
+      { w: 2.06, h: 1.05, d: 1.2, x: 0, y: 0.92, z: -2.05, c },
+      { w: 1.96, h: 0.6, d: 0.1, x: 0, y: 1.72, z: -1.5, c: GLASS },
+      { w: 2.12, h: 0.32, d: 4.0, x: 0, y: 1.55, z: 0.6, c: new THREE.Color(0x1d9c94) },
+      { w: 2.15, h: 0.18, d: 5.45, x: 0, y: 0.4, z: 0, c: TRIM },
+      ...wheels(2.1, 1.8, 0.4),
+      ...lightsFor(2.1, 5.4, 0.85),
+    ],
+  },
+  citrine: {
+    name: 'CITRINE CAB', paint: 0xc4e83a, topSpeed: 46, accel: 9, grip: 6.5, length: 4.6, width: 1.85,
+    boxes: (c) => [
+      { w: 1.85, h: 0.66, d: 4.6, x: 0, y: 0.62, z: 0, c },
+      { w: 1.66, h: 0.56, d: 2.3, x: 0, y: 1.23, z: 0.1, c: GLASS },
+      { w: 1.7, h: 0.1, d: 2.2, x: 0, y: 1.54, z: 0.1, c },
+      { w: 0.9, h: 0.26, d: 0.4, x: 0, y: 1.72, z: 0.1, c: new THREE.Color(0xfff6d8), glow: true },
+      { w: 1.9, h: 0.14, d: 4.65, x: 0, y: 0.36, z: 0, c: TRIM },
+      ...wheels(1.85, 1.45, 0.34),
+      ...lightsFor(1.85, 4.6, 0.75),
+    ],
+  },
 };
+
+// Traffic mix: Pipits most of all, then sedans, cabs, pickups and vans.
+export const TRAFFIC_KINDS = ['pipit', 'pipit', 'pipit', 'promenade', 'promenade', 'citrine', 'citrine', 'saltrunner', 'dockhand'];
 
 export const PARKED_PAINTS = [0x7fc8d6, 0xf2b134, 0xf1ead8, 0x1d9c94, 0x9aa7b8, 0xb8d86b];
 

@@ -75,6 +75,20 @@ await test('drive', async () => {
   return { speedAfter4s: +s.car.speed.toFixed(1), healthAfterWall: Math.round(w.car.health) };
 });
 
+await test('traffic', async () => {
+  let closest = Infinity, maxRed = 0, overlaps = 0, s = null;
+  for (let k = 0; k < 20; k++) {
+    s = await call(() => window.__test.step(60));
+    closest = Math.min(closest, s.traffic.closest);
+    maxRed = Math.max(maxRed, s.traffic.waitingAtRed);
+    if (s.traffic.overlaps) overlaps = Math.max(overlaps, s.traffic.overlaps), console.log('overlap', JSON.stringify(s.traffic));
+  }
+  ok(s.traffic.active >= 20, `${s.traffic.active} traffic cars after 20 s`);
+  ok(overlaps === 0, `cars overlap (${overlaps})`);
+  ok(maxRed >= 1, 'no car waited at a red');
+  return { active: s.traffic.active, closestM: closest, maxWaitingAtRed: maxRed };
+});
+
 await test('perf', async () => {
   await call(() => window.__test.teleport(-174.6, 0, 0));
   const p = await call(() => window.__test.perf(30));
