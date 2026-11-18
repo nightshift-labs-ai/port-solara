@@ -1,6 +1,16 @@
 # PORT SOLARA build notes
 
-## Done (M2 Traffic and theft, partial: steps 0-2 of 7, run of 2026-11-18)
+## Done (M2 Traffic and theft, partial: steps 0-3 of 7, run of 2026-11-18)
+- people/pedestrian-crowd.js `PedestrianCrowd`: 32 walkers on the sidewalk ring 1.5 m outside each
+  block within 120 m (respawn past 160 m), two instanced meshes (outfit-coloured bodies, heads), bob
+  while walking; a car within 9 m coming at them sends them running (4 m/s) toward the building side
+  for 2 s; `panic(x, z, r)` hook for gunfire later; `game.walkersNear` feeds the traffic gap check
+  so cars brake for them. Crosswalk crossings are not in yet (they turn the corner of their block).
+- Self-test now: traffic PASS (24 active, 0 overlaps, closest 2.12 m, up to 7 at a red), peds PASS
+  (32 walkers, 0 inside buildings), perf PASS (189 draw calls, 43,037 triangles, median 1.2 ms).
+  Dossier 806,536 bytes, 27 output files byte-identical on two runs; originality PASS (20 files).
+- Shots re-taken: 1-chase 162.6 KiB, 2-street 165.9 KiB, 4-title 189.9 KiB. Walkers are in frame
+  but sparse (one each in 1 and 2): re-stage the cover in step 6.
 - README: make.fun badges under the title and the make.fun footer line.
 - Lane graph in world/road-network.js: 90 crossing nodes, 322 directed lanes (Palmline Boulevard
   two lanes each way at 4.6/7.2 m, avenues and ruas one at 3 m, right-hand traffic), clearances past
@@ -29,14 +39,14 @@
   signals on the grid). No pedestrians yet in any shot.
 
 ## Next (rest of M2, in order)
-- Step 3 people/pedestrian-crowd.js `PedestrianCrowd` (hook `game.walkersNear(x, z)` is already read by
-  traffic), step 4 player/car-theft.js `stealNearestCar` (pull-out tween, driver flees, uses
+- Step 4 player/car-theft.js `stealNearestCar` (pull-out tween, driver flees, uses
   `game.traffic.detach`), step 5 camera feel + audio/synth-audio.js + skids/smoke, step 6 peds and
   steal tests, re-stage 1-chase.jpg with peds and a braking civilian.
 
 ## Bugs / debts (M2)
-- Draw calls 175 in the perf view (target 150, cap 200): each traffic car is 2 meshes; instance car
-  bodies per kind before pedestrians land.
+- Draw calls 189 in the perf view (target 150, cap 200): each traffic car is 2 meshes; instance car
+  bodies per kind next, before police land in M3.
+- Walkers are boxes (body + head) without legs; give them a leg pair in the instanced set.
 - No car-to-car collision: the player's car passes through traffic (traffic does brake for it).
 - Traffic ignores walkers until the crowd exists; the Albacore start spot sits in the boulevard's inner
   northbound lane, so traffic behind it swaps to the outer lane after 3 s.

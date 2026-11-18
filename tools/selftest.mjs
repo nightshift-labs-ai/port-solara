@@ -89,6 +89,17 @@ await test('traffic', async () => {
   return { active: s.traffic.active, closestM: closest, maxWaitingAtRed: maxRed };
 });
 
+await test('peds', async () => {
+  let inside = 0, s = null;
+  for (let k = 0; k < 10; k++) {
+    s = await call(() => window.__test.step(30));
+    inside = Math.max(inside, s.peds.inside);
+  }
+  ok(s.peds.walkers >= 20, `${s.peds.walkers} walkers`);
+  ok(inside === 0, `${inside} walkers inside buildings`);
+  return { walkers: s.peds.walkers, inside };
+});
+
 await test('perf', async () => {
   await call(() => window.__test.teleport(-174.6, 0, 0));
   const p = await call(() => window.__test.perf(30));

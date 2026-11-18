@@ -5,6 +5,7 @@ import { createSunSoakedLighting } from './world/sunlight-and-sea.js';
 import { DrivableCar, ENTER_RANGE } from './vehicles/car-physics.js';
 import { buildCarModel, CAR_SPECS, PARKED_PAINTS, TRAFFIC_KINDS } from './vehicles/car-models.js';
 import { createTrafficPool } from './traffic/traffic-drivers.js';
+import { PedestrianCrowd } from './people/pedestrian-crowd.js';
 import { PlayerOnFoot } from './player/player-on-foot.js';
 import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
@@ -66,6 +67,8 @@ export function bootPortSolara() {
     return car;
   });
   game.traffic.spawnAround(game.player);
+  game.crowd = new PedestrianCrowd(game);
+  game.walkersNear = (x, z) => game.crowd.near(x, z);
 
   game.enterOrExit = () => {
     if (game.vehicle) {
@@ -95,6 +98,7 @@ export function bootPortSolara() {
     game.time += dt; game.tick++;
     game.roads.signals.update(game.time);
     game.traffic.update(dt, game.focus);
+    game.crowd.update(dt, game.focus);
     if (game.mode !== 'play') { game.input.takePresses(); return; }
     for (const code of input.takePresses()) if (code === 'KeyF') game.enterOrExit();
     const look = input.takeLook();

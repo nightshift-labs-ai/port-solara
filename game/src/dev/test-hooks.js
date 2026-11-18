@@ -10,7 +10,13 @@ export function exposeTestHooks(game) {
         car: car ? { name: car.name, x: car.x, z: car.z, speed: car.speed, health: car.health } : null,
         cars: game.cars.length,
         traffic: this.traffic(),
+        peds: this.peds(),
       };
+    },
+    // Walkers placed near the focus, and how many stand inside a building box.
+    peds() {
+      const live = game.crowd.walkers.filter((w) => w.ring);
+      return { walkers: live.length, inside: live.filter((w) => game.collide.pointInside(w.x, w.z)).length };
     },
     // Active traffic, cars stopped at a red, and pairs of visible cars whose bodies overlap
     // (the other car's centre inside this car's footprint grown by the other's half size).
