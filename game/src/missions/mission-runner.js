@@ -7,7 +7,8 @@
 //   chase      { target: (game) => {x, z}, radius } close to within radius of a moving target
 //   loseWanted {}                                   WANTED back to zero
 //   dialogue   { lines: [{ who, text, secs }] }     subtitles, then on
-//   eliminate / defend                              stubs until combat (M4): a short beat, then on
+//   eliminate  { props, squad }                     beat the squad (down or fled) round the step's spot
+//   defend     { props, waves: [{ at, squad }], hold } hold the spot until every wave is beaten
 // Any step may also carry `lines` (subtitles played from the step's start), `target(game)` (a
 // moving marker, e.g. the car to steal), `seconds` and `heat`. With no mission running, walking or
 // driving into a story mission's start ring starts it.
@@ -51,9 +52,15 @@ export class MissionRunner {
   enter(i) {
     this.index = i;
     this.stepAt = this.game.time;
-    const step = this.step;
-    this.target = step.at ? { x: step.at.x, z: step.at.z } : step.target ? step.target(this.game) : null;
+    const step = this.step, game = this.game;
+    this.target = step.at ? { x: step.at.x, z: step.at.z } : step.target ? step.target(game) : null;
     this.subtitle = null;
+    this.waves = 0;
+    // Fight steps: park the props (cover cars, the car to take) round the step's spot, then the squad.
+    const a = this.target || game.focus;
+    this.props = (step.props || []).map((p) => game.placeProp(p.car, a.x + p.dx, a.z + p.dz, p.heading || 0));
+    if (step.give) game.arms.give(step.give);
+    if (step.kind === 'eliminate') this.spawn(step.squad);
     if (step.heat && this.game.wantedLevel.pips < step.heat) {
       const f = this.game.focus;
       this.game.wantedLevel.commit('theft', f.x, f.z, step.heat);
@@ -85,7 +92,8 @@ export class MissionRunner {
       else this.finish(true);
       return;
     }
-    this.marker.visible = !!this.target;
+    // In a fight the GPS keeps the spot but the beam would wash out the cover the crews hide behind.
+    this.marker.visible = !!this.target && step.kind !== 'eliminate' && step.kind !== 'defend';
     if (this.target) {
       this.marker.position.set(this.target.x, 0, this.target.z);
       this.marker.rotation.y = game.time * 1.4;
@@ -101,9 +109,25 @@ export class MissionRunner {
       case 'chase': return near(step.radius || 8);
       case 'loseWanted': return game.wantedLevel.pips === 0;
       case 'dialogue': this.subtitle = lineAt(step.lines, age); return !this.subtitle;
-      case 'eliminate': case 'defend': return age > (step.secs || 3);
+      case 'eliminate': return age > 0.5 && game.enemies.fighting(this.tag) === 0;
+      case 'defend': {
+        // Waves arrive on their timers; the point holds once every wave is down or fled.
+        const waves = step.waves || [];
+        while (this.waves < waves.length && age >= waves[this.waves].at) this.spawn(waves[this.waves++].squad);
+        return this.waves === waves.length && age > (step.hold || 0) && game.enemies.fighting(this.tag) === 0;
+      }
       default: return true;
     }
+  }
+
+  // A squad by offsets from the step's spot; `cover` names the prop each one hides behind.
+  spawn(squad = []) {
+    const a = this.target || this.game.focus;
+    this.tag = `${this.mission.id}-${this.index}`;
+    this.game.enemies.spawnSquad(squad.map((s) => {
+      const c = this.props[s.cover ?? 0];
+      return { crew: s.crew, x: a.x + s.dx, z: a.z + s.dz, cover: c ? { x: c.x, z: c.z } : null };
+    }), this.tag);
   }
 
   finish(passed, reason = '') {
@@ -113,8 +137,11 @@ export class MissionRunner {
       time: game.time - this.startedAt,
       cash: passed ? m.reward?.cash || 0 : 0,
       rep: passed ? m.reward?.rep || 0 : 0,
+      frontPage: passed ? m.frontPage : null,
     };
     if (passed) { game.cash += this.result.cash; this.rep += this.result.rep; if (m.id) this.completed.add(m.id); }
+    game.enemies?.clear();
+    game.clearProps?.();
     this.mission = null;
     this.target = null;
     this.subtitle = null;
@@ -144,6 +171,13 @@ MissionRunner.prototype.resultCard = function resultCard() {
   const r = this.result;
   if (!r || this.game.time - r.at > RESULT_SECONDS) return null;
   const t = Math.round(r.time);
+  // The finale's card is the next morning's front page.
+  if (r.frontPage) {
+    return {
+      passed: true, age: this.game.time - r.at, title: r.frontPage.paper, sub: r.frontPage.headline,
+      rows: [r.frontPage.sub, `+$${r.cash.toLocaleString('en-US')}`, `+${r.rep} REP`, 'FREE ROAM'],
+    };
+  }
   return {
     passed: r.passed, age: this.game.time - r.at,
     title: r.passed ? 'JOB DONE' : 'JOB BLOWN',

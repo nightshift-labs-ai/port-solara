@@ -4,8 +4,8 @@ import { countWitnesses } from '../police/wanted-level.js';
 // Hitscan along the crosshair ray (the camera's forward), marched in 0.4 m steps against building
 // boxes from the spatial hash, cars (their body box in car space), combat targets and the ground.
 // Returns { x, y, z, kind: 'target' | 'car' | 'wall' | 'ground' | 'air', what, dist }.
-export function fireWeapon(game, from, dir, range) {
-  const targets = (game.combatTargets || []).filter((t) => t.alive && Math.hypot(t.x - from.x, t.z - from.z) < range + 3);
+export function fireWeapon(game, from, dir, range, ignore = null) {
+  const targets = (game.combatTargets || []).filter((t) => t.alive && t !== ignore && Math.hypot(t.x - from.x, t.z - from.z) < range + 3);
   const cars = allCars(game).filter((c) => c.model.visible && Math.hypot(c.x - from.x, c.z - from.z) < range + 4);
   const p = { x: 0, y: 0, z: 0 };
   for (let s = 0.6; s <= range; s += RAY_STEP) {
@@ -54,6 +54,15 @@ export class PlayerWeapons {
   select(i) {
     if (i < 0 || i >= WEAPONS.length || i === this.slot) return;
     this.slot = i; this.reloading = 0; this.cooldown = Math.max(this.cooldown, 0.2);
+  }
+
+  // A mission hands Wren a gun: a full clip, at least half the reserve, and it goes in her hand.
+  give(id) {
+    const i = WEAPONS.findIndex((w) => w.id === id);
+    if (i < 0) return;
+    const w = WEAPONS[i], a = this.ammo[i];
+    a.clip = w.clip; a.reserve = Math.max(a.reserve, (w.reserve || 0) / 2);
+    this.select(i);
   }
 
   reload() {
@@ -131,6 +140,9 @@ export class PlayerWeapons {
     if (hit.kind === 'car' && hit.what.health !== undefined) { hit.what.health -= damage * 0.25; this.hitMarker = 0.18; }
   }
 
+  // A shot effect for anyone (the enemy crews share Wren's flash, tracer and spark pools).
+  showEffect(muzzle, hit, smg) { showShot(this.fx, muzzle, hit, smg); }
+
   rand() { this.seed = (this.seed * 1664525 + 1013904223) >>> 0; return this.seed / 4294967296; }
 }
 
@@ -141,7 +153,7 @@ function allCars(game) {
   return list;
 }
 
-const RAY_STEP = 0.4, TRACERS = 4, SPARKS = 48;
+const RAY_STEP = 0.4, TRACERS = 6, SPARKS = 48;
 
 function buildShotEffects(scene) {
   const add = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };

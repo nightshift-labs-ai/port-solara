@@ -111,6 +111,20 @@ export const CAR_SPECS = {
       ...lightsFor(1.85, 4.6, 0.75),
     ],
   },
+  // The Gilded Hand's black SUV with a gold waist line and a gold grille.
+  aurum: {
+    name: 'AURUM SUV', paint: 0x121418, topSpeed: 50, accel: 10, grip: 6.2, length: 5.0, width: 2.05,
+    boxes: (c) => [
+      { w: 2.05, h: 0.95, d: 5.0, x: 0, y: 0.85, z: 0, c },
+      { w: 1.9, h: 0.7, d: 3.1, x: 0, y: 1.65, z: 0.35, c: GLASS },
+      { w: 1.96, h: 0.1, d: 3.1, x: 0, y: 2.04, z: 0.35, c },
+      { w: 2.08, h: 0.09, d: 5.02, x: 0, y: 1.2, z: 0, c: new THREE.Color(0xd8a928) },
+      { w: 1.2, h: 0.3, d: 0.06, x: 0, y: 0.85, z: -2.52, c: new THREE.Color(0xd8a928) },
+      { w: 2.1, h: 0.18, d: 5.05, x: 0, y: 0.42, z: 0, c: TRIM },
+      ...wheels(2.05, 1.65, 0.42),
+      ...lightsFor(2.05, 5.0, 1.0),
+    ],
+  },
 };
 
 // Traffic mix: Pipits most of all, then sedans, cabs, pickups and vans.

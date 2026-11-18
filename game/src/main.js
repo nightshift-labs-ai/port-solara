@@ -13,6 +13,8 @@ import { WantedLevel } from './police/wanted-level.js';
 import { dispatchPoliceUnits, routeOverLanes, nearestNode } from './police/police-ai.js';
 import { STORY_MISSIONS, SPEAKERS, rankFor } from './missions/story-missions.js';
 import { PlayerWeapons } from './combat/weapons-and-damage.js';
+import { EnemyCrews } from './combat/enemies.js';
+import { CarExplosions } from './combat/car-explosions.js';
 import { MissionRunner } from './missions/mission-runner.js';
 import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
@@ -84,6 +86,32 @@ export function bootPortSolara() {
   game.toast = (text) => game.police.toast(text);
   game.combatTargets = [];
   game.arms = new PlayerWeapons(game);
+  game.enemies = new EnemyCrews(game);
+  game.blasts = new CarExplosions(game);
+  // Mission props, built once and parked out of sight: the Tidewater van and two Aurum SUVs.
+  const props = { van: addCar('dockhand', 1e5, 1e5, 0), aurumA: addCar('aurum', 1e5, 1e5, 0), aurumB: addCar('aurum', 1e5, 1e5, 0) };
+  for (const p of Object.values(props)) p.model.visible = false;
+  props.albacore = game.albacore;
+  game.placeProp = (name, x, z, heading) => {
+    const car = props[name];
+    if (car.wrecked) { car.model.traverse((m) => { if (m.userData.mat) m.material = m.userData.mat; }); car.wrecked = false; }
+    car.x = x; car.z = z; car.heading = heading; car.vx = car.vz = car.speed = 0; car.health = 100;
+    car.model.visible = true; car.sync();
+    return car;
+  };
+  // A finished or failed job takes its cover cars away (the Albacore stays where it was left).
+  game.clearProps = () => {
+    for (const name of ['van', 'aurumA', 'aurumB']) {
+      const car = props[name];
+      if (car === game.vehicle) continue;
+      car.model.visible = false; car.x = car.z = 1e5; car.sync();
+    }
+  };
+  // Road crossings nearest Lantern Point's lighthouse and the Gull Bridge's south landing.
+  game.anchors = {
+    lantern: nearestNode(game.roads.nodes, LANDMARKS.lighthouse.x, LANDMARKS.lighthouse.z),
+    bridge: nearestNode(game.roads.nodes, -392, -290),
+  };
   game.story = STORY_MISSIONS;
   game.missions = new MissionRunner(game, STORY_MISSIONS);
   // GPS: the lane graph's A* from the crossing nearest Wren to the one nearest the goal, re-planned
@@ -148,6 +176,7 @@ export function bootPortSolara() {
     }
     const onFoot = !game.vehicle && !game.theft && !inCustody;
     game.arms.update(dt, input.held, presses, onFoot);
+    game.enemies.update(dt);
     game.chase.aiming = game.arms.aiming;
     game.radio.heat = game.wantedLevel.pips >= 3; // Heat 96 cuts in at WANTED 3+
     const look = input.takeLook();
@@ -168,6 +197,7 @@ export function bootPortSolara() {
     }
     for (const car of game.cars) if (car !== game.vehicle && !car.ai && Math.abs(car.speed) > 0.05) car.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide);
     game.tyres.update(dt, game.vehicle);
+    game.blasts.update(dt); // before the police, so a blown Beacon is their +2 wreck this tick
     game.police.update(dt);
     game.wantedLevel.update(dt, game.focus, game.copsSee());
     game.wanted = game.wantedLevel.pips;

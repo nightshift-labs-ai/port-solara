@@ -15,7 +15,22 @@ export function stageScreenshotScene(game, name) {
 
 // Cover framing: the arm behind and above the Albacore (it fills about 28% of the width), TIDE 14's
 // offset ahead/left of it, and SKYLARK 1's screen point (NDC) and height.
-const FRAME = { back: 2.8, up: 1.55, tideAhead: 8, tideLeft: -3.4, heliX: -0.04, heliY: 0.33, heliUp: 14 };
+const FRAME = { back: 2.8, up: 1.55, tideAhead: 8, tideLeft: -3.4, heliX: -0.1, heliY: 0.39, heliUp: 21 };
+// Where Wren stands for the Mercado fight (south of the van, facing the Clock Arch).
+const STREET = { x: 153.2, z: 75.5 };
+
+// Turns the shoulder camera until its crosshair ray runs through a world point (a few passes,
+// because the arm's height moves with the pitch).
+function aimAt(game, x, y, z) {
+  const T = game.THREE, chase = game.chase;
+  for (let k = 0; k < 5; k++) {
+    chase.update(0, game.focus, game.collide);
+    const cam = game.camera, d = cam.getWorldDirection(new T.Vector3());
+    const want = new T.Vector3(x - cam.position.x, y - cam.position.y, z - cam.position.z).normalize();
+    chase.yaw += Math.atan2(-want.x, -want.z) - Math.atan2(-d.x, -d.z);
+    chase.pitch += Math.asin(d.y) - Math.asin(want.y);
+  }
+}
 
 export const SCENES = {
   // The SPD chase on Palmline: a seeded save state at WANTED 3 (the Albacore's theft was seen and
@@ -28,6 +43,9 @@ export const SCENES = {
     game.crowd.gatherNear(-170, -26, 8, 9);
     game.startPlay();
     const car = game.albacore;
+    game.player.x = car.x - 2.2; game.player.z = car.z;
+    hold([], 200); // the district card has come and gone: the sky over Palmline is the helicopter's
+    car.x = -174.6; car.z = 10; car.sync();
     game.player.x = car.x - 2.2; game.player.z = car.z;
     game.enterOrExit();
     // z sits half a palm spacing (16 m) on from M3a so the camera falls between two median trunks.
@@ -67,20 +85,39 @@ export const SCENES = {
     pol.placeHelicopter(cam.position.x + ray.x * t, cam.position.z + ray.z * t, FRAME.heliUp);
     game.step();
   },
-  // Wren on foot in Old Mercado's market square, the Clock Arch ahead and a Pipit to take.
+  // The Mercado fight (mission 3, stage 2/6, the cover's save state one step earlier): Wren on the
+  // left third in the shoulder aim with the Wasp, two Tidewater gunmen behind their Dockhand van
+  // under the Clock Arch, walkers scattering from the gunfire, Mara on the radio and the Albacore
+  // parked within reach. The last shot is fired two ticks before the frame: flash, tracer, sparks
+  // and the hit marker are all live.
   street(game, hold) {
     hold([], 300);
-    game.crowd.gatherNear(150, 30, 12, 18);
+    game.crowd.gatherNear(152, 70, 10, 16);
     game.startPlay();
-    // The cover's save state, an earlier step: mission 1 done, mission 3 just started at the Mercado.
     game.missions.completed.add('ferry');
     game.missions.rep = 380;
-    game.missions.start(game.story[2], 0);
-    game.player.x = 153.5; game.player.z = 81.5; game.player.facing = 0.03;
-    game.chase.yaw = 0.03;
-    hold(['KeyW'], 85);
+    game.player.x = STREET.x; game.player.z = STREET.z; game.player.facing = 0.05; game.chase.yaw = 0.05;
+    // The curbside Pipit by the arch moves on, so the parked coupe is the car within reach.
+    const pipit = game.cars.find((c) => c.name === 'PIPIT' && Math.hypot(c.x - 156.5, c.z - 73) < 1);
+    if (pipit) { pipit.x = pipit.z = 1e5; pipit.model.visible = false; pipit.sync(); }
+    hold([], 200); // the district card has come and gone
+    game.missions.start(game.story[2], 1);
+    game.arms.select(1);
+    const [first] = game.enemies.active;
+    const aim = () => aimAt(game, first.x, first.height * 0.62, first.z);
+    game.input.setKey('Mouse2', true);
+    aim();
+    hold([], 40);
+    for (let i = 0; i < 2; i++) {
+      aim(); hold(['Mouse0'], 1); aim(); hold([], 60);
+    }
+    // Keep the gunmen in the fight for the frame: the two at the van peek out at either end, the
+    // third stays down in cover.
+    game.enemies.active.forEach((e, i) => { e.health = Math.max(e.health, 60); e.state = i < 2 ? 'peek' : 'cover'; e.timer = 9; });
+    hold([], 50);
+    aim(); hold(['Mouse0'], 1); hold([], 2);
   },
-  // The title over a drone orbit of the live city.
+  // The title over a drone orbit of the live city (the title's save state has no fight running).
   title(game) {
     for (let i = 0; i < 420; i++) game.step();
   },

@@ -115,7 +115,7 @@ export function dispatchPoliceUnits(game, makeCar) {
 
   function activate(u, x, z, heading) {
     const c = u.car;
-    c.x = x; c.z = z; c.heading = heading; c.vx = c.vz = 0; c.speed = 0; c.steer = 0; c.health = 100;
+    c.x = x; c.z = z; c.heading = heading; c.vx = c.vz = 0; c.speed = 0; c.steer = 0; c.health = 100; c.wrecked = false;
     c.sync();
     u.model.visible = true;
     u.active = true; u.path = []; u.repathIn = 0; u.stuckFor = 0; u.reverseFor = 0; u.awayFor = 0;
@@ -272,7 +272,7 @@ export function dispatchPoliceUnits(game, makeCar) {
     heli.rotor.rotation.y = game.time * 21;
     heli.tail.rotation.x = game.time * 30;
     // Searchlight: a soft cone from the belly to a lit disc around Wren.
-    const from = new THREE.Vector3(air.car.x, air.y - 1.2, air.car.z), to = new THREE.Vector3(p.x, 0, p.z);
+    const from = new THREE.Vector3(air.car.x, air.y - 1.2 * HELI_SCALE, air.car.z), to = new THREE.Vector3(p.x, 0, p.z);
     const dir = to.clone().sub(from), len = dir.length();
     heli.cone.position.copy(from);
     heli.cone.quaternion.setFromUnitVectors(DOWN, dir.normalize());
@@ -300,8 +300,8 @@ export function dispatchPoliceUnits(game, makeCar) {
     });
     // The helicopter's belly beacons use the last two sprites.
     const j = units.length * 2, ph = Math.floor(game.time * 3) % 2;
-    pos.setXYZ(j, air.active ? air.car.x : 0, air.active ? air.y - 1.1 : -50, air.car.z);
-    pos.setXYZ(j + 1, air.active ? air.car.x : 0, air.active ? air.y + 0.9 : -50, air.car.z);
+    pos.setXYZ(j, air.active ? air.car.x : 0, air.active ? air.y - 1.1 * HELI_SCALE : -50, air.car.z);
+    pos.setXYZ(j + 1, air.active ? air.car.x : 0, air.active ? air.y + 0.9 * HELI_SCALE : -50, air.car.z);
     col.setXYZ(j, ph ? 1 : 0.2, 0.1, ph ? 0.1 : 1);
     col.setXYZ(j + 1, 0.9, 0.85, 0.7);
     pos.needsUpdate = true; col.needsUpdate = true;
@@ -324,7 +324,9 @@ export const POLICE_SPECS = {
   bulwark: { name: 'SPD BULWARK', topSpeed: 52, accel: 11, grip: 6.5, length: 5.0, width: 2.05 },
 };
 export const SIGHT_RANGE = 90, PURSUIT_RANGE = 40, DESPAWN_RANGE = 230, ROADBLOCK_AHEAD = 120;
-export const HELI_SIGHT = 140, HELI_HEIGHT = 18;
+export const HELI_SIGHT = 140, HELI_HEIGHT = 22;
+// SKYLARK 1 is built at twice its box sizes so it reads from the street.
+export const HELI_SCALE = 2;
 // Searchlight radius on the ground: small enough that the low chase camera stays outside the cone.
 export const SPOT_RADIUS = 2.6;
 export const ARREST_RANGE = 6, CUSTODY_SECONDS = 2.5, CUSTODY_CARD = 4.2, BAIL = 400;
@@ -360,6 +362,7 @@ function buildHelicopter() {
   const tail = new THREE.Mesh(boxesToGeometry([{ w: 0.05, h: 1.8, d: 0.2, x: 0, y: 0, z: 0, c: TRIM }]), POLICE_BODY);
   tail.position.set(0.15, 1.0, 6.1);
   group.add(rotor, tail);
+  group.scale.setScalar(HELI_SCALE);
   group.visible = false;
   const coneGeo = new THREE.ConeGeometry(1, 1, 24, 1, true);
   coneGeo.translate(0, -0.5, 0); // apex at the origin, opening down -y

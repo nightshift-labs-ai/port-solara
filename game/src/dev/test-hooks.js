@@ -162,6 +162,102 @@ export function exposeTestHooks(game) {
       for (let i = 0; i < 5; i++) game.step();
       return out;
     },
+    // A Tidewater gunman standing 12 m up the crosshair line: Wasp shots must hit, show the hit
+    // marker and put him down (no cover so he stands); he shoots back meanwhile.
+    enemy() {
+      if (game.vehicle) this.enterNearest();
+      game.enemies.clear(); game.wantedLevel.clear(); game.police.reset();
+      this.teleport(-168.6, 22, 0);
+      game.chase.yaw = 0; game.chase.pitch = 0.18;
+      const [e] = game.enemies.spawnSquad([{ crew: 'tidewater', x: -168.6 + 0.9, z: 10 }], 'test');
+      e.state = 'peek'; e.timer = 99;
+      const arms = game.arms;
+      arms.select(1); arms.give('wasp');
+      game.input.setKey('Mouse2', true);
+      for (let i = 0; i < 30; i++) game.step();
+      const h0 = e.health, hits0 = arms.hits;
+      let shots = 0, firstHit = null, marker = false;
+      while (e.alive && shots < 12) {
+        e.timer = 99;
+        game.input.setKey('Mouse0', true); game.step(); game.input.setKey('Mouse0', false);
+        shots++;
+        if (firstHit === null) { firstHit = e.health < h0; marker = arms.hitMarker > 0; }
+        for (let i = 0; i < 18; i++) game.step();
+      }
+      game.input.setKey('Mouse2', false);
+      const out = { crew: e.crew.label, firstShotHit: firstHit, hitMarker: marker, shots, hits: arms.hits - hits0, down: !e.alive && e.state === 'down', shotsAtWren: game.enemies.shotsAtWren, wrenHealth: game.player.health };
+      for (let i = 0; i < 360; i++) game.step();
+      out.retired = !e.active && !game.combatTargets.includes(e);
+      game.player.health = 100; game.wantedLevel.clear(); game.police.reset();
+      return out;
+    },
+    // Blow a parked car with damage: smoke under 45, a blast at 0 with debris and a shake, and an
+    // SPD Beacon blown the same way adds +2 WANTED.
+    blast() {
+      if (game.vehicle) this.enterNearest();
+      this.teleport(-168.6, 30, 0);
+      game.wantedLevel.clear(); game.police.reset();
+      const car = game.placeProp('van', -168.6, 14, Math.PI / 2), b = game.blasts, n0 = b.blown;
+      car.health = 30; game.step(); game.step(); game.step(); game.step();
+      const smoking = b.life.some((l) => l > 0);
+      car.health = 0; game.step();
+      const blown = b.blown === n0 + 1 && car.wrecked, shake = game.chase.shake > 0, debris = b.bits.some((x) => x.life > 0);
+      const pol = game.police;
+      pol.place(0, -160, 30, 0, 0);
+      pol.units[0].car.health = 0;
+      const before = game.wantedLevel.pips;
+      game.step(); game.step();
+      const out = { smoking, blown, shake, debris, cruiserBlown: b.blown === n0 + 2, wantedFromCruiser: game.wantedLevel.pips - before };
+      car.model.visible = false; car.x = car.z = 1e5; car.sync();
+      game.wantedLevel.clear(); pol.reset(); game.player.health = 100;
+      return out;
+    },
+    // Each of the five story missions starts and shows its panel; then it is called off.
+    missionList() {
+      if (game.vehicle) this.enterNearest();
+      const r = game.missions, out = [];
+      for (const m of game.story) {
+        r.start(m);
+        out.push({ n: m.number, header: r.panel()?.header, steps: m.steps.length, kinds: [...new Set(m.steps.map((s) => s.kind))].join(',') });
+        r.finish(false, 'TEST CANCELLED'); r.result = null;
+      }
+      game.wantedLevel.clear(); game.police.reset();
+      return out;
+    },
+    // Autopilot: plays a story mission through its steps with test-only moves (walk or drive the
+    // focus toward the marker, take the car it needs, beat each fighter, wait out dialogue) until a
+    // result card shows. Returns the stages it went through and the card.
+    autopilot(index = 0) {
+      if (game.vehicle) this.enterNearest();
+      game.wantedLevel.clear(); game.police.reset();
+      const r = game.missions, m = game.story[index], seen = [];
+      r.completed.delete(m.id);
+      this.teleport(m.start.x, m.start.z + 1, 0);
+      for (let i = 0; i < 3 && !r.mission; i++) game.step();
+      if (r.mission !== m) r.start(m);
+      let n = 0;
+      while (r.mission && n++ < 20000) {
+        const step = r.step, tag = `${r.index + 1}:${step.kind}`;
+        if (seen[seen.length - 1] !== tag) seen.push(tag);
+        const f = game.vehicle || game.player, t = r.target;
+        if (step.kind === 'steal') {
+          const car = step.car ? game.albacore : game.albacore;
+          if (!game.vehicle) { game.player.x = car.x - Math.cos(car.heading) * 2.2; game.player.z = car.z + Math.sin(car.heading) * 2.2; this.enterNearest(); }
+          else if (step.car && game.vehicle.name !== step.car) this.enterNearest();
+        } else if (step.kind === 'loseWanted' && !t) game.wantedLevel.clear();
+        else if (step.kind === 'eliminate' || step.kind === 'defend') {
+          for (const e of game.enemies.active) if (e.alive && e.state !== 'flee') e.hit(500);
+        } else if (t && Math.hypot(t.x - f.x, t.z - f.z) > 1) {
+          const d = Math.hypot(t.x - f.x, t.z - f.z), s = Math.min(d, 1.5);
+          f.x += (t.x - f.x) / d * s; f.z += (t.z - f.z) / d * s;
+          if (game.vehicle) { f.vx = f.vz = f.speed = 0; f.sync(); }
+          if (step.kind === 'loseWanted' && d < 3) game.wantedLevel.clear();
+        }
+        game.step();
+      }
+      const card = r.resultCard();
+      return { mission: m.title, stages: seen, ticks: n, card: card && { title: card.title, sub: card.sub, rows: card.rows }, done: r.completed.has(m.id) };
+    },
     step(n = 1) { for (let i = 0; i < n; i++) game.step(); return this.snapshot(); },
     key(code, down) { game.input.setKey(code, down); },
     teleport(x, z, facing = 0) {

@@ -366,6 +366,14 @@ function drawPortrait(ctx, who, x, y, size) {
   } else if (p.name === 'ILSE VARGA') {
     ctx.beginPath(); ctx.ellipse(x + c, y + size * 0.42, size * 0.25, size * 0.26, 0, Math.PI * 0.9, Math.PI * 2.1, true); ctx.fill();
     ctx.fillStyle = '#1aa39a'; ctx.fillRect(x + c - size * 0.24, y + size * 0.23, size * 0.48, size * 0.09);
+  } else if (p.name === 'AUGUSTIN PELL') {
+    // Swept-back silver hair, a black suit collar and the Gilded Hand's gold pin.
+    ctx.beginPath(); ctx.ellipse(x + c, y + size * 0.3, size * 0.23, size * 0.11, 0, Math.PI, 0); ctx.fill();
+    ctx.fillRect(x + c - size * 0.23, y + size * 0.3, size * 0.05, size * 0.12); ctx.fillRect(x + c + size * 0.18, y + size * 0.3, size * 0.05, size * 0.12);
+    ctx.fillStyle = '#15171c';
+    ctx.beginPath(); ctx.ellipse(x + c, y + size * 1.02, size * 0.42, size * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f4efe4'; ctx.beginPath(); ctx.moveTo(x + c - size * 0.08, y + size * 0.74); ctx.lineTo(x + c + size * 0.08, y + size * 0.74); ctx.lineTo(x + c, y + size * 0.9); ctx.fill();
+    ctx.fillStyle = '#f2c230'; ctx.beginPath(); ctx.arc(x + c - size * 0.22, y + size * 0.86, size * 0.045, 0, Math.PI * 2); ctx.fill();
   } else {
     ctx.fillStyle = '#14304f';
     ctx.fillRect(x + c - size * 0.25, y + size * 0.17, size * 0.5, size * 0.13);

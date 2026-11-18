@@ -174,6 +174,40 @@ await test('combat', async () => {
   return s;
 });
 
+await test('enemy', async () => {
+  const s = await call(() => window.__test.enemy());
+  ok(s.firstShotHit, 'the first Wasp shot at a gunman 12 m ahead missed');
+  ok(s.hitMarker, 'no hit marker on the gunman');
+  ok(s.down && s.shots <= 6, `gunman still up after ${s.shots} shots`);
+  ok(s.retired, 'the downed gunman was not returned to the pool');
+  return s;
+});
+
+await test('blast', async () => {
+  const s = await call(() => window.__test.blast());
+  ok(s.smoking, 'a car at 30 health does not smoke');
+  ok(s.blown && s.shake && s.debris, 'no blast, shake or debris at 0 health');
+  ok(s.cruiserBlown && s.wantedFromCruiser === 2, `a blown Beacon gave ${s.wantedFromCruiser} pips`);
+  return s;
+});
+
+await test('autopilot', async () => {
+  const s = await call(() => window.__test.autopilot(0));
+  ok(s.card && s.card.title === 'JOB DONE' && s.done, `mission 1 ended without JOB DONE (${JSON.stringify(s.card)})`);
+  ok(s.stages.length >= 4, `only ${s.stages.length} stages: ${s.stages}`);
+  const f = await call(() => window.__test.autopilot(4));
+  ok(f.card && f.card.title === 'SOLARA COURIER' && f.done, `mission 5 ended without the front page (${JSON.stringify(f.card)})`);
+  return { m1: s, m5: { stages: f.stages, card: f.card } };
+});
+
+await test('mission-list', async () => {
+  const s = await call(() => window.__test.missionList());
+  ok(s.length === 5, `${s.length} story missions`);
+  s.forEach((m) => ok(m.steps >= 4 && m.header === `MISSION ${m.n}/5 · ${m.header.split(' · ')[1]}`, `mission ${m.n} did not start`));
+  ok(s.some((m) => m.kinds.includes('eliminate')) && s.some((m) => m.kinds.includes('defend')), 'no fight steps');
+  return s;
+});
+
 await test('perf', async () => {
   await call(() => window.__test.teleport(-174.6, 0, 0));
   const p = await call(() => window.__test.perf(30));
