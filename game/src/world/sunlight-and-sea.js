@@ -32,11 +32,12 @@ export function createSunSoakedLighting(game) {
   const colors = [];
   const pos = skyGeo.attributes.position;
   // Golden-hour bands: warm gold at the horizon, a thin rose-peach band, then clear blue overhead.
-  const top = new THREE.Color(0x2a5fa8), mid = new THREE.Color(0x8fb4dc), rose = new THREE.Color(0xf2b49c), low = new THREE.Color(HORIZON);
+  // The rose stays a soft band near the horizon (no purple, blue overhead): brief section 9.3.
+  const top = new THREE.Color(0x2a5fa8), mid = new THREE.Color(0x92b2d8), rose = new THREE.Color(0xf4a596), low = new THREE.Color(0xffa45e);
   for (let i = 0; i < pos.count; i++) {
     const h = Math.max(0, pos.getY(i) / 450);
-    const c = h < 0.08 ? low.clone().lerp(rose, h / 0.08)
-      : h < 0.24 ? rose.clone().lerp(mid, (h - 0.08) / 0.16) : mid.clone().lerp(top, Math.min(1, (h - 0.24) / 0.55));
+    const c = h < 0.1 ? low.clone().lerp(rose, h / 0.1)
+      : h < 0.27 ? rose.clone().lerp(mid, (h - 0.1) / 0.17) : mid.clone().lerp(top, Math.min(1, (h - 0.27) / 0.5));
     colors.push(c.r, c.g, c.b);
   }
   skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
@@ -46,7 +47,7 @@ export function createSunSoakedLighting(game) {
   const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(15, 24), new THREE.MeshBasicMaterial({ color: 0xfff1c8, fog: false, toneMapped: false }));
   sunDisc.renderOrder = -8;
   // The sun's glow: a soft additive halo behind the disc (a cheap stand-in for a bloom pass).
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(150, 150), new THREE.MeshBasicMaterial({
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), new THREE.MeshBasicMaterial({
     map: sunGlowTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false }));
   glow.position.z = -0.5;
   glow.renderOrder = -9;
@@ -104,17 +105,17 @@ export function createSunSoakedLighting(game) {
   return light;
 }
 
-export const HORIZON = 0xf7c08e;
+export const HORIZON = 0xfab27e;
 
 function sunGlowTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
-  grad.addColorStop(0, 'rgba(255,236,190,0.95)');
-  grad.addColorStop(0.18, 'rgba(255,200,130,0.55)');
-  grad.addColorStop(0.5, 'rgba(255,160,90,0.18)');
-  grad.addColorStop(1, 'rgba(255,140,80,0)');
+  grad.addColorStop(0, 'rgba(255,236,190,1)');
+  grad.addColorStop(0.14, 'rgba(255,196,120,0.62)');
+  grad.addColorStop(0.42, 'rgba(255,150,80,0.24)');
+  grad.addColorStop(1, 'rgba(255,120,70,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
   const t = new THREE.CanvasTexture(c);

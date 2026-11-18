@@ -1,5 +1,31 @@
 # PORT SOLARA build notes
 
+## M6 cover light and staging: done (run of 2026-11-19 00:12-00:47 EET)
+- (a) Cover re-staged toward the sun (camera spot moved, sun untouched): the Albacore now runs due
+  west on Rua 5 (z -30) from x -122 (already inside Palmline Beach, so no district card rises over
+  the sky) toward the Palmline crossing, the beach and the sea; 60 ticks of real sim, then squared
+  up at 26 m/s. The arm looks 0.2 rad right of the sun's bearing (`FRAME.sunRight`, yaw from
+  `light.sunDir`), so the sun disc and its glow sit upper middle-left between the left-hand
+  buildings and the palms. The fourth Beacon comes down Palmline toward the crossing ahead.
+- World bug fixed on the way (world/city-builder.js): the inland palm row (boulevard + 15 m) is
+  planted 8 m on from the loop's z but only the loop's z was tested against cross streets, so a
+  palm stood in the roadway of Rua 5 at (-165, -32) (cars could hit it; it cut the new cover). The
+  row now tests its own z.
+- (b) Warm grade (world/sunlight-and-sea.js): horizon/fog 0xfab27e (was 0xf7c08e), sky orange
+  0xffa45e at the horizon into a soft rose 0xf4a596 band up to 10% of the dome, then blue (no
+  purple; the rose stays a band near the horizon, as brief section 9.3 asks); the sun's additive
+  halo 220 m (was 150) with a hotter core. Police bar glows (the existing one-draw-call additive
+  Points) are 3.4 (was 2.6). No vendored bloom pass (three.js addons are not in vendor/), so no
+  extra draw calls: the glow stays the halo quad plus the bar Points.
+- (c) Two Beacons flank the coupe (`FRAME.flank`: 6 m ahead / 3.5 m left, 9 m ahead / 3.5 m right;
+  the SPD list reads GULL 11 7 m and TIDE 14 9 m), both bars lit; civilian cars inside 14 m go back
+  to the traffic pool through its own `despawn`. SKYLARK 1 sits right of the sun (NDC 0.2, 0.5,
+  14 m up) with its searchlight on the car.
+- (d) A/B (out/ab/run3-before-1-chase.jpg vs the new cover, side by side at 100% and 50% in
+  out/ab/run3-ab-*.jpg): the new cover is clearly warmer (sun and glow in frame, orange-rose
+  horizon over the sea, lit bars) and every panel reads the same, so it stays. It shows 93 km/h
+  (was 145); that is the real speed of the staged state.
+
 ## M6 Polish and freeze: partial (run of 2026-11-18 23:24-23:50 EET; steps 1, 2, 4, 5, 6 done, 3 not)
 - Step 1 golden hour (world/sunlight-and-sea.js): sun about 15 degrees up in the WSW (was 28),
   warm 0xffbf7a sun at 3.1, hemisphere cool sky 0xb8c6ec over warm sand 0xeaae78 (shadows stay

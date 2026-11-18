@@ -248,7 +248,8 @@ function plantPalms(game) {
   for (let z = -280; z <= 280; z += 16) {
     if (roads.ewRoads.some((r) => Math.abs(r - z) < 10)) continue;
     spots.push([roads.boulevardX - 3.2, z], [roads.boulevardX + 3.2, z]); // the double median row
-    spots.push([roads.boulevardX + 15, z + 8]);
+    // The inland row sits 8 m on: test its own z, or one lands in the roadway (Rua 5 had one at z -32).
+    if (!roads.ewRoads.some((r) => Math.abs(r - (z + 8)) < 8)) spots.push([roads.boulevardX + 15, z + 8]);
     if (z < 150) spots.push([roads.coastX(z) + 22 + random.range(-4, 4), z + random.range(-4, 4)]);
   }
   for (const b of roads.blocks) {

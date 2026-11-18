@@ -473,7 +473,7 @@ function buildBarGlow(count) {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(count * 2 * 3).fill(-50), 3));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(count * 2 * 3), 3));
-  const mat = new THREE.PointsMaterial({ size: 2.6, map: new THREE.CanvasTexture(canvas), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const mat = new THREE.PointsMaterial({ size: 3.4, map: new THREE.CanvasTexture(canvas), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
   const points = new THREE.Points(geo, mat);
   points.frustumCulled = false;
   return points;

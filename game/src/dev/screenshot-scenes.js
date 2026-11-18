@@ -36,9 +36,11 @@ function writeShotSave(game) {
   game.player.x = at.x; game.player.z = at.z;
 }
 
-// Cover framing: the arm behind and above the Albacore (it fills about 28% of the width), TIDE 14's
-// offset ahead/left of it, and SKYLARK 1's screen point (NDC) and height.
-const FRAME = { back: 2.8, up: 1.55, tideAhead: 8, tideLeft: -3.4, heliX: -0.08, heliY: 0.4, heliUp: 13 };
+// Cover framing: the arm behind and above the Albacore (it fills about 28% of the width), the two
+// flanking Beacons' offsets (ahead, sideways; + is the car's right), SKYLARK 1's screen point (NDC)
+// and height, and how far right of the low sun the arm looks (rad), so the sun sits up and left of
+// centre over the sea at the end of the street.
+const FRAME = { back: 2.8, up: 1.55, flank: [[6, -3.5], [9, 3.5]], heliX: 0.2, heliY: 0.5, heliUp: 14, sunRight: 0.2 };
 // Where Wren stands for the Mercado fight (south of the van, facing the Clock Arch).
 const STREET = { x: 153.2, z: 75.5 };
 
@@ -71,10 +73,11 @@ export const SCENES = {
     car.x = -174.6; car.z = 10; car.sync();
     game.player.x = car.x - 2.2; game.player.z = car.z;
     game.enterOrExit();
-    // z sits half a palm spacing (16 m) on from M3a so the camera falls between two median trunks.
-    car.x = -174.6; car.z = 56; car.heading = 0; car.vx = 0; car.vz = -26; car.speed = 26; car.sync();
+    // Westbound on Rua 5 (z -30) toward Palmline, the beach and the low sun over the sea.
+    // It starts inside Palmline Beach (x < -120), so no district card rises over the sun.
+    car.x = -122; car.z = -31; car.heading = Math.PI / 2; car.vx = -26; car.vz = 0; car.speed = 26; car.sync();
     game.chase.framing = { back: FRAME.back, up: FRAME.up };
-    game.chase.yaw = 0.1; game.chase.lastMode = null;
+    game.chase.yaw = Math.PI / 2; game.chase.lastMode = null;
     const wl = game.wantedLevel;
     wl.clear();
     wl.commit('theft', car.x, car.z, 3);
@@ -86,21 +89,28 @@ export const SCENES = {
     // Wren carries the Wasp in this save state: the weapon panel shows it, its ammo and the slots.
     game.arms.select(1);
     const pol = game.police;
-    pol.place(3, -160, -30, Math.PI / 2, 5);
-    hold(['KeyW'], 100);
-    // The pursuit closes up around the Albacore: one alongside, two ahead, SKYLARK 1 on its orbit.
+    // The fourth Beacon comes down Palmline toward the crossing ahead.
+    pol.place(3, -183, -62, Math.PI, 8);
+    hold(['KeyW'], 40);
+    // The pursuit closes up around the Albacore: one on each flank, one ahead, SKYLARK 1 on its orbit.
     const v = Math.abs(car.speed);
-    pol.place(1, car.x - 4.2, car.z - 2.5, 0, v);
-    pol.place(0, car.x + 3.8, car.z - 16, 0, v + 1);
-    pol.place(2, car.x - 3.8, car.z - 24, 0, v - 2);
-    pol.placeHelicopter(car.x + 13.8, car.z - 27.6);
+    pol.place(1, car.x - 2.5, car.z + 4.2, Math.PI / 2, v);
+    pol.place(0, car.x - 16, car.z - 3.8, Math.PI / 2, v + 1);
+    pol.place(2, car.x - 24, car.z + 3.8, Math.PI / 2, v - 2);
+    pol.placeHelicopter(car.x - 27.6, car.z - 13.8);
     hold(['KeyW'], 20);
-    hold(['KeyW', 'KeyD', 'Space'], 12);
-    // TIDE 14 re-set alongside on the left, ahead enough to read in full beside the coupe.
+    // Squared up due west at chase speed again (a nudge from the pursuit can slow or turn it).
+    car.heading = Math.PI / 2; car.vx = -26; car.vz = 0; car.speed = 26; car.sync();
+    // Civilian cars inside the flank slots go back to the pool (its own despawn), so the Beacons own them.
+    for (const d of game.traffic.drivers) if (d.car && Math.hypot(d.car.x - car.x, d.car.z - car.z) < 14) game.traffic.despawn(d);
+    // Two Beacons re-set on the flanks (7-10 m off), so both bars read in full beside the coupe.
     const f = car.forward, side = { x: Math.cos(car.heading), z: -Math.sin(car.heading) };
-    pol.place(1, car.x + f.x * FRAME.tideAhead - side.x * FRAME.tideLeft, car.z + f.z * FRAME.tideAhead - side.z * FRAME.tideLeft, car.heading, Math.abs(car.speed));
-    // SKYLARK 1 in open sky: the world spot 15 m up under a fixed screen point (centre, below the
-    // mission panel, left of the bank tower), so it never sits on a panel whatever the start z.
+    FRAME.flank.forEach(([ahead, right], k) => pol.place(k, car.x + f.x * ahead + side.x * right, car.z + f.z * ahead + side.z * right, car.heading, Math.abs(car.speed)));
+    // The arm looks just right of the sun's bearing (yaw for a view along -sunDir is atan2(-x, -z)).
+    const sd = game.light.sunDir;
+    game.chase.yaw = Math.atan2(-sd.x, -sd.z) - FRAME.sunRight;
+    // SKYLARK 1 in open sky: the world spot 13 m up under a fixed screen point (right of the sun,
+    // below the right-hand panels), so it never sits on a panel or the sun.
     game.chase.update(0, game.focus, game.collide);
     const cam = game.camera, ray = new game.THREE.Vector3(FRAME.heliX, FRAME.heliY, 0.5).unproject(cam).sub(cam.position).normalize();
     const t = (FRAME.heliUp - cam.position.y) / ray.y;
