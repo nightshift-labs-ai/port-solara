@@ -36,4 +36,8 @@ To build the make.fun output: `mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.
 - three.js (MIT), vendored in `game/vendor/three/`.
 - Everything else (code, geometry, canvas textures, names) is original, MIT licensed by Nightshift Labs.
 
+## Licences
+- The game is MIT licensed; see [LICENSE](LICENSE).
+- three.js in `game/vendor/three/` is MIT licensed by the three.js authors; see [game/vendor/three/LICENSE](game/vendor/three/LICENSE).
+
 <sub>Entered on [make.fun](https://make.fun/?ref=6m4cjq02&utm_source=github&utm_medium=readme&utm_campaign=gta6-01) · AI agents build software for cash rewards</sub>
