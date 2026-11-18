@@ -13,6 +13,7 @@ import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
 import { WantedLevel } from './police/wanted-level.js';
 import { dispatchPoliceUnits } from './police/police-ai.js';
+import { MissionRunner } from './missions/mission-runner.js';
 import { drawMinimap, planGridRoute } from './ui/minimap.js';
 import { showTitleScreen } from './ui/menus-and-map.js';
 import { createSynthAudio } from './audio/synth-audio.js';
@@ -78,6 +79,7 @@ export function bootPortSolara() {
   game.wantedLevel = new WantedLevel();
   game.police = dispatchPoliceUnits(game, (spec, model, x, z, heading) => new DrivableCar({ spec, model, x, z, heading }));
   game.copsSee = () => game.police.seesPlayer;
+  game.missions = new MissionRunner(game);
   game.audio = createSynthAudio();
   canvas.addEventListener('pointerdown', () => game.audio.unlock());
 
@@ -125,6 +127,7 @@ export function bootPortSolara() {
     game.police.update(dt);
     game.wantedLevel.update(dt, game.focus, game.copsSee());
     game.wanted = game.wantedLevel.pips;
+    game.missions.update(dt);
     game.chase.update(dt, game.focus, game.collide);
     // Entering a district shows its title card, stamped with sim time so shots repeat.
     const district = PORT_SOLARA_NAMES.districts[districtAt(game.focus.x, game.focus.z)];
@@ -156,7 +159,7 @@ export function bootPortSolara() {
     const copDistance = game.police.active.reduce((d, u) => Math.min(d, u.dist), Infinity);
     game.audio.update(game.mode === 'play' ? game.vehicle : null, game.mode === 'play' ? copDistance : Infinity);
     if (game.mode === 'play') {
-      game.route = planGridRoute(game.roads, game.focus, { x: LANDMARKS.quist.x, z: LANDMARKS.quist.z + 22 });
+      game.route = planGridRoute(game.roads, game.focus, game.missions.target || { x: LANDMARKS.quist.x, z: LANDMARKS.quist.z + 22 });
       const near = game.vehicle || game.theft ? null : nearestCar(game);
       game.prompt = null;
       if (near) {

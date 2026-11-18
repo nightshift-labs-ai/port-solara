@@ -4,6 +4,9 @@ import { countWitnesses } from '../police/wanted-level.js';
 export function exposeTestHooks(game) {
   window.__test = {
     start() { game.startPlay(); return this.snapshot(); },
+    // Starts a mission (a step list) and returns what the mission panel shows.
+    startMission(mission) { game.missions.start(mission); return game.missions.panel(); },
+    missionState() { const r = game.missions; return { panel: r.panel(), result: r.result, target: r.target, subtitle: r.subtitle, route: game.route }; },
     snapshot() {
       const p = game.player, car = game.vehicle;
       return {

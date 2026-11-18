@@ -1,5 +1,32 @@
 # PORT SOLARA build notes
 
+## M3b in progress (run of 2026-11-18 20:21-20:37 EET: steps 0 and 1 done)
+- Step 0 cover QA: tyre smoke is now one Points object of soft round sprites (64 px radial-gradient
+  CanvasTexture, per-puff size 0.35 -> 1.25 m and alpha 0.42 fading to 0 within 1 s), emitted half
+  as often, half a metre behind the rear wheels and drifting back, so it trails the car instead of
+  covering it. Cover start z 60 -> 56 so no median trunk stands in front; SKYLARK 1 is re-placed
+  after the sim (car + 7, -30) so it is in frame with its searchlight. The bottom-left panel no
+  longer repeats the district (title card only); its right slot is kept for ammo/REP.
+  1-chase.jpg re-shot: 171.7 KiB (q80).
+- Step 1 missions/mission-runner.js `class MissionRunner`: data step lists (goto, steal, deliver,
+  chase, loseWanted, dialogue; eliminate/defend are timed stubs for M4; any step may carry
+  `seconds` (fails with OUT OF TIME) and `heat` (raises WANTED on entry)). Each step sets the panel
+  text, a gold beam + ring world marker (2 draw calls, hidden with no mission) and `missions.target`,
+  which the minimap GPS route now aims at. Finishing sets `result` {passed, time, cash, rep} and pays
+  the cash. HUD: while a mission runs, the banner is the mission panel ("MISSION 3/5 · THE HARBOR
+  RUN", objective with live distance "Reach the Docks · 0.3 km", STAGE n/m bar, step timer m:ss
+  flashing under 10 s, "NEXT · ..." line); the district card and SPD RESPONSE stack under its real
+  height, so nothing overlaps. Test hooks `startMission(m)` and `missionState()`; a probe ran a
+  3-step mission to a passed result with no console errors.
+- HUD fix: the WANTED panel always keeps its tag row, so the clock no longer sits on "WANTED" (or on
+  the cash) when no pips are lit.
+- Self-test after step 1: 12/12 SELFTEST PASS (no mission test yet; that is step 6).
+- Next (step 2 on): story-missions.js STORY_MISSIONS (all five by name and giver, 1 and 3 playable;
+  mission 3's Mercado fight becomes a short dialogue/escape step until M4 combat), start markers in
+  the world and on the minimap; lane-graph gold GPS route (planGridRoute is still the old 3-leg
+  grid route); result cards (own wording); dialogue portraits, REP bar, toasts; radio chip; mission
+  and gps self-tests; re-stage the cover with the mission panel.
+
 ## Done (M3a Police: complete, steps 1-7, run of 2026-11-18 19:51-20:30 EET)
 - Step 2 police/police-ai.js `dispatchPoliceUnits` (file named police-ai.js by run direction; the
   brief's table says police-response.js, the first declaration is the same): a pool of 6 units built

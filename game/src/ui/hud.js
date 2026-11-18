@@ -8,15 +8,20 @@ export function drawHud(ctx, game, drawMinimap) {
   ctx.clearRect(0, 0, w, h);
   ctx.textBaseline = 'alphabetic';
 
-  // Objective banner.
-  const obj = game.objective;
-  ctx.font = font(30 * s);
-  const bw = Math.max(ctx.measureText(obj.title).width, (ctx.font = font(26 * s, 700), ctx.measureText(obj.detail).width)) + 44 * s;
-  panel(ctx, mx, my, bw, 92 * s);
-  ctx.fillStyle = GOLD; ctx.font = font(30 * s);
-  ctx.fillText(obj.title, mx + 22 * s, my + 38 * s);
-  ctx.fillStyle = WHITE; ctx.font = font(26 * s, 700);
-  ctx.fillText(obj.detail, mx + 22 * s, my + 74 * s);
+  // Objective banner, or the mission panel while a story mission runs. Everything on the left
+  // stacks under whatever height it takes, so nothing overlaps.
+  const mission = game.missions?.panel();
+  const bh = mission ? drawMissionPanel(ctx, mission, mx, my, s, game.time) : 92 * s;
+  if (!mission) {
+    const obj = game.objective;
+    ctx.font = font(30 * s);
+    const bw = Math.max(ctx.measureText(obj.title).width, (ctx.font = font(26 * s, 700), ctx.measureText(obj.detail).width)) + 44 * s;
+    panel(ctx, mx, my, bw, bh);
+    ctx.fillStyle = GOLD; ctx.font = font(30 * s);
+    ctx.fillText(obj.title, mx + 22 * s, my + 38 * s);
+    ctx.fillStyle = WHITE; ctx.font = font(26 * s, 700);
+    ctx.fillText(obj.detail, mx + 22 * s, my + 74 * s);
+  }
 
   // District title card under the banner: fades in on entering a district, out after CARD_SECONDS.
   const card = game.districtCard;
@@ -25,7 +30,7 @@ export function drawHud(ctx, game, drawMinimap) {
     ctx.globalAlpha = Math.min(1, age / 0.3, (CARD_SECONDS - age) / 0.6);
     ctx.font = font(38 * s);
     const cw = Math.max(ctx.measureText(card.name).width, (ctx.font = font(22 * s, 700), ctx.measureText(card.sub).width)) + 44 * s;
-    const cy = my + 104 * s;
+    const cy = my + bh + 12 * s;
     panel(ctx, mx, cy, cw, 86 * s);
     ctx.fillStyle = WHITE; ctx.font = font(38 * s);
     ctx.fillText(card.name, mx + 22 * s, cy + 44 * s);
@@ -36,7 +41,7 @@ export function drawHud(ctx, game, drawMinimap) {
 
   // Event toasts (police events) under the WANTED panel on the right, newest on top.
   const toasts = (game.police ? game.police.events : []).filter((e) => game.time - e.at < TOAST_SECONDS).slice(-2).reverse();
-  const toastY = my + 230 * s + 12 * s + 136 * s + (game.wantedLevel?.pips > 0 ? 30 * s : 0) + 12 * s;
+  const toastY = my + 230 * s + 12 * s + 136 * s + 30 * s + 12 * s;
   toasts.forEach((e, i) => {
     const age = game.time - e.at;
     ctx.globalAlpha = Math.min(1, age / 0.25, (TOAST_SECONDS - age) / 0.5);
@@ -53,7 +58,7 @@ export function drawHud(ctx, game, drawMinimap) {
   const units = game.police ? game.police.active.slice().sort((a, b) => a.dist - b.dist) : [];
   if (units.length) {
     const rows = units.slice(0, DISPATCH_ROWS), more = units.length - rows.length;
-    const px = mx, py = my + 206 * s, pw = 356 * s, ph = (48 + rows.length * 34 + (more > 0 ? 28 : 0)) * s;
+    const px = mx, py = my + bh + 114 * s, pw = 356 * s, ph = (48 + rows.length * 34 + (more > 0 ? 28 : 0)) * s;
     panel(ctx, px, py, pw, ph);
     ctx.fillStyle = GOLD; ctx.font = font(21 * s);
     ctx.fillText(`SPD RESPONSE · ${units.length} UNIT${units.length > 1 ? 'S' : ''}`, px + 16 * s, py + 31 * s);
@@ -83,7 +88,7 @@ export function drawHud(ctx, game, drawMinimap) {
   const mapX = w - mx - size, mapY = my;
   drawMinimap(ctx, game, mapX, mapY, size);
   const pipY = mapY + size + 12 * s;
-  const tagRow = game.wantedLevel?.pips > 0 ? 30 * s : 0;
+  const tagRow = 30 * s; // always kept, so the clock has its own row with or without heat
   panel(ctx, mapX, pipY, size, 136 * s + tagRow);
   ctx.fillStyle = WHITE; ctx.font = font(24 * s);
   ctx.fillText('WANTED', mapX + 14 * s, pipY + 30 * s);
@@ -107,7 +112,7 @@ export function drawHud(ctx, game, drawMinimap) {
   // Weekday and clock from the game's own time of day (one game minute per second of play).
   const clock = game.lore.clock, minutes = Math.floor(clock.startMinutes + game.time) % 1440;
   ctx.fillStyle = WHITE; ctx.font = font(21 * s); ctx.textAlign = 'right';
-  ctx.fillText(`${clock.weekday} ${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, mapX + size - 14 * s, pipY + (tagRow ? 104 : 30) * s);
+  ctx.fillText(`${clock.weekday} ${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, mapX + size - 14 * s, pipY + 104 * s);
   ctx.textAlign = 'left';
 
   // Health, armour and weapon.
@@ -198,6 +203,38 @@ export function panel(ctx, x, y, w, h) {
 function bar(ctx, x, y, w, h, frac, color) {
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(x, y, w, h);
   ctx.fillStyle = color; ctx.fillRect(x, y, w * Math.max(0, Math.min(1, frac)), h);
+}
+
+// The mission panel: "MISSION 3/5 · THE HARBOR RUN", the objective with live distance, a stage
+// bar with "STAGE 2/4", the step timer on the right when it has one, and the NEXT line. Returns
+// its height so the panels under it can stack.
+function drawMissionPanel(ctx, m, x, y, s, time) {
+  const h = 150 * s;
+  ctx.font = font(26 * s, 700);
+  const ow = ctx.measureText(m.objective).width;
+  ctx.font = font(22 * s);
+  const w = Math.max(560 * s, ctx.measureText(m.header).width + 44 * s, ow + 44 * s);
+  panel(ctx, x, y, w, h);
+  ctx.fillStyle = GOLD; ctx.fillText(m.header, x + 22 * s, y + 32 * s);
+  ctx.fillStyle = WHITE; ctx.font = font(26 * s, 700);
+  ctx.fillText(m.objective, x + 22 * s, y + 68 * s);
+  const timerW = m.timer != null ? 92 * s : 0;
+  ctx.font = font(15 * s);
+  const stage = `STAGE ${m.stage}/${m.stages}`;
+  const sw = ctx.measureText(stage).width;
+  ctx.fillStyle = 'rgba(255,248,236,0.85)';
+  ctx.fillText(stage, x + 22 * s, y + 98 * s);
+  bar(ctx, x + 34 * s + sw, y + 87 * s, w - 56 * s - sw - timerW, 12 * s, (m.stage - 1) / m.stages, GOLD);
+  if (m.timer != null) {
+    const t = Math.ceil(m.timer);
+    ctx.font = font(22 * s); ctx.textAlign = 'right';
+    ctx.fillStyle = t <= 10 && Math.floor(time * 2) % 2 ? '#ff6b5b' : WHITE;
+    ctx.fillText(`${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, x + w - 22 * s, y + 100 * s);
+    ctx.textAlign = 'left';
+  }
+  ctx.fillStyle = 'rgba(255,248,236,0.72)'; ctx.font = font(19 * s, 700);
+  ctx.fillText(m.next, x + 22 * s, y + 134 * s);
+  return h;
 }
 
 // A police shield pip: dark when unlit, pulsing red/blue when lit.
