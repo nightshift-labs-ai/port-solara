@@ -303,8 +303,8 @@ function drawCityMap(ctx, game, rect, s) {
   ctx.fillStyle = '#fff8ec';
   ctx.fillText('N ▲', rect.x + rect.w - 64 * s, rect.y + 34 * s);
   ctx.restore();
-  ctx.lineWidth = 2 * s; ctx.strokeStyle = '#fff1d6';
-  ctx.beginPath(); ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 18 * s); ctx.stroke();
+  ctx.lineWidth = 1.2 * s; ctx.strokeStyle = 'rgba(255, 241, 214, 0.5)';
+  ctx.beginPath(); ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 12 * s); ctx.stroke();
 }
 
 // Story order: done, then the first open one is current, the rest locked.

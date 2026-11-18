@@ -59,7 +59,7 @@ export function drawHud(ctx, game, drawMinimap) {
   const units = game.police ? game.police.active.slice().sort((a, b) => a.dist - b.dist) : [];
   if (units.length) {
     const rows = units.slice(0, DISPATCH_ROWS), more = units.length - rows.length;
-    const px = mx, py = my + bh + 114 * s, pw = 356 * s, ph = (48 + rows.length * 34 + (more > 0 ? 28 : 0)) * s;
+    const px = mx, py = my + bh + 114 * s, pw = 372 * s, ph = (48 + rows.length * 34 + (more > 0 ? 28 : 0)) * s;
     panel(ctx, px, py, pw, ph);
     ctx.fillStyle = GOLD; ctx.font = font(21 * s);
     ctx.fillText(`SPD RESPONSE · ${units.length} UNIT${units.length > 1 ? 'S' : ''}`, px + 16 * s, py + 31 * s);
@@ -67,13 +67,15 @@ export function drawHud(ctx, game, drawMinimap) {
       const ry = py + (48 + i * 34) * s;
       ctx.fillStyle = WHITE; ctx.font = font(20 * s);
       ctx.fillText(u.call, px + 16 * s, ry + 22 * s);
-      ctx.font = font(19 * s, 700); ctx.fillStyle = 'rgba(255,248,236,0.85)';
-      ctx.textAlign = 'right';
-      ctx.fillText(`${Math.round(u.dist)} m`, px + 228 * s, ry + 22 * s);
-      ctx.textAlign = 'left';
       const [bg, fg] = STATE_COLORS[u.state] || STATE_COLORS.RESPONDING;
       ctx.font = font(15 * s);
       const tw = ctx.measureText(u.state).width + 14 * s;
+      // The distance sits right against the state tag, so a long tag never covers it.
+      ctx.font = font(19 * s, 700); ctx.fillStyle = 'rgba(255,248,236,0.85)';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${Math.round(u.dist)} m`, px + pw - 26 * s - tw, ry + 22 * s);
+      ctx.textAlign = 'left';
+      ctx.font = font(15 * s);
       ctx.fillStyle = bg;
       ctx.beginPath(); ctx.roundRect(px + pw - 16 * s - tw, ry + 3 * s, tw, 24 * s, 6 * s); ctx.fill();
       ctx.fillStyle = fg; ctx.fillText(u.state, px + pw - 9 * s - tw, ry + 21 * s);

@@ -229,10 +229,12 @@ export function bootPortSolara() {
   game.render = () => {
     const hudCtx = hudCanvas.getContext('2d');
     if (game.mode === 'title') {
-      const a = game.time * 0.04;
-      camera.position.set(-150 + Math.cos(a) * 150, 62, -40 + Math.sin(a) * 150);
-      camera.lookAt(-60, 18, -90);
-      game.light.follow({ x: -120, z: -60 }, camera.position);
+      // A slow drone swing 250 m east of the Sundial Tower, looking west over the city to the
+      // low sun and the bay; the needle stays out past the right edge, clear of the wordmark.
+      const a = 0.35 + Math.sin(game.time * 0.05) * 0.12;
+      camera.position.set(-30 + Math.cos(a) * 250, 85, -180 + Math.sin(a) * 250);
+      camera.lookAt(-47, 20, 69);
+      game.light.follow({ x: -60, z: -120 }, camera.position);
     } else {
       game.chase.update(0, game.focus, game.collide);
       game.light.follow(game.focus, camera.position);
