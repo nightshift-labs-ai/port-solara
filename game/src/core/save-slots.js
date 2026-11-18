@@ -16,7 +16,7 @@ export function captureState(game, place) {
     storyOf: game.story.length,
     cash: game.cash,
     rep: game.missions.rep,
-    weapons: { slot: game.arms.slot, ammo: game.arms.ammo.map((a) => ({ clip: a.clip, reserve: a.reserve })) },
+    weapons: { slot: game.arms.slot, ammo: game.arms.ammo.map((a) => ({ clip: a.clip, reserve: a.reserve })), locked: [...game.arms.locked] },
     cars: game.cars.filter((c) => c.owned && !c.ai).map((c) => c.name),
     stats: { races: game.progress.races, courier: game.progress.courier, bestLaps: { ...(game.progress.bestLaps || {}) } },
     time: Math.round(game.time * 100) / 100,
@@ -34,6 +34,7 @@ export function applyState(game, s) {
   game.cash = s.cash;
   if (s.weapons) {
     s.weapons.ammo.forEach((a, i) => { if (game.arms.ammo[i]) { game.arms.ammo[i].clip = a.clip; game.arms.ammo[i].reserve = a.reserve; } });
+    game.arms.locked = new Set(s.weapons.locked || ['hornet']);
     game.arms.slot = s.weapons.slot || 0;
   }
   for (const c of game.cars) if (!c.ai && s.cars?.includes(c.name)) c.owned = true;

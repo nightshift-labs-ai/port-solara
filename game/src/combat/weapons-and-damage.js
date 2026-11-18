@@ -43,6 +43,8 @@ export class PlayerWeapons {
     this.cooldown = 0; this.reloading = 0; this.heatCooldown = 0;
     this.aiming = false; this.firing = 0;
     this.hitMarker = 0; this.shots = 0; this.hits = 0;
+    // The Hornet waits for REP rank 3 at Brass & Barrel (or Ilse's hand-out in mission 4).
+    this.locked = new Set(['hornet']);
     this.seed = 0x2f6e2b1;
     this.fx = buildShotEffects(game.scene);
   }
@@ -52,7 +54,7 @@ export class PlayerWeapons {
   get clip() { return this.ammo[this.slot]; }
 
   select(i) {
-    if (i < 0 || i >= WEAPONS.length || i === this.slot) return;
+    if (i < 0 || i >= WEAPONS.length || i === this.slot || this.locked.has(WEAPONS[i].id)) return;
     this.slot = i; this.reloading = 0; this.cooldown = Math.max(this.cooldown, 0.2);
   }
 
@@ -61,6 +63,7 @@ export class PlayerWeapons {
     const i = WEAPONS.findIndex((w) => w.id === id);
     if (i < 0) return;
     const w = WEAPONS[i], a = this.ammo[i];
+    this.locked.delete(id);
     a.clip = w.clip; a.reserve = Math.max(a.reserve, (w.reserve || 0) / 2);
     this.select(i);
   }

@@ -206,7 +206,7 @@ export function formatDistance(d) {
 }
 
 // A gold beam with a spinning ring at its foot: 2 draw calls, additive so it reads in sun.
-function buildMarker(THREE, scale = 1) {
+export function buildMarker(THREE, scale = 1) {
   const group = new THREE.Group();
   group.scale.setScalar(scale);
   const gold = (opacity) => new THREE.MeshBasicMaterial({ color: 0xffc21f, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });

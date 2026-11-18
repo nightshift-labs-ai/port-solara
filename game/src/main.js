@@ -16,6 +16,7 @@ import { PlayerWeapons } from './combat/weapons-and-damage.js';
 import { EnemyCrews } from './combat/enemies.js';
 import { CarExplosions } from './combat/car-explosions.js';
 import { MissionRunner } from './missions/mission-runner.js';
+import { SideActivities } from './missions/side-activities.js';
 import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
 import { drawMinimap } from './ui/minimap.js';
@@ -44,8 +45,8 @@ export function bootPortSolara() {
     time: 0, tick: 0,
     mode: 'title',
     cash: 18450, wanted: 0,
-    // Side activity counts for the map panel (the activities themselves arrive in M5 step 4).
-    progress: { races: 0, racesOf: 4, courier: 0, courierOf: 10, savedAt: null },
+    // Side activity counts for the map panel (missions/side-activities.js runs them).
+    progress: { races: 0, racesOf: 4, courier: 0, courierOf: 10, bestLaps: {}, sold: 0, savedAt: null },
     objective: FREE_ROAM_OBJECTIVE,
     cars: [], vehicle: null, prompt: null, route: null,
     districtAt, districtName: '',
@@ -124,7 +125,7 @@ export function bootPortSolara() {
     const path = a === b ? [a] : [a, ...routeOverLanes(a, b)];
     return [{ x: from.x, z: from.z }, ...path.map((n) => ({ x: n.x, z: n.z })), { x: to.x, z: to.z }];
   };
-  game.gpsGoal = () => game.missions.target || game.missions.openStarts[0]?.mission.start || { x: LANDMARKS.quist.x, z: LANDMARKS.quist.z + 30 };
+  game.gpsGoal = () => game.missions.target || (game.side?.active && game.side.goal) || game.missions.openStarts[0]?.mission.start || { x: LANDMARKS.quist.x, z: LANDMARKS.quist.z + 30 };
   let routeAt = -1, routeGoal = null;
   game.updateRoute = () => {
     const goal = game.gpsGoal();
@@ -178,6 +179,7 @@ export function bootPortSolara() {
       if (code === 'KeyF' && !game.theft && !inCustody) game.enterOrExit();
       if (code === 'KeyR' && game.vehicle) game.radio.station = (game.radio.station + 1) % 2; // Gull FM / Low Tide
       if (code === 'KeyE' && nearSafehouse(game)) game.saveNote = { text: game.saveGame('Calloway Salvage'), at: game.time };
+      else if (code === 'KeyE') game.side.use(); // races, courier, Quist Auto, gun shop, respray
     }
     const onFoot = !game.vehicle && !game.theft && !inCustody;
     game.arms.update(dt, input.held, presses, onFoot);
@@ -207,6 +209,7 @@ export function bootPortSolara() {
     game.wantedLevel.update(dt, game.focus, game.copsSee());
     game.wanted = game.wantedLevel.pips;
     game.missions.update(dt);
+    game.side.update(dt);
     game.chase.update(dt, game.focus, game.collide);
     // Entering a district shows its title card, stamped with sim time so shots repeat.
     const district = PORT_SOLARA_NAMES.districts[districtAt(game.focus.x, game.focus.z)];
@@ -219,7 +222,7 @@ export function bootPortSolara() {
     game.objective = wl.pips > 0 ? {
       title: 'LOSE THE SPD - BREAK LINE OF SIGHT',
       detail: wl.inSight ? `In sight · stay unseen ${wl.escapeSeconds}s to escape` : `Unseen ${Math.floor(wl.unseenFor)}s of ${wl.escapeSeconds}s · leave the search zone`,
-    } : game.missions.openStarts[0] ? storyObjective(game.missions.openStarts[0].mission) : FREE_ROAM_OBJECTIVE;
+    } : game.side.active ? game.side.objective() : game.missions.openStarts[0] ? storyObjective(game.missions.openStarts[0].mission) : FREE_ROAM_OBJECTIVE;
   };
 
   const v = new THREE.Vector3();
@@ -252,6 +255,13 @@ export function bootPortSolara() {
         v.set(home.x, 2.2, home.z).project(camera);
         if (v.z < 1) game.prompt = { text: note, x: (v.x * 0.5 + 0.5) * hudCanvas.width, y: (-v.y * 0.5 + 0.5) * hudCanvas.height };
       }
+      // At a race flag, Quist Auto, the gun shop or Pelican Fuel: what [E] does there.
+      const offer = !game.prompt && game.side.offer();
+      if (offer) {
+        const p = game.side.spotHere();
+        v.set(p.x, 2.2, p.z).project(camera);
+        if (v.z < 1) game.prompt = { text: offer, x: (v.x * 0.5 + 0.5) * hudCanvas.width, y: (-v.y * 0.5 + 0.5) * hudCanvas.height };
+      }
       drawHud(hudCtx, game, drawMinimap);
     }
   };
@@ -280,6 +290,7 @@ export function bootPortSolara() {
     showTitleScreen(game, game.onNewGame);
   };
   citySpots(game);
+  game.side = new SideActivities(game);
   installSaveSlots(game);
   installPauseAndMap(game);
   showTitleScreen(game, game.onNewGame);

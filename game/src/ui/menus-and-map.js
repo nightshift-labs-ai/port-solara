@@ -427,7 +427,7 @@ export function showTitleScreen(game, onNewGame) {
 
   const strip = document.createElement('div');
   strip.className = 'controls-strip';
-  strip.textContent = 'WASD MOVE · SHIFT RUN · F STEAL/EXIT CAR · SPACE HANDBRAKE · R RADIO';
+  strip.textContent = 'WASD MOVE · F STEAL/EXIT CAR · SPACE HANDBRAKE · E USE · R RADIO · TAB MAP · ESC PAUSE';
   root.append(controls, menu, strip);
 
   const onKey = (e) => {
@@ -450,6 +450,7 @@ export const CONTROLS = [
   ['F', 'enter / leave a car'],
   ['R', 'radio: Gull FM / Low Tide (Heat 96 at WANTED 3+)'],
   ['GOLD RING', 'walk in to start a story mission'],
+  ['E', 'save at Calloway Salvage · race flags · Quist Auto · gun shop · respray'],
   ['ESC', 'pause menu (resume, map, save, quit)'],
   ['TAB', 'full city map'],
 ];
