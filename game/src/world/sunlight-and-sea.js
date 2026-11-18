@@ -76,12 +76,12 @@ export function createSunSoakedLighting(game) {
   return {
     sun, sunDir, sea,
     // Keeps the shadow frustum, the sky and the sun disc centred on the focus point.
-    follow(focus) {
+    follow(focus, eye = focus) {
       sun.position.set(focus.x + sunDir.x * 140, sunDir.y * 140, focus.z + sunDir.z * 140);
       sun.target.position.set(focus.x, 0, focus.z);
-      sky.position.set(focus.x, 0, focus.z);
-      sunDisc.position.set(focus.x + sunDir.x * 430, sunDir.y * 430, focus.z + sunDir.z * 430);
-      sunDisc.lookAt(focus.x, 0, focus.z);
+      sky.position.set(eye.x, 0, eye.z);
+      sunDisc.position.set(eye.x + sunDir.x * 430, sunDir.y * 430, eye.z + sunDir.z * 430);
+      sunDisc.lookAt(eye.x, 0, eye.z);
     },
   };
 }

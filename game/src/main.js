@@ -105,10 +105,10 @@ export function bootPortSolara() {
       const a = game.time * 0.04;
       camera.position.set(-150 + Math.cos(a) * 150, 62, -40 + Math.sin(a) * 150);
       camera.lookAt(-60, 18, -90);
-      game.light.follow({ x: -120, z: -60 });
+      game.light.follow({ x: -120, z: -60 }, camera.position);
     } else {
       game.chase.update(0, game.focus, game.collide);
-      game.light.follow(game.focus);
+      game.light.follow(game.focus, camera.position);
     }
     renderer.render(scene, camera);
     if (game.mode === 'play') {
