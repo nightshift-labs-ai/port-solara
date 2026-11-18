@@ -25,8 +25,20 @@
   out/ab/run3-ab-*.jpg): the new cover is clearly warmer (sun and glow in frame, orange-rose
   horizon over the sea, lit bars) and every panel reads the same, so it stays. It shows 93 km/h
   (was 145); that is the real speed of the staged state.
+- Self-test (SwiftShader, 1280x800): SELFTEST PASS 23/23. Perf before (last run): HIGH 169 draw
+  calls / 42,379 tris / median 2.1 ms; LOW 110 / 26,135 / 1.3-1.5 ms. After: HIGH 166 / 41,655 /
+  median 1.4 ms / heap 45 MB; LOW 108 / 25,743 / 1.5 ms (the stray in-road palms were instances, so
+  three fewer calls and fewer tris). Inside the 4 ms target and the brief's budget.
+- Originality PASS (32 files). main.ts twice: 40 files byte-identical, dossier 1,112,905 bytes.
+- Shots: 1-chase.jpg 172.2 KiB, 2-street.jpg 168.7 KiB, 3-map.jpg 167.5 KiB, 4-title.jpg 183.7 KiB
+  (each at its usual quality). Judge sheet rebuilt: at 50% the cover reads as a sunset police chase
+  with the helicopter; street, map and title keep their purpose.
+- Next: round minimap, drawn weapon icons, a play-time controls strip (from the earlier list);
+  tail-light glow on the player car (the shared bar-glow Points has one size, so it would need its
+  own smaller sprite set); a pedestrian or two in the cover's view (the corner crowd sits behind
+  the SPD panel). Graphics LOW still keeps the sun halo and bar glows (two cheap draw calls).
 
-## M6 Polish and freeze: partial (run of 2026-11-18 23:24-23:50 EET; steps 1, 2, 4, 5, 6 done, 3 not)
+## M6 Polish and freeze: steps 1, 2, 4, 5, 6 (run of 2026-11-18 23:24-23:50 EET); step 3 in the run above
 - Step 1 golden hour (world/sunlight-and-sea.js): sun about 15 degrees up in the WSW (was 28),
   warm 0xffbf7a sun at 3.1, hemisphere cool sky 0xb8c6ec over warm sand 0xeaae78 (shadows stay
   blue-tinted, as the brief asks), sky bands gold horizon -> thin rose-peach -> blue (kept off a
@@ -41,7 +53,7 @@
   in the street shot; the bug was there at full size too). Title menu and controls strip (CSS) and
   the map frame use the same slim style. **Not done:** round minimap, drawn weapon icons, a
   bottom-centre controls strip in play (the title strip lists the real bindings).
-- Step 3 cover staging: **not done** (the camera still faces away from the sun, so the sun disc is
+- Step 3 cover staging: done in the 00:12 EET run (see above). At the time of this run it was **not done** (the camera still faces away from the sun, so the sun disc is
   not in the cover; flanking cruisers and the helicopter are the M4 staging, which already has
   SKYLARK 1 over the street and two Beacons near the Albacore).
 - Step 4 shots: all four re-shot on the shared save. 4-title.jpg: the drone now swings 250 m east
@@ -64,8 +76,8 @@
   4-title.jpg 183.5 KiB (q84). The map side panel now has the slim style too (navy glass, 1 px
   rim, gold left strip).
 
-## Next (rest of M6)
-- Cover staging: re-aim the chase camera so the low sun sits in frame; glow on police bars and
+## Next (rest of M6), as written after the 23:24 run
+- Cover staging (done in the 00:12 EET run by heading the chase west on Rua 5): re-aim the chase camera so the low sun sits in frame; glow on police bars and
   tail lights (a vendored bloom pass or additive light-bar halos), measured on SwiftShader.
   Tried and reverted in the 23:43-23:52 EET cover-light run: swinging the chase arm toward the sun
   (yaw +1.15 and +0.55, TIDE 14 moved to the other side) warms the left horizon, but the sun disc
