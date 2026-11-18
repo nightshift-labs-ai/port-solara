@@ -31,7 +31,7 @@ export function showTitleScreen(game, onNewGame) {
 
   const strip = document.createElement('div');
   strip.className = 'controls-strip';
-  strip.textContent = 'WASD MOVE · MOUSE LOOK · SHIFT RUN · F ENTER/EXIT CAR · SPACE HANDBRAKE';
+  strip.textContent = 'WASD MOVE · MOUSE LOOK · SHIFT RUN · F STEAL/EXIT CAR · SPACE HANDBRAKE';
   root.append(controls, menu, strip);
 
   const onKey = (e) => {

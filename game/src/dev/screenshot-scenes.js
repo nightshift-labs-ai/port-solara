@@ -27,10 +27,12 @@ export const SCENES = {
   },
   // Wren on foot in Old Mercado's market square, the Clock Arch ahead and a Pipit to take.
   street(game, hold) {
+    hold([], 300);
+    game.crowd.gatherNear(150, 30, 12, 18);
     game.startPlay();
-    game.player.x = 151.5; game.player.z = 82; game.player.facing = 0.15;
-    game.chase.yaw = 0.15;
-    hold(['KeyW'], 70);
+    game.player.x = 153.5; game.player.z = 81.5; game.player.facing = 0.03;
+    game.chase.yaw = 0.03;
+    hold(['KeyW'], 85);
   },
   // The title over a drone orbit of the live city.
   title(game) {
