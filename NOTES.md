@@ -1,5 +1,58 @@
 # PORT SOLARA build notes
 
+## M4 step 1 Weapons + cover QA: done (short run of 2026-11-18 21:17-21:44 EET)
+- File name: the run brief said src/combat/weapons.js, but the brief's file table (row 14) names
+  **src/combat/weapons-and-damage.js** with `fireWeapon`, so that is the file (`fireWeapon` first).
+- `fireWeapon(game, from, dir, range)`: hitscan along the crosshair ray (camera forward), 0.4 m
+  steps against building boxes from the spatial hash (box `h`), car body boxes in car space (parked,
+  traffic, SPD units), `game.combatTargets` (x, z, radius, height, alive, hit(d)) and the ground.
+- `WEAPONS`: FISTS (15 dmg, 1.9 m punch), WASP PISTOL (24 dmg, 70 m, 12 + 60, semi-auto, 1.2 s
+  reload), HORNET SMG (11 dmg, 50 m, 30 + 150, auto, wider spread). The Breaker shotgun is cut for
+  now (next step). `PlayerWeapons`: 1/2/3, Q and the wheel switch; R reloads on foot (still the radio
+  in a car); RMB shoulder aim (arm 2.4 m over the right shoulder, fov 50, Wren faces the aim, gun arm
+  out, both arms for the Hornet, a dark gun box in hand); LMB fires; own LCG for spread (the world's
+  seeded random is untouched). Effects: one additive star sprite muzzle flash (0.06 s), a pool of 4
+  additive tracer boxes (0.09 s fade), one 48-point sparks cloud with gravity. Hit marker: four gold
+  ticks round the crosshair (0.28 s); the crosshair only shows while aiming or firing on foot. No gore.
+  Gunfire panics walkers within 30 m and, if a walker or the SPD sees it, commits `gunfire` (+1 pip,
+  at most once per 12 s). Shots on cars take `health` (SPD wrecks come from the M3a hook).
+- Input: Mouse0 / Mouse2 in the held set, wheel presses, no context menu on the canvas.
+- HUD weapon panel 124 px: weapon name + clip (red at 3 or less) / reserve or RELOADING, slot chips
+  "1 FISTS · 2 WASP · 3 HORNET" (gold = held), REP rank on the weapon row's right, its bar beside
+  the chips.
+- Cover QA: (a) the grey disc under the car was SKYLARK 1's ground spot; it is hidden while Wren is
+  in a car (cone kept). (b) SKYLARK 1 is placed by unprojecting a fixed screen point (NDC 0.0/0.38,
+  11 m up) so it sits in sky below the mission panel and left of the bank tower. (c) Cover arm
+  2.8 m back / 1.55 m up (`FRAME` in screenshot-scenes.js): the Albacore is 336 px of 1280 (26%).
+  TIDE 14 is set 11 m ahead / 3.4 m left; with the coupe this large, a cruiser right alongside
+  falls behind the SPD panel, so the two cruisers read just ahead over the roof with lit bars
+  (their lower bodies sit behind the coupe). (d) The cover's save state holds the Wasp: "WASP 12 / 60"
+  with the slot chips.
+
+## Self-test after M4 step 1 (SwiftShader, 1280x800): SELFTEST PASS, 15/15
+- New `combat` test: RMB aim (fov < 56), the first Wasp shot at a target 10 m ahead hits, hit marker
+  shows, the target drops after 5 shots, clip 7 left, gunfire seen = WANTED 1.
+- perf 132 draw calls / 40,187 triangles / median 4.2 ms / heap 22 MB, console clean; all M1-M3
+  tests unchanged.
+- Originality PASS (28 files). main.ts twice: 35 output files byte-identical, dossier 920,400 bytes.
+  (Run main.ts without `ulimit -v`: the cap stops Node's type stripper from reserving Wasm memory.)
+- Shots: 1-chase.jpg 188.2 KiB (q80), 2-street.jpg 174.0 KiB (q88), 4-title.jpg 189.0 KiB (q76).
+  Judge sheet rebuilt; at 50% the cover reads mission, chase, police, helicopter, WANTED, minimap,
+  subtitle, radio and the WASP panel.
+
+## Next (rest of M4)
+- Breaker shotgun; enemies.js (Tidewater gunmen, Gilded Hand guards in cover, pooled) registering in
+  `game.combatTargets`; explosions; missions 2, 4, 5 and the real Mercado fight; Pell's portrait;
+  autopilot and mission-list tests; 2-street.jpg staged with the Wasp aimed, two gunmen behind a
+  Dockhand van, flash, tracer, sparks, hit marker.
+
+## Bugs / debts (M4 step 1)
+- Cover: the cruisers are not fully in frame beside the coupe (left of it is the SPD panel); a
+  shorter SPD panel or no district card on the cover would free that space.
+- SKYLARK 1 reads small (11 m up, about 45 m out) between palm fronds.
+- No drive-by fire; fists only hit combat targets (no punching walkers, on purpose: no gore).
+- The tracer starts at a fixed muzzle point, not the gun mesh's world position.
+
 ## M3b Missions: done (steps 2-7 in the run of 2026-11-18 20:55-21:36 EET)
 - Cover fixes first: the grey disc round the car was SKYLARK 1's searchlight (cone base 5.2 m, so
   the low chase camera sat inside it); cone and ground disc are now `SPOT_RADIUS` 2.6 m, disc

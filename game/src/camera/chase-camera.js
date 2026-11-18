@@ -51,12 +51,13 @@ export class ChaseCamera {
       cam.fov += ((65 + Math.min(12, speed * 0.24)) - cam.fov) * Math.min(1, dt * 2);
     } else {
       const p = focus;
-      const side = 0.7, height = 1.75;
+      // RMB shoulder aim: the arm pulls in to 2.4 m over the right shoulder and the lens narrows.
+      const side = this.aiming ? 0.85 : 0.7, height = this.aiming ? 1.7 : 1.75, reach = this.aiming ? 2.4 : 4.2;
       const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
       const rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
       // Spring arm: march out from the shoulder and stop short of any building.
-      let want = 4.2;
-      for (let s = 0.5; s <= 4.2; s += 0.35) {
+      let want = reach;
+      for (let s = 0.5; s <= reach; s += 0.35) {
         const x = p.x + rx * side - fx * s * Math.cos(this.pitch), z = p.z + rz * side - fz * s * Math.cos(this.pitch);
         if (collide.pointInside(x, z)) { want = Math.max(0.6, s - 0.4); break; }
       }
@@ -64,7 +65,7 @@ export class ChaseCamera {
       const horiz = this.arm * Math.cos(this.pitch);
       this.pos.set(p.x + rx * side - fx * horiz, height + this.arm * Math.sin(this.pitch), p.z + rz * side - fz * horiz);
       this.target.set(p.x + rx * side + fx * 4, height - 0.1, p.z + rz * side + fz * 4);
-      cam.fov += (62 - cam.fov) * Math.min(1, dt * 3);
+      cam.fov += ((this.aiming ? 50 : 62) - cam.fov) * Math.min(1, dt * 3);
     }
     cam.position.copy(this.pos);
     if (this.shake > 0) {

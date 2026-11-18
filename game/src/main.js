@@ -12,6 +12,7 @@ import { stealNearestCar, updateCarTheft, nearestCar } from './player/car-theft.
 import { WantedLevel } from './police/wanted-level.js';
 import { dispatchPoliceUnits, routeOverLanes, nearestNode } from './police/police-ai.js';
 import { STORY_MISSIONS, SPEAKERS, rankFor } from './missions/story-missions.js';
+import { PlayerWeapons } from './combat/weapons-and-damage.js';
 import { MissionRunner } from './missions/mission-runner.js';
 import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
@@ -81,6 +82,8 @@ export function bootPortSolara() {
   game.police = dispatchPoliceUnits(game, (spec, model, x, z, heading) => new DrivableCar({ spec, model, x, z, heading }));
   game.copsSee = () => game.police.seesPlayer;
   game.toast = (text) => game.police.toast(text);
+  game.combatTargets = [];
+  game.arms = new PlayerWeapons(game);
   game.story = STORY_MISSIONS;
   game.missions = new MissionRunner(game, STORY_MISSIONS);
   // GPS: the lane graph's A* from the crossing nearest Wren to the one nearest the goal, re-planned
@@ -138,10 +141,14 @@ export function bootPortSolara() {
     game.crowd.update(dt, game.focus);
     if (game.mode !== 'play') { game.input.takePresses(); return; }
     const inCustody = game.police.updateCustody(dt);
-    for (const code of input.takePresses()) {
+    const presses = input.takePresses();
+    for (const code of presses) {
       if (code === 'KeyF' && !game.theft && !inCustody) game.enterOrExit();
-      if (code === 'KeyR') game.radio.station = (game.radio.station + 1) % 2; // Gull FM / Low Tide
+      if (code === 'KeyR' && game.vehicle) game.radio.station = (game.radio.station + 1) % 2; // Gull FM / Low Tide
     }
+    const onFoot = !game.vehicle && !game.theft && !inCustody;
+    game.arms.update(dt, input.held, presses, onFoot);
+    game.chase.aiming = game.arms.aiming;
     game.radio.heat = game.wantedLevel.pips >= 3; // Heat 96 cuts in at WANTED 3+
     const look = input.takeLook();
     game.chase.look(look.x, look.y);
@@ -155,7 +162,9 @@ export function bootPortSolara() {
       if (game.vehicle.lastImpact > 6) { game.chase.shake = Math.min(1, game.vehicle.lastImpact / 20); game.vehicle.lastImpact = 0; }
       game.player.x = game.vehicle.x; game.player.z = game.vehicle.z;
     } else {
-      game.player.update(dt, { x: input.axis('KeyA', 'KeyD'), z: input.axis('KeyW', 'KeyS') }, game.chase.yaw, input.held.has('ShiftLeft') || input.held.has('ShiftRight'), game.collide);
+      const aim = game.arms.aiming || game.arms.firing > 0;
+      game.player.update(dt, { x: input.axis('KeyA', 'KeyD'), z: input.axis('KeyW', 'KeyS') }, game.chase.yaw, !aim && (input.held.has('ShiftLeft') || input.held.has('ShiftRight')), game.collide, aim ? game.chase.yaw : null);
+      game.player.pose(aim ? game.arms.weapon.id : null);
     }
     for (const car of game.cars) if (car !== game.vehicle && !car.ai && Math.abs(car.speed) > 0.05) car.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide);
     game.tyres.update(dt, game.vehicle);

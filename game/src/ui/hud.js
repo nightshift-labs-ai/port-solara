@@ -116,20 +116,60 @@ export function drawHud(ctx, game, drawMinimap) {
   ctx.textAlign = 'left';
 
   // Health, armour and weapon.
-  const by = h - my - 96 * s;
-  panel(ctx, mx, by, 420 * s, 96 * s);
+  const by = h - my - 124 * s;
+  panel(ctx, mx, by, 420 * s, 124 * s);
   const player = game.player;
   bar(ctx, mx + 16 * s, by + 16 * s, 388 * s, 16 * s, player.health / 100, '#5ad16a');
   bar(ctx, mx + 16 * s, by + 40 * s, 388 * s, 12 * s, player.armour / 100, '#5fb7ff');
-  ctx.fillStyle = WHITE; ctx.font = font(26 * s);
-  ctx.fillText('FISTS', mx + 16 * s, by + 84 * s);
-  // REP rank and progress on the right of the weapon row (ammo joins it with combat in M4).
+  // The held weapon and its ammo (clip / reserve, RELOADING while it reloads), then the slot chips.
+  const arms = game.arms, wpn = arms?.weapon;
+  ctx.fillStyle = WHITE; ctx.font = font(24 * s);
+  ctx.fillText(wpn ? wpn.short : 'FISTS', mx + 16 * s, by + 80 * s);
+  if (wpn?.clip) {
+    const nameW = ctx.measureText(wpn.short).width;
+    ctx.font = font(arms.reloading > 0 ? 14 * s : 20 * s);
+    ctx.fillStyle = arms.reloading > 0 ? GOLD : (arms.clip.clip <= 3 ? '#ff6b5b' : WHITE);
+    ctx.fillText(arms.reloading > 0 ? 'RELOADING' : `${arms.clip.clip}`, mx + 26 * s + nameW, by + 80 * s);
+    if (!(arms.reloading > 0)) {
+      const cw = ctx.measureText(`${arms.clip.clip}`).width;
+      ctx.font = font(15 * s); ctx.fillStyle = 'rgba(255,248,236,0.7)';
+      ctx.fillText(`/ ${arms.clip.reserve}`, mx + 32 * s + nameW + cw, by + 80 * s);
+    }
+  }
+  if (arms) {
+    let sx = mx + 16 * s;
+    ctx.font = font(13 * s);
+    arms.slots.forEach((wd, i) => {
+      const label = `${i + 1} ${wd.short}`, cw = ctx.measureText(label).width + 14 * s, on = i === arms.slot;
+      ctx.fillStyle = on ? GOLD : 'rgba(255,248,236,0.14)';
+      ctx.beginPath(); ctx.roundRect(sx, by + 92 * s, cw, 20 * s, 5 * s); ctx.fill();
+      ctx.fillStyle = on ? '#14304f' : 'rgba(255,248,236,0.85)';
+      ctx.fillText(label, sx + 7 * s, by + 107 * s);
+      sx += cw + 6 * s;
+    });
+  }
+  // REP rank and progress on the right of the weapon row.
   if (game.rankFor) {
     const r = game.rankFor(game.missions.rep);
     ctx.font = font(17 * s); ctx.textAlign = 'right'; ctx.fillStyle = GOLD;
-    ctx.fillText(`REP ${r.rank} · ${r.name}`, mx + 404 * s, by + 72 * s);
+    ctx.fillText(`REP ${r.rank} · ${r.name}`, mx + 404 * s, by + 80 * s);
     ctx.textAlign = 'left';
-    bar(ctx, mx + 196 * s, by + 79 * s, 208 * s, 7 * s, r.frac, GOLD);
+    bar(ctx, mx + 318 * s, by + 99 * s, 86 * s, 7 * s, r.frac, GOLD);
+  }
+  // Crosshair while aiming or firing on foot; the hit marker is four short gold ticks round it.
+  if (arms && !game.vehicle && wpn.clip && (arms.aiming || arms.firing > 0)) {
+    const cx = w / 2, cy = h / 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2 * s;
+    ctx.beginPath();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { ctx.moveTo(cx + dx * 5 * s, cy + dy * 5 * s); ctx.lineTo(cx + dx * 12 * s, cy + dy * 12 * s); }
+    ctx.stroke();
+    if (arms.hitMarker > 0) {
+      ctx.strokeStyle = GOLD; ctx.lineWidth = 3 * s; ctx.globalAlpha = Math.min(1, arms.hitMarker * 6);
+      ctx.beginPath();
+      for (const [dx, dy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) { ctx.moveTo(cx + dx * 8 * s, cy + dy * 8 * s); ctx.lineTo(cx + dx * 17 * s, cy + dy * 17 * s); }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
   }
 
   // Radio chip over the speed panel: an animated level meter, the station, song and artist.

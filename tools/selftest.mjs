@@ -165,6 +165,15 @@ await test('gps', async () => {
   return s;
 });
 
+await test('combat', async () => {
+  const s = await call(() => window.__test.combat());
+  ok(s.aimed, 'RMB did not bring up the shoulder aim');
+  ok(s.firstShotHit, 'the first Wasp shot at a target 10 m ahead missed');
+  ok(s.hitMarker, 'no hit marker after a hit');
+  ok(s.dropped && s.shotsToDrop <= 6, `target still up after ${s.shotsToDrop} shots`);
+  return s;
+});
+
 await test('perf', async () => {
   await call(() => window.__test.teleport(-174.6, 0, 0));
   const p = await call(() => window.__test.perf(30));

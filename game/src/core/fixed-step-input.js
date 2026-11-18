@@ -23,6 +23,11 @@ export function readKeyboardAndMouse(canvas) {
   addEventListener('blur', () => input.held.clear());
   canvas.addEventListener('click', () => { if (!input.pointerLocked && canvas.requestPointerLock) canvas.requestPointerLock(); });
   document.addEventListener('pointerlockchange', () => { input.pointerLocked = document.pointerLockElement === canvas; });
+  // Mouse buttons join the key set as Mouse0 (fire) and Mouse2 (aim); the wheel queues presses.
+  canvas.addEventListener('mousedown', (e) => input.setKey('Mouse' + e.button, true));
+  addEventListener('mouseup', (e) => input.setKey('Mouse' + e.button, false));
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvas.addEventListener('wheel', (e) => input.presses.push(e.deltaY > 0 ? 'WheelDown' : 'WheelUp'), { passive: true });
   addEventListener('mousemove', (e) => {
     if (!input.pointerLocked) return;
     input.lookX += e.movementX;

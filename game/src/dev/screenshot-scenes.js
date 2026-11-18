@@ -13,6 +13,10 @@ export function stageScreenshotScene(game, name) {
   requestAnimationFrame(() => requestAnimationFrame(() => { window.__shotReady = true; }));
 }
 
+// Cover framing: the arm behind and above the Albacore (it fills about 28% of the width), TIDE 14's
+// offset ahead/left of it, and SKYLARK 1's screen point (NDC) and height.
+const FRAME = { back: 2.8, up: 1.55, tideAhead: 11, tideLeft: 3.4, heliX: -0.03, heliY: 0.38, heliUp: 11 };
+
 export const SCENES = {
   // The SPD chase on Palmline: a seeded save state at WANTED 3 (the Albacore's theft was seen and
   // a Beacon was rammed), the Albacore already at 26 m/s northbound with three Beacons on it (one
@@ -28,7 +32,7 @@ export const SCENES = {
     game.enterOrExit();
     // z sits half a palm spacing (16 m) on from M3a so the camera falls between two median trunks.
     car.x = -174.6; car.z = 56; car.heading = 0; car.vx = 0; car.vz = -26; car.speed = 26; car.sync();
-    game.chase.framing = { back: 4.6, up: 1.9 };
+    game.chase.framing = { back: FRAME.back, up: FRAME.up };
     game.chase.yaw = 0.1; game.chase.lastMode = null;
     const wl = game.wantedLevel;
     wl.clear();
@@ -39,6 +43,8 @@ export const SCENES = {
     game.missions.completed.add('ferry');
     game.missions.rep = 380;
     game.missions.start(game.story[2], 3);
+    // Wren carries the Wasp in this save state: the weapon panel shows it, its ammo and the slots.
+    game.arms.select(1);
     const pol = game.police;
     pol.place(3, -160, -30, Math.PI / 2, 5);
     hold(['KeyW'], 100);
@@ -50,11 +56,15 @@ export const SCENES = {
     pol.placeHelicopter(car.x + 13.8, car.z - 27.6);
     hold(['KeyW'], 20);
     hold(['KeyW', 'KeyD', 'Space'], 12);
-    // SKYLARK 1 on its orbit ahead and up, re-set after the sim so it is in frame on any start z.
-    pol.placeHelicopter(car.x + 7, car.z - 30);
-    // TIDE 14 re-set alongside on the left, a little ahead, so it reads in full beside the coupe.
+    // TIDE 14 re-set alongside on the left, ahead enough to read in full beside the coupe.
     const f = car.forward, side = { x: Math.cos(car.heading), z: -Math.sin(car.heading) };
-    pol.place(1, car.x + f.x * 4.5 - side.x * 4.2, car.z + f.z * 4.5 - side.z * 4.2, car.heading, Math.abs(car.speed));
+    pol.place(1, car.x + f.x * FRAME.tideAhead - side.x * FRAME.tideLeft, car.z + f.z * FRAME.tideAhead - side.z * FRAME.tideLeft, car.heading, Math.abs(car.speed));
+    // SKYLARK 1 in open sky: the world spot 15 m up under a fixed screen point (centre, below the
+    // mission panel, left of the bank tower), so it never sits on a panel whatever the start z.
+    game.chase.update(0, game.focus, game.collide);
+    const cam = game.camera, ray = new game.THREE.Vector3(FRAME.heliX, FRAME.heliY, 0.5).unproject(cam).sub(cam.position).normalize();
+    const t = (FRAME.heliUp - cam.position.y) / ray.y;
+    pol.placeHelicopter(cam.position.x + ray.x * t, cam.position.z + ray.z * t, FRAME.heliUp);
     game.step();
   },
   // Wren on foot in Old Mercado's market square, the Clock Arch ahead and a Pipit to take.

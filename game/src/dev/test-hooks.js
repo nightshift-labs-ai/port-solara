@@ -137,6 +137,31 @@ export function exposeTestHooks(game) {
       r.finish(false, 'TEST CANCELLED'); r.result = null;
       return { points: route.length, onNodes, axisAligned, endsAtTarget: Math.hypot(end.x - target.x, end.z - target.z) < 0.01, lengthM: Math.round(length), straightM: Math.round(Math.hypot(target.x + 168.6, target.z - 20)) };
     },
+    // Combat: a dummy target 10 m ahead on the crosshair line; Wasp, RMB aim, LMB until it drops.
+    combat() {
+      if (game.vehicle) this.enterNearest();
+      this.teleport(-168.6, 20, 0);
+      game.chase.yaw = 0; game.chase.pitch = 0.18;
+      const arms = game.arms, dummy = { x: -168.6 + 0.85, z: 10, radius: 0.45, height: 1.9, health: 100, alive: true, hit(d) { this.health -= d; if (this.health <= 0) this.alive = false; } };
+      game.combatTargets.push(dummy);
+      arms.select(1);
+      game.input.setKey('Mouse2', true);
+      for (let i = 0; i < 40; i++) game.step();
+      const aimed = arms.aiming && game.camera.fov < 56;
+      let shots = 0, firstHit = null, marker = false;
+      while (dummy.alive && shots < 10) {
+        game.input.setKey('Mouse0', true); game.step(); game.input.setKey('Mouse0', false);
+        shots++;
+        if (firstHit === null) { firstHit = dummy.health < 100; marker = arms.hitMarker > 0; }
+        for (let i = 0; i < 20; i++) game.step();
+      }
+      game.input.setKey('Mouse2', false);
+      const out = { aimed, firstShotHit: firstHit, hitMarker: marker, shotsToDrop: shots, dropped: !dummy.alive, clip: arms.clip.clip, wantedAfterGunfire: game.wantedLevel.pips };
+      game.combatTargets.splice(game.combatTargets.indexOf(dummy), 1);
+      game.wantedLevel.clear(); game.police.reset(); arms.select(0);
+      for (let i = 0; i < 5; i++) game.step();
+      return out;
+    },
     step(n = 1) { for (let i = 0; i < n; i++) game.step(); return this.snapshot(); },
     key(code, down) { game.input.setKey(code, down); },
     teleport(x, z, facing = 0) {

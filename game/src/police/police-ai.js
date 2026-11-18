@@ -278,6 +278,8 @@ export function dispatchPoliceUnits(game, makeCar) {
     heli.cone.quaternion.setFromUnitVectors(DOWN, dir.normalize());
     heli.cone.scale.set(SPOT_RADIUS, len, SPOT_RADIUS);
     heli.spot.position.set(p.x, 0.09, p.z);
+    // In a car the lit disc read as a grey stain under the body; only Wren on foot gets it.
+    heli.spot.visible = air.active && !game.vehicle;
   }
 
   // Red and blue swap six times a second, per unit offset; the glow sprites sit over each bar half.
