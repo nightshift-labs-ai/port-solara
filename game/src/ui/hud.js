@@ -90,7 +90,7 @@ export function drawHud(ctx, game, drawMinimap) {
   const pipY = mapY + size + 12 * s;
   const tagRow = 30 * s; // always kept, so the clock has its own row with or without heat
   panel(ctx, mapX, pipY, size, 136 * s + tagRow);
-  ctx.fillStyle = WHITE; ctx.font = font(24 * s);
+  ctx.fillStyle = WHITE; ctx.font = font(21 * s);
   ctx.fillText('WANTED', mapX + 14 * s, pipY + 30 * s);
   // IN SIGHT (red) while a cop sees Wren, SEARCHING (amber) with the escape countdown otherwise.
   const wl = game.wantedLevel;
@@ -111,8 +111,8 @@ export function drawHud(ctx, game, drawMinimap) {
   ctx.fillText('$' + game.cash.toLocaleString('en-US'), mapX + 14 * s, pipY + 122 * s + tagRow);
   // Weekday and clock from the game's own time of day (one game minute per second of play).
   const clock = game.lore.clock, minutes = Math.floor(clock.startMinutes + game.time) % 1440;
-  ctx.fillStyle = WHITE; ctx.font = font(21 * s); ctx.textAlign = 'right';
-  ctx.fillText(`${clock.weekday} ${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, mapX + size - 14 * s, pipY + 104 * s);
+  ctx.fillStyle = 'rgba(255,248,236,0.9)'; ctx.font = font(16 * s); ctx.textAlign = 'right';
+  ctx.fillText(`${clock.weekday} ${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, mapX + size - 14 * s, pipY + 29 * s);
   ctx.textAlign = 'left';
 
   // Health, armour and weapon.
@@ -123,7 +123,55 @@ export function drawHud(ctx, game, drawMinimap) {
   bar(ctx, mx + 16 * s, by + 40 * s, 388 * s, 12 * s, player.armour / 100, '#5fb7ff');
   ctx.fillStyle = WHITE; ctx.font = font(26 * s);
   ctx.fillText('FISTS', mx + 16 * s, by + 84 * s);
-  // The right of this row is kept for ammo and REP (the district lives only in the title card).
+  // REP rank and progress on the right of the weapon row (ammo joins it with combat in M4).
+  if (game.rankFor) {
+    const r = game.rankFor(game.missions.rep);
+    ctx.font = font(17 * s); ctx.textAlign = 'right'; ctx.fillStyle = GOLD;
+    ctx.fillText(`REP ${r.rank} · ${r.name}`, mx + 404 * s, by + 72 * s);
+    ctx.textAlign = 'left';
+    bar(ctx, mx + 196 * s, by + 79 * s, 208 * s, 7 * s, r.frac, GOLD);
+  }
+
+  // Radio chip over the speed panel: an animated level meter, the station, song and artist.
+  const radio = game.radioNow?.();
+  if (radio) {
+    ctx.font = font(17 * s, 700);
+    const line = `${radio.song} — ${radio.artist}`;
+    const rw = Math.max(ctx.measureText(line).width, (ctx.font = font(15 * s), ctx.measureText(radio.station).width)) + 64 * s;
+    const rx = w - mx - rw, ry = h - my - (game.vehicle ? 150 : 0) * s - 12 * s - 52 * s;
+    panel(ctx, rx, ry, rw, 52 * s);
+    ctx.fillStyle = radio.heat ? '#ff6b5b' : GOLD;
+    for (let i = 0; i < 4; i++) {
+      const lv = 0.35 + 0.65 * Math.abs(Math.sin(game.time * (3.1 + i * 1.7) + i));
+      ctx.fillRect(rx + (14 + i * 7) * s, ry + (40 - 24 * lv) * s, 5 * s, 24 * lv * s);
+    }
+    ctx.font = font(15 * s); ctx.fillText(radio.station, rx + 50 * s, ry + 21 * s);
+    ctx.fillStyle = WHITE; ctx.font = font(17 * s, 700); ctx.fillText(line, rx + 50 * s, ry + 42 * s);
+  }
+
+  // Mission subtitles, bottom centre, with the speaker's canvas portrait chip.
+  const sub = game.missions?.subtitle;
+  // It sits in the gap between the health panel and the speed panel, on their baseline.
+  const gapL = mx + 434 * s, gapR = w - mx - (game.vehicle ? 244 : 0) * s;
+  if (sub) drawSubtitle(ctx, sub, game.speakers?.[sub.who], (gapL + gapR) / 2, Math.min(560 * s, gapR - gapL), h - my, s);
+
+  // Result card: JOB DONE with time, cash and REP, or JOB BLOWN with the reason.
+  const res = game.missions?.resultCard();
+  if (res) {
+    ctx.globalAlpha = Math.min(1, res.age / 0.3, (6 - res.age) / 0.6);
+    ctx.font = font(26 * s);
+    const rowText = res.rows.join('   ·   ');
+    const cw = Math.max(520 * s, ctx.measureText(rowText).width + 60 * s), cx = (w - cw) / 2, cy = h * 0.3;
+    panel(ctx, cx, cy, cw, 168 * s);
+    ctx.fillStyle = res.passed ? GOLD : '#ff6b5b';
+    ctx.fillRect(cx + 2 * s, cy + 2 * s, cw - 4 * s, 8 * s);
+    ctx.textAlign = 'center';
+    ctx.font = font(60 * s); ctx.fillText(res.title, w / 2, cy + 76 * s);
+    ctx.fillStyle = WHITE; ctx.font = font(22 * s); ctx.fillText(res.sub, w / 2, cy + 110 * s);
+    ctx.fillStyle = res.passed ? '#9fe0a0' : 'rgba(255,248,236,0.85)'; ctx.font = font(26 * s);
+    ctx.fillText(rowText, w / 2, cy + 148 * s);
+    ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
 
   // Speed arc and car name, or nothing on foot.
   const car = game.vehicle;
@@ -235,6 +283,62 @@ function drawMissionPanel(ctx, m, x, y, s, time) {
   ctx.fillStyle = 'rgba(255,248,236,0.72)'; ctx.font = font(19 * s, 700);
   ctx.fillText(m.next, x + 22 * s, y + 134 * s);
   return h;
+}
+
+// A subtitle panel centred on cx within `room` px, bottom at `bottom`: portrait chip, gold speaker
+// name, the line wrapped to fit so it never reaches the side panels.
+function drawSubtitle(ctx, line, who, cx, room, bottom, s) {
+  const maxW = room - 110 * s;
+  ctx.font = font(21 * s, 700);
+  const words = line.text.split(' '), rows = [''];
+  for (const word of words) {
+    const tryRow = rows[rows.length - 1] ? rows[rows.length - 1] + ' ' + word : word;
+    if (ctx.measureText(tryRow).width > maxW && rows[rows.length - 1]) rows.push(word); else rows[rows.length - 1] = tryRow;
+  }
+  const textW = Math.max(...rows.map((r) => ctx.measureText(r).width));
+  const pw = textW + 110 * s, ph = (44 + rows.length * 26) * s, px = cx - pw / 2, py = bottom - ph;
+  panel(ctx, px, py, pw, ph);
+  drawPortrait(ctx, who, px + 12 * s, py + 12 * s, 66 * s);
+  ctx.fillStyle = GOLD; ctx.font = font(16 * s);
+  ctx.fillText(who ? who.name : line.who, px + 92 * s, py + 30 * s);
+  ctx.fillStyle = WHITE; ctx.font = font(21 * s, 700);
+  rows.forEach((r, i) => ctx.fillText(r, px + 92 * s, py + (56 + i * 26) * s));
+}
+
+// A flat canvas face: accent backdrop, shoulders, skin oval, hair, eyes. Mara wears her hair up,
+// Ilse a teal bandana, Roarke an SPD cap with a gold badge.
+function drawPortrait(ctx, who, x, y, size) {
+  const p = who || { skin: '#c99272', hair: '#333', accent: '#445' };
+  const c = size / 2;
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(x, y, size, size, size * 0.18); ctx.clip();
+  ctx.fillStyle = p.accent; ctx.fillRect(x, y, size, size);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(x, y, size, size * 0.45);
+  ctx.fillStyle = p.name === 'CMDR. ROARKE' ? '#14304f' : '#f4efe4';
+  ctx.beginPath(); ctx.ellipse(x + c, y + size * 1.02, size * 0.42, size * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = p.skin;
+  ctx.fillRect(x + c - size * 0.08, y + size * 0.6, size * 0.16, size * 0.16);
+  ctx.beginPath(); ctx.ellipse(x + c, y + size * 0.47, size * 0.21, size * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = p.hair;
+  if (p.name === 'MARA QUIST') {
+    ctx.beginPath(); ctx.ellipse(x + c, y + size * 0.3, size * 0.23, size * 0.12, 0, Math.PI, 0); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + c, y + size * 0.13, size * 0.1, 0, Math.PI * 2); ctx.fill();
+  } else if (p.name === 'ILSE VARGA') {
+    ctx.beginPath(); ctx.ellipse(x + c, y + size * 0.42, size * 0.25, size * 0.26, 0, Math.PI * 0.9, Math.PI * 2.1, true); ctx.fill();
+    ctx.fillStyle = '#1aa39a'; ctx.fillRect(x + c - size * 0.24, y + size * 0.23, size * 0.48, size * 0.09);
+  } else {
+    ctx.fillStyle = '#14304f';
+    ctx.fillRect(x + c - size * 0.25, y + size * 0.17, size * 0.5, size * 0.13);
+    ctx.fillRect(x + c - size * 0.3, y + size * 0.28, size * 0.6, size * 0.05);
+    ctx.fillStyle = '#ffc93c'; ctx.beginPath(); ctx.arc(x + c, y + size * 0.23, size * 0.045, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = '#1b1f2a';
+  ctx.fillRect(x + c - size * 0.11, y + size * 0.46, size * 0.05, size * 0.04);
+  ctx.fillRect(x + c + size * 0.06, y + size * 0.46, size * 0.05, size * 0.04);
+  ctx.fillStyle = '#8a3b33'; ctx.fillRect(x + c - size * 0.06, y + size * 0.6, size * 0.12, size * 0.025);
+  ctx.restore();
+  ctx.lineWidth = 2; ctx.strokeStyle = OUTLINE;
+  ctx.beginPath(); ctx.roundRect(x, y, size, size, size * 0.18); ctx.stroke();
 }
 
 // A police shield pip: dark when unlit, pulsing red/blue when lit.

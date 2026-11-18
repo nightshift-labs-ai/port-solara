@@ -12,11 +12,12 @@ import { stealNearestCar, updateCarTheft, nearestCar } from './player/car-theft.
 import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
 import { WantedLevel } from './police/wanted-level.js';
-import { dispatchPoliceUnits } from './police/police-ai.js';
+import { dispatchPoliceUnits, routeOverLanes, nearestNode } from './police/police-ai.js';
+import { STORY_MISSIONS, SPEAKERS, rankFor } from './missions/story-missions.js';
 import { MissionRunner } from './missions/mission-runner.js';
-import { drawMinimap, planGridRoute } from './ui/minimap.js';
+import { drawMinimap } from './ui/minimap.js';
 import { showTitleScreen } from './ui/menus-and-map.js';
-import { createSynthAudio } from './audio/synth-audio.js';
+import { createSynthAudio, RADIO_STATIONS, SONG_SECONDS } from './audio/synth-audio.js';
 import { PORT_SOLARA_NAMES, FREE_ROAM_OBJECTIVE } from './story/port-solara-lore.js';
 import { readKeyboardAndMouse, FIXED_STEP_SECONDS, MAX_SUBSTEPS } from './core/fixed-step-input.js';
 import { createSeededRandom, createSpatialHash } from './core/seeded-world-tools.js';
@@ -79,7 +80,37 @@ export function bootPortSolara() {
   game.wantedLevel = new WantedLevel();
   game.police = dispatchPoliceUnits(game, (spec, model, x, z, heading) => new DrivableCar({ spec, model, x, z, heading }));
   game.copsSee = () => game.police.seesPlayer;
-  game.missions = new MissionRunner(game);
+  game.toast = (text) => game.police.toast(text);
+  game.story = STORY_MISSIONS;
+  game.missions = new MissionRunner(game, STORY_MISSIONS);
+  // GPS: the lane graph's A* from the crossing nearest Wren to the one nearest the goal, re-planned
+  // every half second or when the goal moves.
+  game.planRoute = (from, to) => {
+    const a = nearestNode(game.roads.nodes, from.x, from.z), b = nearestNode(game.roads.nodes, to.x, to.z);
+    const path = a === b ? [a] : [a, ...routeOverLanes(a, b)];
+    return [{ x: from.x, z: from.z }, ...path.map((n) => ({ x: n.x, z: n.z })), { x: to.x, z: to.z }];
+  };
+  game.gpsGoal = () => game.missions.target || game.missions.openStarts[0]?.mission.start || { x: LANDMARKS.quist.x, z: LANDMARKS.quist.z + 30 };
+  let routeAt = -1, routeGoal = null;
+  game.updateRoute = () => {
+    const goal = game.gpsGoal();
+    if (routeGoal && game.tick - routeAt < 30 && Math.hypot(goal.x - routeGoal.x, goal.z - routeGoal.z) < 4) {
+      if (game.route) game.route[0] = { x: game.focus.x, z: game.focus.z };
+      return game.route;
+    }
+    routeAt = game.tick; routeGoal = { x: goal.x, z: goal.z };
+    return (game.route = game.planRoute(game.focus, goal));
+  };
+  game.speakers = SPEAKERS;
+  game.rankFor = rankFor;
+  // The car radio: Gull FM or Low Tide by the R key, Heat 96 by itself at WANTED 3+.
+  game.radio = { station: 0, heat: false };
+  game.radioIndex = () => (game.radio.heat ? 2 : game.radio.station);
+  game.radioNow = () => {
+    if (!game.vehicle) return null;
+    const st = RADIO_STATIONS[game.radioIndex()], [song, artist] = st.songs[Math.floor(game.time / SONG_SECONDS) % st.songs.length];
+    return { station: st.name, song, artist, heat: game.radio.heat };
+  };
   game.audio = createSynthAudio();
   canvas.addEventListener('pointerdown', () => game.audio.unlock());
 
@@ -107,7 +138,11 @@ export function bootPortSolara() {
     game.crowd.update(dt, game.focus);
     if (game.mode !== 'play') { game.input.takePresses(); return; }
     const inCustody = game.police.updateCustody(dt);
-    for (const code of input.takePresses()) if (code === 'KeyF' && !game.theft && !inCustody) game.enterOrExit();
+    for (const code of input.takePresses()) {
+      if (code === 'KeyF' && !game.theft && !inCustody) game.enterOrExit();
+      if (code === 'KeyR') game.radio.station = (game.radio.station + 1) % 2; // Gull FM / Low Tide
+    }
+    game.radio.heat = game.wantedLevel.pips >= 3; // Heat 96 cuts in at WANTED 3+
     const look = input.takeLook();
     game.chase.look(look.x, look.y);
     updateCarTheft(game, dt);
@@ -157,9 +192,9 @@ export function bootPortSolara() {
     }
     renderer.render(scene, camera);
     const copDistance = game.police.active.reduce((d, u) => Math.min(d, u.dist), Infinity);
-    game.audio.update(game.mode === 'play' ? game.vehicle : null, game.mode === 'play' ? copDistance : Infinity);
+    game.audio.update(game.mode === 'play' ? game.vehicle : null, game.mode === 'play' ? copDistance : Infinity, game.radioIndex());
     if (game.mode === 'play') {
-      game.route = planGridRoute(game.roads, game.focus, game.missions.target || { x: LANDMARKS.quist.x, z: LANDMARKS.quist.z + 22 });
+      game.updateRoute();
       const near = game.vehicle || game.theft ? null : nearestCar(game);
       game.prompt = null;
       if (near) {

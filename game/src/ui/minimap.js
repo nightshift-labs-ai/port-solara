@@ -72,6 +72,12 @@ export function drawMinimap(ctx, game, x, y, size) {
   }
   ctx.restore();
 
+  // Story mission starts that are open now, numbered.
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(x, y, size, size, 22 * s); ctx.clip();
+  for (const st of game.missions ? game.missions.openStarts : []) storyBlip(ctx, game, st.mission, x, y, size, s);
+  ctx.restore();
+
   // Player arrow, always centred and pointing up.
   ctx.save();
   ctx.translate(x + size / 2, y + size / 2);
@@ -103,10 +109,16 @@ function blip(ctx, x, z, r, fill, stroke) {
   ctx.lineWidth = r * 0.35; ctx.strokeStyle = stroke; ctx.stroke();
 }
 
-// A grid route: out to the nearest avenue, along it, then across to the goal.
-export function planGridRoute(roads, from, to) {
-  const nearest = (list, v) => list.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
-  const ax = nearest(roads.nsRoads, from.x);
-  const tz = nearest(roads.ewRoads, to.z);
-  return [{ x: from.x, z: from.z }, { x: ax, z: from.z }, { x: ax, z: tz }, { x: to.x, z: tz }, { x: to.x, z: to.z }];
+// A story mission start: a gold disc with its number, kept upright and clamped to the map edge.
+function storyBlip(ctx, game, m, x, y, size, s) {
+  const scale = size / 300, half = size / 2 - 14 * s, f = game.focus, yaw = game.chase.yaw;
+  const dx = (m.start.x - f.x) * scale, dz = (m.start.z - f.z) * scale;
+  let px = dx * Math.cos(yaw) - dz * Math.sin(yaw), py = dx * Math.sin(yaw) + dz * Math.cos(yaw);
+  const k = Math.min(1, half / Math.max(Math.abs(px), Math.abs(py), 1e-3));
+  px = x + size / 2 + px * k; py = y + size / 2 + py * k;
+  ctx.beginPath(); ctx.arc(px, py, 11 * s, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffc21f'; ctx.fill();
+  ctx.lineWidth = 2.5 * s; ctx.strokeStyle = '#14304f'; ctx.stroke();
+  ctx.fillStyle = '#14304f'; ctx.font = `900 ${Math.round(14 * s)}px "DejaVu Sans", Verdana, sans-serif`;
+  ctx.textAlign = 'center'; ctx.fillText(String(m.number), px, py + 5 * s); ctx.textAlign = 'left';
 }

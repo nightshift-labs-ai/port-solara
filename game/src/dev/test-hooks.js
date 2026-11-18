@@ -97,6 +97,46 @@ export function exposeTestHooks(game) {
       const p = game.player;
       return { custody: !!card, card, after, bail: cash0 - game.cash, pipsAfter: wl.pips, cardGone: !game.custody, onFoot: !game.vehicle, at: [Math.round(p.x), Math.round(p.z)], insideBuilding: game.collide.pointInside(p.x, p.z) };
     },
+    // Mission 1 end to end: walk into its start ring, sit through Mara, teleport to the valet lane,
+    // take the Albacore parked there, stop it at Quist Auto, then wait for the result card.
+    mission() {
+      const r = game.missions, m1 = game.story[0], log = [];
+      if (game.vehicle) this.enterNearest();
+      game.wantedLevel.clear(); game.police.reset();
+      const startsInside = r.starts.filter((s) => game.collide.pointInside(s.mission.start.x, s.mission.start.z)).length;
+      const cash0 = game.cash, rep0 = r.rep;
+      this.teleport(m1.start.x, m1.start.z + 1, 0);
+      this.step(2);
+      const started = r.mission === m1;
+      const until = (cond, max = 900) => { let n = 0; while (!cond() && n++ < max) game.step(); return n; };
+      const note = () => log.push(r.panel() ? `${r.panel().stage}:${r.step.kind}` : 'none');
+      note(); until(() => r.step?.kind !== 'dialogue'); note();
+      this.teleport(r.target.x, r.target.z, 0); this.step(2); note();
+      const car = game.albacore;
+      car.x = r.target ? r.target.x : -170.6; car.z = game.player.z - 4; car.vx = car.vz = car.speed = 0; car.sync();
+      game.player.x = car.x - 2.2; game.player.z = car.z;
+      this.enterNearest(); until(() => r.step?.kind !== 'steal', 120); note();
+      const goal = r.target, panel = r.panel();
+      this.teleport(goal.x, goal.z, 0); this.step(2); note();
+      until(() => !r.mission);
+      const card = r.resultCard();
+      return { startsInside, started, log, deliverPanel: panel, card, cash: game.cash - cash0, rep: r.rep - rep0, done: r.completed.has(m1.id) };
+    },
+    // GPS to mission 3's first marker: the route must run crossing to crossing along roads.
+    gps() {
+      const r = game.missions;
+      if (game.vehicle) this.enterNearest();
+      this.teleport(-168.6, 20, 0);
+      r.start(game.story[2]);
+      const route = game.updateRoute(), inner = route.slice(1, -1);
+      const roads = game.roads;
+      const onNodes = inner.every((p) => roads.nsRoads.includes(p.x) && roads.ewRoads.includes(p.z));
+      const axisAligned = inner.every((p, i) => i === 0 || p.x === inner[i - 1].x || p.z === inner[i - 1].z);
+      const end = route[route.length - 1], target = r.target;
+      const length = route.reduce((d, p, i) => (i ? d + Math.hypot(p.x - route[i - 1].x, p.z - route[i - 1].z) : 0), 0);
+      r.finish(false, 'TEST CANCELLED'); r.result = null;
+      return { points: route.length, onNodes, axisAligned, endsAtTarget: Math.hypot(end.x - target.x, end.z - target.z) < 0.01, lengthM: Math.round(length), straightM: Math.round(Math.hypot(target.x + 168.6, target.z - 20)) };
+    },
     step(n = 1) { for (let i = 0; i < n; i++) game.step(); return this.snapshot(); },
     key(code, down) { game.input.setKey(code, down); },
     teleport(x, z, facing = 0) {

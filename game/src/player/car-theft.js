@@ -41,6 +41,7 @@ export function nearestCar(game) {
 // Wren is in the driver's seat: hide her, switch the camera, and mark the car as hers.
 export function takeTheWheel(game, car) {
   game.vehicle = car;
+  if (!car.owned) game.toast?.(`VEHICLE STOLEN: ${car.name}`);
   car.owned = true;
   game.player.setVisible(false);
   game.chase.mode = 'car';

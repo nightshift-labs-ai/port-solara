@@ -34,6 +34,11 @@ export const SCENES = {
     wl.clear();
     wl.commit('theft', car.x, car.z, 3);
     wl.commit('copAssault', car.x, car.z);
+    // The same save state as every shot: mission 1 done (REP and cash paid), mission 3 at its
+    // "lose the SPD" step with Mara on the radio.
+    game.missions.completed.add('ferry');
+    game.missions.rep = 380;
+    game.missions.start(game.story[2], 3);
     const pol = game.police;
     pol.place(3, -160, -30, Math.PI / 2, 5);
     hold(['KeyW'], 100);
@@ -47,6 +52,9 @@ export const SCENES = {
     hold(['KeyW', 'KeyD', 'Space'], 12);
     // SKYLARK 1 on its orbit ahead and up, re-set after the sim so it is in frame on any start z.
     pol.placeHelicopter(car.x + 7, car.z - 30);
+    // TIDE 14 re-set alongside on the left, a little ahead, so it reads in full beside the coupe.
+    const f = car.forward, side = { x: Math.cos(car.heading), z: -Math.sin(car.heading) };
+    pol.place(1, car.x + f.x * 4.5 - side.x * 4.2, car.z + f.z * 4.5 - side.z * 4.2, car.heading, Math.abs(car.speed));
     game.step();
   },
   // Wren on foot in Old Mercado's market square, the Clock Arch ahead and a Pipit to take.

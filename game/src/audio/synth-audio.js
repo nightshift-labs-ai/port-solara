@@ -76,10 +76,35 @@ export function createSynthAudio() {
     audio.siren = { wail, level: sirenLevel, beat: -1 };
   };
 
-  // Once per frame with the car Wren drives (or null on foot and in menus) and the distance to
-  // the nearest SPD unit with its siren on (Infinity when none).
-  audio.update = (car, copDistance = Infinity) => {
+  // The car radio: a lookahead sequencer that books each station's bass and lead notes 0.25 s
+  // ahead as short enveloped oscillators into one radio bus (-1 = off, e.g. in menus).
+  const radio = { bus: null, station: -1, next: 0, step: 0 };
+  const playRadio = (index) => {
+    const ctx = audio.ctx;
+    if (!radio.bus) { radio.bus = ctx.createGain(); radio.bus.gain.value = 0.16; radio.bus.connect(audio.master); }
+    if (index !== radio.station) { radio.station = index; radio.step = 0; radio.next = ctx.currentTime + 0.05; }
+    if (index < 0) return;
+    const st = RADIO_STATIONS[index], beat = 60 / st.bpm / 2;
+    while (radio.next < ctx.currentTime + 0.25) {
+      const i = radio.step++ % 16, t = radio.next;
+      const note = (semi, wave, vol, len) => {
+        const osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.type = wave; osc.frequency.value = st.root * 2 ** (semi / 12);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, t + len);
+        osc.connect(g).connect(radio.bus); osc.start(t); osc.stop(t + len + 0.02);
+      };
+      if (st.bass[i] != null) note(st.bass[i] - 12, st.bassWave, 0.5, beat * 1.6);
+      if (st.lead[i] != null) note(st.lead[i] + 12, st.leadWave, 0.22, beat * 0.9);
+      radio.next += beat;
+    }
+  };
+
+  // Once per frame with the car Wren drives (or null on foot and in menus), the distance to
+  // the nearest SPD unit with its siren on (Infinity when none) and the radio station (-1 = off).
+  audio.update = (car, copDistance = Infinity, station = -1) => {
     if (!audio.ctx || audio.ctx.state !== 'running') return;
+    playRadio(car ? station : -1);
     const t = audio.ctx.currentTime, e = audio.engine, ty = audio.tyres, sn = audio.siren;
     const beat = Math.floor(t / SIREN_BEAT);
     if (beat !== sn.beat) {
@@ -113,6 +138,24 @@ export function createSynthAudio() {
   audio.alarm = () => playSiren(audio, { seconds: 1.4, low: 980, high: 1560, rate: 7, volume: 0.09 });
   return audio;
 }
+
+// Our three stations: invented names, songs and artists, each a 16-step loop (semitones over the
+// root, null = rest). Heat 96 cuts in by itself at WANTED 3+.
+export const RADIO_STATIONS = [
+  { name: 'GULL FM 101.4', bpm: 112, root: 220, bassWave: 'triangle', leadWave: 'square',
+    bass: [0, null, 0, null, 5, null, 5, null, 7, null, 7, null, 5, null, 3, null],
+    lead: [12, null, 16, 19, null, 16, 14, null, 12, null, 16, 19, 21, null, 19, null],
+    songs: [['Salt on the Windshield', 'The Breakwaters'], ['Ferry at Five', 'Juno Arcos']] },
+  { name: 'LOW TIDE 88.2', bpm: 76, root: 196, bassWave: 'sine', leadWave: 'triangle',
+    bass: [0, null, null, 0, null, null, -2, null, -5, null, null, -5, null, null, -2, null],
+    lead: [null, 7, null, null, 10, null, null, null, 7, null, 5, null, null, 3, null, null],
+    songs: [['Quayside Glow', 'Mina Sol'], ['Lantern Swell', 'Deep Pier Trio']] },
+  { name: 'HEAT 96', bpm: 148, root: 233, bassWave: 'sawtooth', leadWave: 'square',
+    bass: [0, 0, 12, 0, 0, 10, 0, 12, 0, 0, 12, 0, 3, 3, 5, 7],
+    lead: [null, 12, null, 15, null, 12, 17, null, null, 12, null, 15, 19, null, 17, 15],
+    songs: [['Ninety-Six in the Shade', 'Coral Static'], ['Red Then Blue', 'DJ Ferrolho']] },
+];
+export const SONG_SECONDS = 95;
 
 const GEARS = 5;
 // SPD siren notes in Hz, one per beat; the last glides up into the next bar.

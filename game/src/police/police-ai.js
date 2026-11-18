@@ -276,7 +276,7 @@ export function dispatchPoliceUnits(game, makeCar) {
     const dir = to.clone().sub(from), len = dir.length();
     heli.cone.position.copy(from);
     heli.cone.quaternion.setFromUnitVectors(DOWN, dir.normalize());
-    heli.cone.scale.set(5.2, len, 5.2);
+    heli.cone.scale.set(SPOT_RADIUS, len, SPOT_RADIUS);
     heli.spot.position.set(p.x, 0.09, p.z);
   }
 
@@ -323,6 +323,8 @@ export const POLICE_SPECS = {
 };
 export const SIGHT_RANGE = 90, PURSUIT_RANGE = 40, DESPAWN_RANGE = 230, ROADBLOCK_AHEAD = 120;
 export const HELI_SIGHT = 140, HELI_HEIGHT = 18;
+// Searchlight radius on the ground: small enough that the low chase camera stays outside the cone.
+export const SPOT_RADIUS = 2.6;
 export const ARREST_RANGE = 6, CUSTODY_SECONDS = 2.5, CUSTODY_CARD = 4.2, BAIL = 400;
 // Where the SPD books Wren: sidewalk spots beside two posts (the nearest one is used).
 export const SPD_POSTS = [
@@ -361,8 +363,8 @@ function buildHelicopter() {
   coneGeo.translate(0, -0.5, 0); // apex at the origin, opening down -y
   const lightMat = new THREE.MeshBasicMaterial({ color: 0xfff1c8, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
   const cone = new THREE.Mesh(coneGeo, lightMat);
-  const spot = new THREE.Mesh(new THREE.CircleGeometry(5.4, 28).rotateX(-Math.PI / 2), lightMat.clone());
-  spot.material.opacity = 0.16;
+  const spot = new THREE.Mesh(new THREE.CircleGeometry(SPOT_RADIUS, 28).rotateX(-Math.PI / 2), lightMat.clone());
+  spot.material.opacity = 0.1;
   cone.visible = spot.visible = false;
   cone.frustumCulled = spot.frustumCulled = false;
   return { group, rotor, tail, cone, spot };
