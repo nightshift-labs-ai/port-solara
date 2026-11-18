@@ -115,6 +115,12 @@ export function bootPortSolara() {
     for (const car of game.cars) if (car !== game.vehicle && !car.ai && Math.abs(car.speed) > 0.05) car.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide);
     game.tyres.update(dt, game.vehicle);
     game.chase.update(dt, game.focus, game.collide);
+    // Entering a district shows its title card, stamped with sim time so shots repeat.
+    const district = PORT_SOLARA_NAMES.districts[districtAt(game.focus.x, game.focus.z)];
+    if (district !== game.districtName) {
+      game.districtName = district;
+      game.districtCard = { name: district, sub: nearestRoadName(game.roads, game.focus.x, game.focus.z) || 'PORT SOLARA', at: game.time };
+    }
   };
 
   const v = new THREE.Vector3();
@@ -132,7 +138,6 @@ export function bootPortSolara() {
     renderer.render(scene, camera);
     game.audio.update(game.mode === 'play' ? game.vehicle : null);
     if (game.mode === 'play') {
-      game.districtName = PORT_SOLARA_NAMES.districts[districtAt(game.focus.x, game.focus.z)];
       game.route = planGridRoute(game.roads, game.focus, { x: LANDMARKS.quist.x, z: LANDMARKS.quist.z + 22 });
       const near = game.vehicle || game.theft ? null : nearestCar(game);
       game.prompt = null;
@@ -180,6 +185,17 @@ export function bootPortSolara() {
   if (params.has('shot')) import('./dev/screenshot-scenes.js').then((m) => m.stageScreenshotScene(game, params.get('shot')));
   if (params.has('test')) import('./dev/test-hooks.js').then((m) => m.exposeTestHooks(game));
   return game;
+}
+
+// The name of the road under a spot (within its half width plus the sidewalk), or ''.
+function nearestRoadName(network, x, z) {
+  let best = '', bd = Infinity;
+  for (const r of network.roads) {
+    const along = r.axis === 'z' ? z : x, across = Math.abs((r.axis === 'z' ? x : z) - r.at);
+    if (along < r.from || along > r.to || across > r.width / 2 + 3 || across >= bd) continue;
+    bd = across; best = r.name;
+  }
+  return best;
 }
 
 // Parked cars along the curbs: [kind, x, z, heading].

@@ -18,6 +18,22 @@ export function drawHud(ctx, game, drawMinimap) {
   ctx.fillStyle = WHITE; ctx.font = font(26 * s, 700);
   ctx.fillText(obj.detail, mx + 22 * s, my + 74 * s);
 
+  // District title card under the banner: fades in on entering a district, out after CARD_SECONDS.
+  const card = game.districtCard;
+  const age = card ? game.time - card.at : Infinity;
+  if (age < CARD_SECONDS) {
+    ctx.globalAlpha = Math.min(1, age / 0.3, (CARD_SECONDS - age) / 0.6);
+    ctx.font = font(38 * s);
+    const cw = Math.max(ctx.measureText(card.name).width, (ctx.font = font(22 * s, 700), ctx.measureText(card.sub).width)) + 44 * s;
+    const cy = my + 104 * s;
+    panel(ctx, mx, cy, cw, 86 * s);
+    ctx.fillStyle = GOLD; ctx.font = font(22 * s, 700);
+    ctx.fillText(card.sub, mx + 22 * s, cy + 30 * s);
+    ctx.fillStyle = WHITE; ctx.font = font(38 * s);
+    ctx.fillText(card.name, mx + 22 * s, cy + 72 * s);
+    ctx.globalAlpha = 1;
+  }
+
   // Minimap, WANTED shields and cash.
   const size = 230 * s;
   const mapX = w - mx - size, mapY = my;
@@ -73,6 +89,7 @@ export function drawHud(ctx, game, drawMinimap) {
   }
 }
 
+export const CARD_SECONDS = 4.5;
 export const GOLD = '#ffc93c';
 export const WHITE = '#fff8ec';
 export const NAVY_GLASS = 'rgba(14, 30, 60, 0.65)';
