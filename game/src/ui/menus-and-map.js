@@ -427,7 +427,7 @@ export function showTitleScreen(game, onNewGame) {
 
   const strip = document.createElement('div');
   strip.className = 'controls-strip';
-  strip.textContent = 'WASD MOVE · F STEAL/EXIT CAR · SPACE HANDBRAKE · E USE · R RADIO · TAB MAP · ESC PAUSE';
+  strip.textContent = 'WASD MOVE · F STEAL CAR · SPACE DRIFT · E USE · TAB MAP · ESC PAUSE';
   root.append(controls, menu, strip);
 
   const onKey = (e) => {

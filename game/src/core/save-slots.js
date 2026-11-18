@@ -154,6 +154,7 @@ export function installSaveSlots(game) {
     return r;
   };
   game.loadSave = (s) => applyState(game, s);
+  game.captureSave = (place) => captureState(game, place);
   game.newGameState = () => { applyState(game, fresh); game.progress.savedAt = null; };
 }
 

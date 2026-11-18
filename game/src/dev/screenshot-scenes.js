@@ -13,6 +13,29 @@ export function stageScreenshotScene(game, name) {
   requestAnimationFrame(() => requestAnimationFrame(() => { window.__shotReady = true; }));
 }
 
+// The one save state behind all four shots: missions 1 and 2 done (story 3/5), REP 640 (rank 4
+// WHEELMAN), $18,450, North Ring won, three courier drops, the Hornet still locked, saved at
+// Calloway Salvage at 14:32 (UTC, the headless clock). The title's CONTINUE line reads it back.
+export const SHOT_SAVE = { story: ['ferry', 'market'], rep: 640, cash: 18450, races: 1, bestLaps: { race1: 52.4 }, courier: 3, savedAt: Date.UTC(2026, 10, 20, 14, 32), place: 'Calloway Salvage' };
+
+function seedShotSave(game) {
+  for (const id of SHOT_SAVE.story) game.missions.completed.add(id);
+  game.missions.rep = SHOT_SAVE.rep;
+  game.cash = SHOT_SAVE.cash;
+  Object.assign(game.progress, { races: SHOT_SAVE.races, bestLaps: { ...SHOT_SAVE.bestLaps }, courier: SHOT_SAVE.courier, savedAt: { clock: '14:32', place: SHOT_SAVE.place } });
+}
+
+// Writes the shared save into slot 2 as a real record (as the safehouse [E] would) at the fixed time.
+function writeShotSave(game) {
+  localStorage.clear();
+  const h = game.spots.find((p) => p.id === 'safehouse');
+  const at = { x: game.player.x, z: game.player.z };
+  game.player.x = h.x + 1; game.player.z = h.z;
+  game.focus = game.player;
+  localStorage.setItem('port-solara/save-slot-2', JSON.stringify({ ...game.captureSave(SHOT_SAVE.place), slot: 2, savedAt: SHOT_SAVE.savedAt }));
+  game.player.x = at.x; game.player.z = at.z;
+}
+
 // Cover framing: the arm behind and above the Albacore (it fills about 28% of the width), TIDE 14's
 // offset ahead/left of it, and SKYLARK 1's screen point (NDC) and height.
 const FRAME = { back: 2.8, up: 1.55, tideAhead: 8, tideLeft: -3.4, heliX: -0.08, heliY: 0.4, heliUp: 13 };
@@ -56,10 +79,9 @@ export const SCENES = {
     wl.clear();
     wl.commit('theft', car.x, car.z, 3);
     wl.commit('copAssault', car.x, car.z);
-    // The same save state as every shot: mission 1 done (REP and cash paid), mission 3 at its
-    // "lose the SPD" step with Mara on the radio.
-    game.missions.completed.add('ferry');
-    game.missions.rep = 380;
+    // The same save state as every shot (SHOT_SAVE), mission 3 at its "lose the SPD" step with
+    // Mara on the radio.
+    seedShotSave(game);
     game.missions.start(game.story[2], 3);
     // Wren carries the Wasp in this save state: the weapon panel shows it, its ammo and the slots.
     game.arms.select(1);
@@ -94,8 +116,7 @@ export const SCENES = {
     hold([], 300);
     game.crowd.gatherNear(152, 70, 10, 16);
     game.startPlay();
-    game.missions.completed.add('ferry');
-    game.missions.rep = 380;
+    seedShotSave(game);
     game.player.x = STREET.x; game.player.z = STREET.z; game.player.facing = 0.05; game.chase.yaw = 0.05;
     // The curbside Pipit by the arch moves on, so the parked coupe is the car within reach.
     const pipit = game.cars.find((c) => c.name === 'PIPIT' && Math.hypot(c.x - 156.5, c.z - 73) < 1);
@@ -116,8 +137,21 @@ export const SCENES = {
     hold([], 50);
     aim(); hold(['Mouse0'], 1); hold([], 2);
   },
-  // The title over a drone orbit of the live city (the title's save state has no fight running).
+  // The Tab map on the shared save: story 3/5 with The Harbor Run current, Races 1/4,
+  // Courier 3/10, REP rank 4, cash and "Saved 14:32 - Calloway Salvage"; Wren on Palmline.
+  map(game, hold) {
+    hold([], 300);
+    game.startPlay();
+    seedShotSave(game);
+    hold([], 60);
+    game.openPause('map');
+  },
+  // The title over a drone orbit of the live city, with CONTINUE read back from the shared save
+  // written into slot 2 as a real record.
   title(game) {
     for (let i = 0; i < 420; i++) game.step();
+    seedShotSave(game);
+    writeShotSave(game);
+    game.quitToTitle();
   },
 };

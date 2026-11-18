@@ -208,13 +208,108 @@ await test('mission-list', async () => {
   return s;
 });
 
+// M5 shell: the page reloads between these, so each starts from a clean boot.
+const reload = async () => {
+  await page.reload();
+  await page.waitForFunction(() => window.__testReady === true, null, { timeout: 60000 });
+};
+// The newest save record in localStorage (what CONTINUE loads).
+const newestSave = () => Object.keys(localStorage).filter((k) => k.startsWith('port-solara/save-slot-'))
+  .map((k) => JSON.parse(localStorage.getItem(k))).sort((a, b) => b.savedAt - a.savedAt)[0] || null;
+
+await test('save', async () => {
+  await reload();
+  const before = await call(() => {
+    const g = window.portSolara;
+    localStorage.clear();
+    g.startPlay();
+    g.missions.completed.add('ferry'); g.missions.completed.add('market');
+    g.missions.rep = 640; g.cash = 18450;
+    g.progress.bestLaps = { race1: 52.4 }; g.progress.races = 1; g.progress.courier = 3;
+    g.arms.give('hornet'); g.arms.select(1);
+    const h = g.spots.find((p) => p.id === 'safehouse');
+    g.player.x = h.x + 1; g.player.z = h.z; g.focus = g.player;
+    const note = g.saveGame('Calloway Salvage');
+    return { note, cash: g.cash, rep: g.missions.rep, story: [...g.missions.completed].sort(), races: g.progress.races, courier: g.progress.courier, best: g.progress.bestLaps.race1, slot: g.arms.slot, locked: [...g.arms.locked], x: g.player.x, z: g.player.z };
+  });
+  ok(/^Saved to slot/.test(before.note), `save refused: ${before.note}`);
+  await reload();
+  const label = await call(() => document.querySelector('.title-menu li')?.textContent);
+  ok(label === 'CONTINUE - Story 3/5 - $18,450', `title shows "${label}"`);
+  const after = await call(`(() => {
+    const g = window.portSolara, s = (${newestSave.toString()})();
+    g.loadSave(s); g.startPlay();
+    return { cash: g.cash, rep: g.missions.rep, story: [...g.missions.completed].sort(), races: g.progress.races, courier: g.progress.courier, best: g.progress.bestLaps.race1, slot: g.arms.slot, locked: [...g.arms.locked], x: g.player.x, z: g.player.z, place: g.progress.savedAt && g.progress.savedAt.place };
+  })()`);
+  for (const k of ['cash', 'rep', 'races', 'courier', 'best', 'slot']) ok(after[k] === before[k], `${k}: ${before[k]} -> ${after[k]}`);
+  ok(JSON.stringify(after.story) === JSON.stringify(before.story) && after.locked.length === 0, 'story or weapons differ');
+  ok(Math.hypot(after.x - before.x, after.z - before.z) < 0.2 && after.place === 'Calloway Salvage', 'Wren is not back at the safehouse');
+  return { label, ...after };
+});
+
+await test('settings', async () => {
+  await call(() => { const g = window.portSolara; g.changeSetting('master', 4); g.changeSetting('sensitivity', 1.5); g.changeSetting('graphics', 'low'); });
+  await reload();
+  const s = await call(() => { const g = window.portSolara; return { ...g.settings, far: g.camera.far, shadows: g.renderer.shadowMap.enabled, look: g.lookScale }; });
+  ok(s.master === 4 && s.sensitivity === 1.5 && s.graphics === 'low', `settings came back as ${JSON.stringify(s)}`);
+  ok(s.far === 300 && !s.shadows && s.look === 1.5, 'the LOW preset or sensitivity is not applied');
+  await call(() => window.portSolara.changeSetting('graphics', 'high'));
+  return s;
+});
+
+await test('race', async () => {
+  const s = await call(() => {
+    const g = window.portSolara;
+    g.startPlay();
+    const car = g.albacore, spot = g.spots.find((p) => p.id === 'race2');
+    const put = (x, z) => { car.x = x; car.z = z; car.speed = car.vx = car.vz = 0; car.sync(); g.player.x = x; g.player.z = z; };
+    g.player.x = car.x - 2.2; g.player.z = car.z; g.enterOrExit();
+    put(spot.x, spot.z);
+    const offer = g.side.offer(), cash0 = g.cash;
+    g.side.use();
+    const checkpoints = [];
+    for (const cp of g.side.active.route.slice(1)) {
+      put(cp.x, cp.z);
+      for (let i = 0; i < 60; i++) g.step();
+      checkpoints.push(g.side.active ? g.side.active.next : 'done');
+    }
+    return { offer, checkpoints, result: g.side.result, races: g.progress.races, best: g.progress.bestLaps.race2, paid: g.cash - cash0 };
+  });
+  ok(s.offer === '[E] START CORAL CIRCUIT', `offer "${s.offer}"`);
+  ok(s.result && s.result.passed && s.races === 1 && s.best > 0 && s.paid === 1500, `race did not complete: ${JSON.stringify(s)}`);
+  return s;
+});
+
+await test('respray', async () => {
+  const s = await call(() => {
+    const g = window.portSolara, rs = g.spots.find((p) => p.id === 'respray'), car = g.vehicle;
+    car.x = rs.x; car.z = rs.z; car.speed = car.vx = car.vz = 0; car.sync(); g.player.x = rs.x; g.player.z = rs.z;
+    g.police.reset();
+    g.wantedLevel.commit('copAssault', rs.x, rs.z);
+    g.step();
+    const pips = g.wantedLevel.pips, seen = g.copsSee(), cash0 = g.cash;
+    const note = g.side.use();
+    return { pips, seen, note, after: g.wantedLevel.pips, paid: cash0 - g.cash };
+  });
+  ok(s.pips >= 2 && !s.seen, `setup: ${s.pips} pips, seen ${s.seen}`);
+  ok(s.after === 0 && s.paid === 500, `respray left ${s.after} pips, paid ${s.paid}: ${s.note}`);
+  return s;
+});
+
 await test('perf', async () => {
+  await reload();
+  await call(() => { localStorage.clear(); window.portSolara.changeSetting('graphics', 'high'); window.__test.start(); window.__test.step(120); });
   await call(() => window.__test.teleport(-174.6, 0, 0));
   const p = await call(() => window.__test.perf(30));
   ok(p.drawCalls <= 200, `${p.drawCalls} draw calls`);
   ok(p.triangles <= 300000, `${p.triangles} triangles`);
   ok(p.medianMs <= 70, `median frame ${p.medianMs.toFixed(1)} ms`);
-  return { drawCalls: p.drawCalls, triangles: p.triangles, medianMs: +p.medianMs.toFixed(1), heapMB: p.heapMB && Math.round(p.heapMB) };
+  // The LOW preset in the same view: no shadow pass, 300 m draw distance.
+  await call(() => window.portSolara.changeSetting('graphics', 'low'));
+  const low = await call(() => window.__test.perf(30));
+  await call(() => { window.portSolara.changeSetting('graphics', 'high'); localStorage.clear(); });
+  ok(low.medianMs <= p.medianMs * 1.5 + 2, `LOW is slower than HIGH (${low.medianMs} vs ${p.medianMs})`);
+  return { drawCalls: p.drawCalls, triangles: p.triangles, medianMs: +p.medianMs.toFixed(1), heapMB: p.heapMB && Math.round(p.heapMB), low: { drawCalls: low.drawCalls, triangles: low.triangles, medianMs: +low.medianMs.toFixed(1) } };
 });
 
 await test('clean-console', async () => { ok(problems.length === 0, problems.join(' | ')); return { problems: 0 }; });
