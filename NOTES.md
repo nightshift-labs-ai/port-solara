@@ -26,16 +26,18 @@
   outline.mjs, check-originality.mjs.
 
 ## Self-test (SwiftShader, 1280x800)
-- boot PASS (city build ~41 ms, 10 cars), walk PASS (9.3 m in 3 s, never inside a building),
-  drive PASS (35 m/s after 4 s; wall hit leaves 75 health, no pass-through), perf PASS
-  (146 draw calls, ~32k triangles, median render 1.9 ms with gl.finish), console clean.
+- boot PASS (city build 35-41 ms, 10 cars), walk PASS (9.3 m in 3 s, never inside a building),
+  drive PASS (35.2 m/s after 4 s; wall hit leaves 75 health, no pass-through), perf PASS
+  (146 draw calls, 31,697 triangles, median render 1.6-1.9 ms with gl.finish, heap ~14 MB), console clean.
+- The perf median times render() only; a full-frame cover-scene timing comes with traffic in M2.
 - Originality: PASS (0 hits).
 
 ## Shots
 - 1-chase.jpg (~187 KiB): Albacore at 90 km/h up Palmline Boulevard, full HUD, sea + lighthouse. No
   police/traffic/peds yet (M2/M3). Sundial Tower is hidden behind the hotel row from this angle.
 - 2-street.jpg (~165 KiB): Wren on foot in the Old Mercado square, Clock Arch, Mercado Central sign,
-  parked Pipit. Not yet over-the-shoulder aiming or combat (M4).
+  parked Pipit. Not yet over-the-shoulder aiming or combat (M4). The "[F] ENTER" prompt is out of
+  range in this frame. A handbrake-drift cover was tried and reverted: the camera swung into the hotel wall.
 - 4-title.jpg (~188 KiB): wordmark over Coral Heights and the Sundial Tower. No CONTINUE yet (M5).
 - 3-map.jpg: not taken (M5).
 - Dossier: ~795 KiB, byte-identical on two runs.

@@ -164,7 +164,7 @@ function buildLandmarks(game) {
     const x = q.x + Math.cos(ang) * 13, z = q.z + Math.sin(ang) * 13;
     const stall = box(4.5, 0.4, 3.2, awnings[i % 4], x, 2.6, z);
     stall.rotation.y = -ang;
-    const table = box(4, 1, 2.4, 0x8a5a3c, x, 0.7, z);
+    const table = box(3.6, 0.9, 1.8, 0xc99a63, x, 0.6, z);
     table.rotation.y = -ang;
     scene.add(stall, table);
   }
