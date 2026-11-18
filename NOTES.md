@@ -1,5 +1,62 @@
 # PORT SOLARA build notes
 
+## Done (M3a Police: complete, steps 1-7, run of 2026-11-18 19:51-20:30 EET)
+- Step 2 police/police-ai.js `dispatchPoliceUnits` (file named police-ai.js by run direction; the
+  brief's table says police-response.js, the first declaration is the same): a pool of 6 units built
+  once (Beacon cruisers GULL 11, TIDE 14, CORAL 7, MERCADO 3; Bulwark SUVs ANCHOR 40/41) in SPD
+  livery (white over navy sill, gold waist band, push bar; Bulwark navy with white roof), body + light
+  bar = 2 draw calls each; the bar swaps two vertex-coloured geometries 6x/s, and one additive Points
+  object glows over every bar half (1 draw call). Response: 1 = one cruiser, 2 = two, 3 = four + a
+  two-Bulwark roadblock 120 m ahead (toast ROADBLOCK AHEAD), 4+ = all six, Bulwarks RAMMING. Far
+  units route over the lane graph with A* (re-planned each second) to Wren's spot 2 s ahead; inside
+  40 m odd units ride alongside at 3.6 m, even units aim for the rear quarter (PIT: a contact turns
+  her car 0.22 rad and dents it), inside 6 m it is RAMMING. Stuck units reverse for 1.1 s; units past
+  230 m recycle; a wrecked unit is +2; a hard hit by the player is a cop assault (+2). Line of sight:
+  any unit within 90 m with no building box on the line (sampled every 4 m) => IN SIGHT.
+  HUD: SPD RESPONSE panel (call sign, distance, coloured tag PURSUIT/RAMMING/ROADBLOCK/SEARCHING/
+  RESPONDING/OVERHEAD, "+N more units in the search zone"); flashing red/blue minimap blips, clamped
+  to the map edge.
+- Step 3 SKYLARK 1 helicopter at WANTED 3+ (the brief's 5, moved to 3 for the cover): merged body,
+  spinning main and tail rotors, belly beacons, additive searchlight cone and ground disc; flies in
+  from 160 m at up to 60 m/s, circles 26 m ahead of Wren at 18 m; sees her from 140 m.
+- Step 4 SPD siren in audio/synth-audio.js (square voice, band-pass, our 740/990/740/880 Hz four-beat
+  with a glide, level from the nearest unit; only after the audio unlock click). IN CUSTODY after
+  2.5 s under 2 m/s within 6 m of a unit: navy fade card "IN CUSTODY / BOOKED AT SPD PALMLINE POST ·
+  BAIL -$400", heat cleared, police reset, respawn on foot at the nearest of two SPD posts.
+- Step 5 HUD: district card = name + one line per district (lore `districtLines`), full for 2.5 s then
+  a 0.6 s fade; police toasts under the WANTED panel; "FRI 17:32" clock from game time (17:20 + 1 min
+  per second of play); while WANTED the banner reads "LOSE THE SPD - BREAK LINE OF SIGHT" with the
+  real escape timer.
+- Step 6 tests: wanted (now with the SPD stood down so the unseen timer is measured), police, custody.
+  1-chase.jpg re-staged: WANTED 3 save state (witnessed theft + cop assault), the Albacore at 26 m/s on
+  Palmline, MERCADO 3 at the Rua 5 side street; after 100 ticks the other units and SKYLARK 1 are
+  placed round the car (alongside left, ahead right, ahead left) and 0.53 s of real sim runs (pursuit
+  -> RAMMING tags, handbrake flick, smoke). Camera framing 4.6 m back, 1.9 m up (shot only).
+
+## Self-test after M3a (SwiftShader, 1280x800): SELFTEST PASS, 12/12
+- boot (23 ms), walk 9.3 m, drive 35.2 m/s, traffic 24 / 0 overlaps / 7 at a red, peds 32 / 0
+  inside, steal, wanted (6 witnesses -> 1 pip, cleared after 11.0 s = escape), skid, police (WANTED
+  3: 4 cruisers + roadblock + helicopter, nearest 69 -> 8 m in 4 s, IN SIGHT), custody (after 2.53 s,
+  bail 400, pips 0, respawned on foot at -169,13), perf 152 draw calls / 45,047 triangles / median
+  1.1 ms / heap 20 MB in the perf view (171 draw calls with all police and the helicopter up), clean.
+- Originality PASS (25 files). main.ts twice: 32 output files byte-identical, dossier 894,677 bytes.
+- Shots: 1-chase.jpg 174.2 KiB (q80), 2-street.jpg 172.1 KiB (q88), 4-title.jpg 189.6 KiB (q76).
+  Judge sheet rebuilt; at 50% the cover reads chase, police, helicopter, WANTED, minimap, banner.
+
+## Next (M3b)
+- Mission runner with missions 1 and 3, GPS to mission markers, result cards (JOB DONE, LIGHTS OUT),
+  then the cover banner as STORY 3/5 - THE HARBOR RUN (no mission text in shots until it exists).
+
+## Bugs / debts (M3a)
+- Cover: the alongside cruisers are cut by the frame edges and hug the camera (their bars are out of
+  frame); the bars that read are on GULL 11 ahead. A median palm trunk fills the left foreground.
+- Tyre smoke is still grey low-poly balls; at the low cover camera they sit in front of the car.
+- Police cars do not collide with traffic cars or parked cars (only with buildings and Wren).
+- Level 2 "they shoot" waits for combat (M4); respray not in yet.
+- The helicopter cannot keep up with a car faster than 60 m/s; it trails until the car slows.
+- Police routing aims at crossing centres; on the boulevard that is the palm median (palms are not
+  colliders, so it works, but looks odd from above).
+
 - M3a step 1 (2026-11-18): police/wanted-level.js `WantedLevel` (theft seen within 25 m +1, pedHit/gunfire +1, copAssault/cruiserWrecked +2, 5 pips, escape 8 s + 3 s/pip unseen) hooked into both theft paths; HUD IN SIGHT / SEARCHING Ns tag under the pips, dashed minimap search circle (60 m + 25 m/pip) round the last-seen spot; `copsSee` is a stub until step 2; wanted self-test PASS (6 witnesses -> 1 pip, cleared after 11 s), 10/10 PASS, perf 152 draw calls; 1-chase.jpg re-shot (WANTED 1, SEARCHING), 2/4 unchanged. Next: step 2 police-ai.js.
 
 ## Done (M2 Traffic and theft: complete, all 7 steps, runs of 2026-11-18)
