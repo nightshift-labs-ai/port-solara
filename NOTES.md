@@ -41,6 +41,12 @@
 ## Next (rest of M6)
 - Cover staging: re-aim the chase camera so the low sun sits in frame; glow on police bars and
   tail lights (a vendored bloom pass or additive light-bar halos), measured on SwiftShader.
+  Tried and reverted in the 23:43-23:52 EET cover-light run: swinging the chase arm toward the sun
+  (yaw +1.15 and +0.55, TIDE 14 moved to the other side) warms the left horizon, but the sun disc
+  still falls outside the frame and TIDE 14 drops out of view or behind the right-hand toasts, so
+  the A/B kept out/ab/after-1-chase.jpg. The sun is about 112 degrees left of the northbound
+  chase, so the real fix is to stage the chase heading south (or west) on Palmline instead of
+  swinging the arm.
 - Round minimap, drawn weapon icons (fists, Wasp, Hornet), dim the locked Hornet chip.
 
 ## M5 Shell and depth: done (steps 3-6 in the run of 2026-11-18 23:05-23:44 EET)
