@@ -41,6 +41,25 @@ export function exposeTestHooks(game) {
       if (game.vehicle) { t.heading = facing; t.vx = t.vz = 0; t.sync(); } else { t.facing = facing; game.chase.yaw = facing; }
       return this.snapshot();
     },
+    // Leave any car, stand at the driver's door of a traffic car on a straight lane, press F and
+    // play 1.5 s: the driver must be out and running and Wren must be in that very car.
+    steal() {
+      if (game.vehicle) this.enterNearest();
+      const d = game.traffic.drivers.find((x) => x.car && !x.turn && x.lane.stopS - x.s > 25);
+      if (!d) return { error: 'no traffic car on a straight' };
+      const car = d.car, side = { x: Math.cos(car.heading), z: -Math.sin(car.heading) };
+      game.player.x = car.x - side.x * 2.2; game.player.z = car.z - side.z * 2.2;
+      this.enterNearest();
+      const target = game.theft && game.theft.car;
+      const jacking = target === car;
+      this.step(90);
+      const runner = (game.runaways || [])[0];
+      return {
+        target: car.name, jacking, inCar: game.vehicle === car, carLeftTraffic: !car.ai,
+        driverRunning: !!runner && runner.figure.visible,
+        driverDistance: runner ? +Math.hypot(runner.x - car.x, runner.z - car.z).toFixed(1) : 0,
+      };
+    },
     enterNearest() { game.input.setKey('KeyF', true); game.step(); game.input.setKey('KeyF', false); return this.snapshot(); },
     perf(frames = 30) {
       const gl = game.renderer.getContext();

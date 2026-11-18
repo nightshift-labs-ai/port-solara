@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import { buildCityDistricts, districtAt, LANDMARKS } from './world/city-builder.js';
 import { buildRoadNetwork } from './world/road-network.js';
 import { createSunSoakedLighting } from './world/sunlight-and-sea.js';
-import { DrivableCar, ENTER_RANGE } from './vehicles/car-physics.js';
+import { DrivableCar } from './vehicles/car-physics.js';
 import { buildCarModel, CAR_SPECS, PARKED_PAINTS, TRAFFIC_KINDS } from './vehicles/car-models.js';
 import { createTrafficPool } from './traffic/traffic-drivers.js';
 import { PedestrianCrowd } from './people/pedestrian-crowd.js';
 import { PlayerOnFoot } from './player/player-on-foot.js';
+import { stealNearestCar, updateCarTheft, nearestCar } from './player/car-theft.js';
 import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
 import { drawMinimap, planGridRoute } from './ui/minimap.js';
@@ -82,14 +83,7 @@ export function bootPortSolara() {
       game.focus = game.player;
       return;
     }
-    const car = nearestCar(game);
-    if (!car) return;
-    if (car.ai) game.traffic.detach(car);
-    game.vehicle = car;
-    game.player.setVisible(false);
-    game.chase.mode = 'car';
-    game.chase.yaw = car.heading;
-    game.focus = car;
+    stealNearestCar(game);
   };
 
   game.step = () => {
@@ -100,10 +94,13 @@ export function bootPortSolara() {
     game.traffic.update(dt, game.focus);
     game.crowd.update(dt, game.focus);
     if (game.mode !== 'play') { game.input.takePresses(); return; }
-    for (const code of input.takePresses()) if (code === 'KeyF') game.enterOrExit();
+    for (const code of input.takePresses()) if (code === 'KeyF' && !game.theft) game.enterOrExit();
     const look = input.takeLook();
     game.chase.look(look.x, look.y);
-    if (game.vehicle) {
+    updateCarTheft(game, dt);
+    if (game.theft) {
+      // Wren is busy at the driver's door; the tween owns her until the car is hers.
+    } else if (game.vehicle) {
       game.vehicle.update(dt, { throttle: input.axis('KeyS', 'KeyW'), steer: input.axis('KeyA', 'KeyD'), handbrake: input.held.has('Space') }, game.collide);
       if (game.vehicle.lastImpact > 6) { game.chase.shake = Math.min(1, game.vehicle.lastImpact / 20); game.vehicle.lastImpact = 0; }
       game.player.x = game.vehicle.x; game.player.z = game.vehicle.z;
@@ -130,11 +127,11 @@ export function bootPortSolara() {
     if (game.mode === 'play') {
       game.districtName = PORT_SOLARA_NAMES.districts[districtAt(game.focus.x, game.focus.z)];
       game.route = planGridRoute(game.roads, game.focus, { x: LANDMARKS.quist.x, z: LANDMARKS.quist.z + 22 });
-      const near = game.vehicle ? null : nearestCar(game);
+      const near = game.vehicle || game.theft ? null : nearestCar(game);
       game.prompt = null;
       if (near) {
         v.set(near.x, 1.9, near.z).project(camera);
-        if (v.z < 1) game.prompt = { text: `[F] ENTER ${near.name}`, x: (v.x * 0.5 + 0.5) * hudCanvas.width, y: (-v.y * 0.5 + 0.5) * hudCanvas.height };
+        if (v.z < 1) game.prompt = { text: `[F] ${near.owned ? 'ENTER' : 'STEAL'} ${near.name}`, x: (v.x * 0.5 + 0.5) * hudCanvas.width, y: (-v.y * 0.5 + 0.5) * hudCanvas.height };
       }
       drawHud(hudCtx, game, drawMinimap);
     }
@@ -176,15 +173,6 @@ export function bootPortSolara() {
   if (params.has('shot')) import('./dev/screenshot-scenes.js').then((m) => m.stageScreenshotScene(game, params.get('shot')));
   if (params.has('test')) import('./dev/test-hooks.js').then((m) => m.exposeTestHooks(game));
   return game;
-}
-
-function nearestCar(game) {
-  let best = null, bd = ENTER_RANGE;
-  for (const car of game.cars) {
-    const d = Math.hypot(car.x - game.player.x, car.z - game.player.z);
-    if (d < bd) { bd = d; best = car; }
-  }
-  return best;
 }
 
 // Parked cars along the curbs: [kind, x, z, heading].

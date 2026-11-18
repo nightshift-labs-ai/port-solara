@@ -100,6 +100,16 @@ await test('peds', async () => {
   return { walkers: s.peds.walkers, inside };
 });
 
+await test('steal', async () => {
+  const s = await call(() => window.__test.steal());
+  ok(!s.error, s.error);
+  ok(s.jacking, 'F did not start a jacking on the traffic car');
+  ok(s.inCar, 'Wren is not in the jacked car');
+  ok(s.carLeftTraffic, 'the car is still driven by traffic');
+  ok(s.driverRunning && s.driverDistance > 3, `driver not running away (${s.driverDistance} m)`);
+  return s;
+});
+
 await test('perf', async () => {
   await call(() => window.__test.teleport(-174.6, 0, 0));
   const p = await call(() => window.__test.perf(30));

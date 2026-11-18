@@ -85,5 +85,3 @@ export class DrivableCar {
     this.model.rotation.z = -this.steer * Math.min(1, Math.abs(this.speed) / 30) * 0.08;
   }
 }
-
-export const ENTER_RANGE = 6;
