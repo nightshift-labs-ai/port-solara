@@ -17,16 +17,21 @@ export function dispatchPoliceUnits(game, makeCar) {
   });
   const glow = buildBarGlow(units.length + 1);
   game.scene.add(glow);
+  const heli = buildHelicopter();
+  game.scene.add(heli.group, heli.cone, heli.spot);
+  const air = { call: 'SKYLARK 1', kind: 'heli', index: units.length, active: false, state: 'OVERHEAD', dist: 1e9, car: { x: 1e5, z: 1e5 }, y: 0 };
   const police = {
-    units, glow, enabled: true, seesPlayer: false, roadblock: null, events: [], dispatchIn: 0,
-    get active() { return units.filter((u) => u.active); },
-    // Fixed-step update: dispatch by level, drive every unit, then the line-of-sight check.
+    units, glow, heli: air, enabled: true, seesPlayer: false, roadblock: null, events: [], dispatchIn: 0,
+    get active() { return air.active ? [...units.filter((u) => u.active), air] : units.filter((u) => u.active); },
+    // Fixed-step update: dispatch by level, drive every unit, fly the helicopter, then the
+    // line-of-sight check (the helicopter sees Wren from 140 m: nothing blocks the sky).
     update(dt) {
       const wl = game.wantedLevel;
       const pips = police.enabled ? wl.pips : 0;
       if ((police.dispatchIn -= dt) <= 0) { police.dispatchIn = 0.5; dispatch(pips); }
       for (const u of units) if (u.active) driveUnit(u, dt, pips);
-      police.seesPlayer = pips > 0 && units.some((u) => u.active && u.dist < SIGHT_RANGE && clearLine(game.collide, u.car.x, u.car.z, game.focus.x, game.focus.z));
+      flyHelicopter(dt, pips);
+      police.seesPlayer = pips > 0 && ((air.active && air.dist < HELI_SIGHT) || units.some((u) => u.active && u.dist < SIGHT_RANGE && clearLine(game.collide, u.car.x, u.car.z, game.focus.x, game.focus.z)));
       flashBars();
     },
     // Puts unit i on the street at a spot (the shot module and tests stage chases with it).
@@ -38,7 +43,7 @@ export function dispatchPoliceUnits(game, makeCar) {
       u.state = state;
       return u;
     },
-    reset() { units.forEach(deactivate); police.roadblock = null; },
+    reset() { units.forEach(deactivate); police.roadblock = null; air.active = false; air.car.x = air.car.z = 1e5; air.dist = 1e9; },
     toast(text) { police.events.push({ text, at: game.time }); if (police.events.length > 4) police.events.shift(); },
   };
 
@@ -205,6 +210,38 @@ export function dispatchPoliceUnits(game, makeCar) {
     c.sync(); v.sync();
   }
 
+  // At WANTED 3+ SKYLARK 1 flies in from 160 m and circles 22 m above a spot just ahead of Wren,
+  // its searchlight cone on her; below 3 it climbs away and is gone.
+  function flyHelicopter(dt, pips) {
+    const p = game.focus, f = facingOf();
+    if (pips >= 3 && !air.active) {
+      air.active = true;
+      air.car.x = p.x - f.x * 160; air.car.z = p.z - f.z * 160; air.y = 40;
+      police.toast('SPD HELICOPTER OVERHEAD');
+    }
+    if (pips < 3 && air.active && (air.y += dt * 8) > 70) { air.active = false; air.car.x = air.car.z = 1e5; }
+    heli.group.visible = heli.cone.visible = heli.spot.visible = air.active;
+    if (!air.active) return;
+    const a = game.time * 0.32;
+    const ox = p.x + f.x * 22 + Math.cos(a) * 20, oz = p.z + f.z * 22 + Math.sin(a) * 20;
+    const dx = ox - air.car.x, dz = oz - air.car.z, d = Math.hypot(dx, dz), step = Math.min(d, 38 * dt);
+    if (d > 0.01) { air.car.x += dx / d * step; air.car.z += dz / d * step; }
+    if (pips >= 3) air.y += (HELI_HEIGHT - air.y) * Math.min(1, dt * 0.8);
+    air.dist = Math.hypot(p.x - air.car.x, p.z - air.car.z);
+    heli.group.position.set(air.car.x, air.y, air.car.z);
+    heli.group.rotation.set(0, Math.atan2(-(p.x - air.car.x), -(p.z - air.car.z)), 0);
+    heli.group.rotateX(-0.12);
+    heli.rotor.rotation.y = game.time * 21;
+    heli.tail.rotation.x = game.time * 30;
+    // Searchlight: a soft cone from the belly to a lit disc around Wren.
+    const from = new THREE.Vector3(air.car.x, air.y - 1.2, air.car.z), to = new THREE.Vector3(p.x, 0, p.z);
+    const dir = to.clone().sub(from), len = dir.length();
+    heli.cone.position.copy(from);
+    heli.cone.quaternion.setFromUnitVectors(DOWN, dir.normalize());
+    heli.cone.scale.set(5.2, len, 5.2);
+    heli.spot.position.set(p.x, 0.09, p.z);
+  }
+
   // Red and blue swap six times a second, per unit offset; the glow sprites sit over each bar half.
   function flashBars() {
     const pos = glow.geometry.attributes.position, col = glow.geometry.attributes.color;
@@ -221,6 +258,12 @@ export function dispatchPoliceUnits(game, makeCar) {
         col.setXYZ(j, k === 0 ? (on ? 1 : 0.25) : 0.1, k === 0 ? 0.12 : (on ? 0.4 : 0.1), k === 0 ? 0.1 : (on ? 1 : 0.25));
       }
     });
+    // The helicopter's belly beacons use the last two sprites.
+    const j = units.length * 2, ph = Math.floor(game.time * 3) % 2;
+    pos.setXYZ(j, air.active ? air.car.x : 0, air.active ? air.y - 1.1 : -50, air.car.z);
+    pos.setXYZ(j + 1, air.active ? air.car.x : 0, air.active ? air.y + 0.9 : -50, air.car.z);
+    col.setXYZ(j, ph ? 1 : 0.2, 0.1, ph ? 0.1 : 1);
+    col.setXYZ(j + 1, 0.9, 0.85, 0.7);
     pos.needsUpdate = true; col.needsUpdate = true;
   }
 
@@ -241,6 +284,45 @@ export const POLICE_SPECS = {
   bulwark: { name: 'SPD BULWARK', topSpeed: 52, accel: 11, grip: 6.5, length: 5.0, width: 2.05 },
 };
 export const SIGHT_RANGE = 90, PURSUIT_RANGE = 40, DESPAWN_RANGE = 230, ROADBLOCK_AHEAD = 85;
+export const HELI_SIGHT = 140, HELI_HEIGHT = 22;
+const DOWN = new THREE.Vector3(0, -1, 0);
+
+// SKYLARK 1: a navy-and-white cabin, tail boom, fin and skids in one mesh, two rotors, and the
+// searchlight cone and ground disc (additive, no depth write). Five draw calls.
+function buildHelicopter() {
+  const body = boxesToGeometry([
+    { w: 1.9, h: 1.3, d: 3.4, x: 0, y: 0, z: 0, c: NAVY },
+    { w: 1.92, h: 0.5, d: 3.0, x: 0, y: 0.75, z: 0.1, c: WHITE },
+    { w: 1.94, h: 0.14, d: 3.42, x: 0, y: 0.15, z: 0, c: GOLD },
+    { w: 1.6, h: 0.9, d: 0.9, x: 0, y: 0.15, z: -1.95, c: GLASS },
+    { w: 0.36, h: 0.4, d: 4.6, x: 0, y: 0.35, z: 3.9, c: NAVY },
+    { w: 0.12, h: 1.3, d: 0.8, x: 0, y: 0.9, z: 6.0, c: WHITE },
+    { w: 0.5, h: 0.4, d: 0.5, x: 0, y: 1.2, z: 0, c: TRIM },
+    { w: 0.1, h: 0.1, d: 3.4, x: -0.85, y: -1.05, z: 0, c: TRIM },
+    { w: 0.1, h: 0.1, d: 3.4, x: 0.85, y: -1.05, z: 0, c: TRIM },
+    { w: 0.08, h: 0.5, d: 0.08, x: -0.85, y: -0.8, z: -0.8, c: TRIM }, { w: 0.08, h: 0.5, d: 0.08, x: 0.85, y: -0.8, z: -0.8, c: TRIM },
+    { w: 0.08, h: 0.5, d: 0.08, x: -0.85, y: -0.8, z: 0.9, c: TRIM }, { w: 0.08, h: 0.5, d: 0.08, x: 0.85, y: -0.8, z: 0.9, c: TRIM },
+  ]);
+  const group = new THREE.Group();
+  group.add(new THREE.Mesh(body, POLICE_BODY));
+  const rotor = new THREE.Mesh(boxesToGeometry([
+    { w: 10, h: 0.06, d: 0.32, x: 0, y: 0, z: 0, c: TRIM }, { w: 0.32, h: 0.06, d: 10, x: 0, y: 0, z: 0, c: TRIM },
+  ]), POLICE_BODY);
+  rotor.position.y = 1.5;
+  const tail = new THREE.Mesh(boxesToGeometry([{ w: 0.05, h: 1.8, d: 0.2, x: 0, y: 0, z: 0, c: TRIM }]), POLICE_BODY);
+  tail.position.set(0.15, 1.0, 6.1);
+  group.add(rotor, tail);
+  group.visible = false;
+  const coneGeo = new THREE.ConeGeometry(1, 1, 24, 1, true);
+  coneGeo.translate(0, -0.5, 0); // apex at the origin, opening down -y
+  const lightMat = new THREE.MeshBasicMaterial({ color: 0xfff1c8, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+  const cone = new THREE.Mesh(coneGeo, lightMat);
+  const spot = new THREE.Mesh(new THREE.CircleGeometry(5.4, 28).rotateX(-Math.PI / 2), lightMat.clone());
+  spot.material.opacity = 0.3;
+  cone.visible = spot.visible = false;
+  cone.frustumCulled = spot.frustumCulled = false;
+  return { group, rotor, tail, cone, spot };
+}
 
 // True when no building box stands on the line between two points (sampled every 4 m).
 export function clearLine(collide, ax, az, bx, bz) {

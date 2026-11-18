@@ -133,6 +133,7 @@ await test('police', async () => {
   ok(s.maxCruisers >= 4, `${s.maxCruisers} cruisers answered WANTED 3`);
   ok(s.nearest < s.firstNearest - 20 && s.nearest <= 30, `units did not close in (${s.firstNearest} m -> ${s.nearest} m)`);
   ok(s.inSight, 'no unit ever had line of sight');
+  ok(s.heli, 'no helicopter at WANTED 3');
   return s;
 });
 

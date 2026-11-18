@@ -42,19 +42,20 @@ export function exposeTestHooks(game) {
       pol.reset(); wl.clear();
       wl.commit('copAssault', game.focus.x, game.focus.z); wl.commit('theft', game.focus.x, game.focus.z);
       const samples = [];
-      let maxActive = 0, firstNearest = null, nearest = Infinity, roadblock = false, inSight = false;
+      let maxActive = 0, firstNearest = null, nearest = Infinity, roadblock = false, inSight = false, heli = false;
       for (let sec = 0; sec < 30 && nearest > 14; sec++) {
         for (let i = 0; i < 60; i++) game.step();
-        const act = pol.active, chasing = act.filter((u) => u.state !== 'ROADBLOCK');
+        const act = pol.active, chasing = act.filter((u) => u.state !== 'ROADBLOCK' && u.kind !== 'heli');
         maxActive = Math.max(maxActive, chasing.length);
         roadblock ||= act.some((u) => u.state === 'ROADBLOCK');
+        heli ||= pol.heli.active;
         inSight ||= wl.inSight;
         const d = Math.min(...chasing.map((u) => u.dist));
         if (firstNearest === null && Number.isFinite(d)) firstNearest = d;
         nearest = Math.min(nearest, d);
         samples.push(Math.round(d));
       }
-      return { pips: wl.pips, maxCruisers: maxActive, roadblock, firstNearest: Math.round(firstNearest), nearest: Math.round(nearest), inSight, seconds: samples.length, samples };
+      return { pips: wl.pips, maxCruisers: maxActive, roadblock, heli, firstNearest: Math.round(firstNearest), nearest: Math.round(nearest), inSight, seconds: samples.length, samples };
     },
     // Walkers placed near the focus, and how many stand inside a building box.
     peds() {
