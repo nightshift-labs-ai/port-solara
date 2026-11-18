@@ -3,7 +3,8 @@
 // the action prompt over its target. Sizes are given at 1280 px wide and scale with the window.
 export function drawHud(ctx, game, drawMinimap) {
   const w = ctx.canvas.width, h = ctx.canvas.height;
-  const s = w / 1280;
+  // Slim HUD: type and padding run about 15% under the 1280 sizes so more street shows.
+  const s = w / 1280 * HUD_SCALE;
   const mx = Math.round(w * 0.04), my = Math.round(h * 0.04);
   ctx.clearRect(0, 0, w, h);
   ctx.textBaseline = 'alphabetic';
@@ -276,20 +277,24 @@ export const STATE_COLORS = {
 };
 export const GOLD = '#ffc93c';
 export const WHITE = '#fff8ec';
-export const NAVY_GLASS = 'rgba(14, 30, 60, 0.65)';
-export const OUTLINE = '#fff1d6';
+export const NAVY_GLASS = 'rgba(10, 20, 44, 0.8)';
+export const OUTLINE = 'rgba(255, 241, 214, 0.38)';
+export const HUD_SCALE = 0.85;
 
 export function font(px, weight = 800) { return `${weight} ${Math.round(px)}px "DejaVu Sans", Verdana, sans-serif`; }
 
+// Dark glass with a 1 px soft rim and a gold accent strip down the left edge.
 export function panel(ctx, x, y, w, h) {
   const s = ctx.canvas.width / 1280;
   ctx.fillStyle = NAVY_GLASS;
   ctx.strokeStyle = OUTLINE;
-  ctx.lineWidth = Math.max(2, 2 * s);
+  ctx.lineWidth = Math.max(1, 1.2 * s);
   ctx.beginPath();
-  ctx.roundRect(x, y, w, h, 10 * s);
+  ctx.roundRect(x, y, w, h, 7 * s);
   ctx.fill();
   ctx.stroke();
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(x + 1, y + 6 * s, Math.max(2, 3 * s), Math.max(0, h - 12 * s));
 }
 
 function bar(ctx, x, y, w, h, frac, color) {
