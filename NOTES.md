@@ -1,6 +1,56 @@
 # PORT SOLARA build notes
 
-## Done (M2 Traffic and theft, partial: steps 0-3 of 7, run of 2026-11-18)
+## Done (M2 Traffic and theft: complete, all 7 steps, runs of 2026-11-18)
+- Step 4 player/car-theft.js `stealNearestCar`: F within 6 m of a traffic car detaches it from the
+  pool, brakes it hard, tweens Wren to the driver's door (0.35 s), drags the driver out past her with
+  a stumble (0.6 s), then puts her in the car; the driver sprints off (5.5 m/s for 7 s, turning along
+  walls) as one of 3 pooled figures; walkers within 14 m panic. Parked cars open at once (with the
+  car alarm). Prompt reads "[F] STEAL <car>" until a car is yours, then "[F] ENTER". Input is locked
+  while the jacking plays (`game.theft`).
+- Step 5 feel: chase camera has a position spring (12/s, snaps on mode change), heading lag that
+  loosens in a slide so the flank shows, look-ahead 6-13 m with speed plus a velocity lean, FOV 65-77.
+  audio/synth-audio.js (first declaration `playSiren`, used today as the car alarm; the SPD will use
+  it in M3): engine = saw + sub-octave square through a rev-following low-pass over 5 gears, tyre
+  squeal = looped seeded noise through a band-pass opened by slip and handbrake. Audio is created
+  only on the NEW GAME click or a canvas click (never in tests/shots). vehicles/skid-marks-and-smoke.js
+  `SkidMarksAndSmoke`: 600 instanced strips in a ring buffer under the rear wheels and 48 instanced
+  puffs (1 s life), driven by sim ticks only. DrivableCar now exposes `slip`, `throttle`, `handbrake`.
+- Step 6: steal and skid self-tests (traffic and peds tests already in). 1-chase.jpg re-staged: 10 s
+  of live sim, 8 walkers gathered on the Rua 5 corners (`PedestrianCrowd.gatherNear`, staging only),
+  the Albacore taken from the curb runs north 2.4 s and handbrake-drifts right into the Palmline x
+  Rua 5 crossing (smoke, skid marks, two cars held at the red, walkers on the corner, sea and lighthouse).
+  2-street.jpg: walkers under the Clock Arch, Wren within reach of the Pipit so "[F] STEAL PIPIT" shows.
+- District title card (brief section 1 rival bar, M2): on entering a district the HUD shows the road
+  under you (gold) and the district (white, 38 px) under the banner for 4.5 s; district is tracked in
+  the fixed step and the card is stamped with sim time. Title strip says "F STEAL/EXIT CAR".
+
+## Self-test after M2 (SwiftShader, 1280x800)
+- boot PASS (city 19-34 ms, 33 cars incl. pool), walk PASS (9.3 m), drive PASS (35.2 m/s, 75 health),
+  traffic PASS (24 active after 20 s, 0 overlaps, closest 2.12 m, up to 7 waiting at a red), peds PASS
+  (32 walkers, 0 inside buildings), steal PASS (Saltrunner jacked, Wren in it, car left the pool,
+  driver running 6.1 m away after 1.5 s), skid PASS (82 strips, 24 puffs alive, slip 16), perf PASS
+  (158 draw calls, 46,213 triangles, median render 1.0-2.1 ms, heap 15 MB), console clean.
+- Originality PASS (23 files). main.ts twice: 30 output files byte-identical, dossier 847,436 bytes.
+  main.ts runs without `ulimit -v` (Node's TypeScript wasm cannot allocate under it).
+- Shots: 1-chase.jpg 175.9 KiB, 2-street.jpg 167.4 KiB, 4-title.jpg 189.6 KiB (q76). Judge sheet
+  rebuilt; at 50% the cover reads as a car drifting through a busy crossing with banner, district
+  card, minimap, WANTED and speed. Police are not in any shot yet (M3).
+
+## Next (M3 Police and first missions)
+- police/wanted-level.js `WantedLevel` (theft seen within 25 m +1: hook it into `stealNearestCar`),
+  police/police-response.js with Beacon/Bulwark models, `playSiren` on the cruisers, search circle,
+  custody and LIGHTS OUT, mission runner with missions 1 and 3, then re-stage the cover per section 3.
+- Instance car bodies per kind before police land (draw calls).
+
+## Bugs / debts (after M2)
+- The cover has two near civilian cars and a few far ones; section 3 wants three with one braking
+  (no brake lights yet: tail lamps are part of the merged body).
+- Tyre smoke is low-poly icosahedra at one opacity; near the camera the trail reads a little blocky.
+- Parked theft is instant (brief says 1 s with an alarm; the alarm is in, the delay is not).
+- Jacked-driver figures are 6 meshes each (up to 3 visible for 7 s); fold into the crowd instancing.
+- Walkers in 2-street.jpg are far (under the arch); the crowd still only walks block rings, not plazas.
+
+## Earlier M2 steps (1-3)
 - people/pedestrian-crowd.js `PedestrianCrowd`: 32 walkers on the sidewalk ring 1.5 m outside each
   block within 120 m (respawn past 160 m), two instanced meshes (outfit-coloured bodies, heads), bob
   while walking; a car within 9 m coming at them sends them running (4 m/s) toward the building side
@@ -9,8 +59,6 @@
 - Self-test now: traffic PASS (24 active, 0 overlaps, closest 2.12 m, up to 7 at a red), peds PASS
   (32 walkers, 0 inside buildings), perf PASS (189 draw calls, 43,037 triangles, median 1.2 ms).
   Dossier 806,536 bytes, 27 output files byte-identical on two runs; originality PASS (20 files).
-- Shots re-taken: 1-chase 162.6 KiB, 2-street 165.9 KiB, 4-title 189.9 KiB. Walkers are in frame
-  but sparse (one each in 1 and 2): re-stage the cover in step 6.
 - README: make.fun badges under the title and the make.fun footer line.
 - Lane graph in world/road-network.js: 90 crossing nodes, 322 directed lanes (Palmline Boulevard
   two lanes each way at 4.6/7.2 m, avenues and ruas one at 3 m, right-hand traffic), clearances past
@@ -27,7 +75,6 @@
   inside a crossing only cars on the exit lane count for the gap.
 - New models: Saltrunner pickup, Dockhand van (teal band), Citrine Cab (lime, roof light). Traffic mix:
   Pipit most common, then Promenade, Citrine, Saltrunner, Dockhand.
-- F on a traffic car currently takes it straight from the pool (no pull-out animation yet: step 4).
 
 ## Self-test after M2 steps 1-2 (SwiftShader, 1280x800)
 - boot PASS (city 18-22 ms, 33 cars incl. pool), walk PASS (9.3 m), drive PASS (35.2 m/s, 75 health),
@@ -38,18 +85,13 @@
   2-street.jpg 165.5 KiB (a Saltrunner passes at the left), 4-title.jpg 189.9 KiB at q76 (cars and
   signals on the grid). No pedestrians yet in any shot.
 
-## Next (rest of M2, in order)
-- Step 4 player/car-theft.js `stealNearestCar` (pull-out tween, driver flees, uses
-  `game.traffic.detach`), step 5 camera feel + audio/synth-audio.js + skids/smoke, step 6 peds and
-  steal tests, re-stage 1-chase.jpg with peds and a braking civilian.
-
-## Bugs / debts (M2)
+## Bugs / debts (from M2 steps 1-3, still open)
 - Draw calls 189 in the perf view (target 150, cap 200): each traffic car is 2 meshes; instance car
   bodies per kind next, before police land in M3.
 - Walkers are boxes (body + head) without legs; give them a leg pair in the instanced set.
 - No car-to-car collision: the player's car passes through traffic (traffic does brake for it).
-- Traffic ignores walkers until the crowd exists; the Albacore start spot sits in the boulevard's inner
-  northbound lane, so traffic behind it swaps to the outer lane after 3 s.
+- The Albacore start spot sits in the boulevard's inner northbound lane, so traffic behind it swaps to
+  the outer lane after 3 s.
 - Left turns at unsignalled crossings wait for an empty crossing, which can queue a short line.
 
 ## Done (M1 City slice)

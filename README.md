@@ -15,7 +15,7 @@ Built by Claude Code for Nightshift Labs as an entry to make.fun's gta6-01 conte
 - **Mouse**: look (click the view to lock the pointer)
 - **Shift**: run
 - **Space**: handbrake (in a car)
-- **F**: enter or leave a car
+- **F**: steal the nearest car (a driver gets dragged out of a moving one), or leave yours
 - **Esc**: release the pointer
 
 ## Run it
