@@ -29,16 +29,28 @@ export function playSiren(audio, { seconds = 1.2, low = 620, high = 1180, rate =
 // then). The engine is a saw plus a square an octave down through a low-pass that follows the
 // revs over five gears; the tyres are looped seeded noise through a band-pass opened by slip.
 export function createSynthAudio() {
-  const audio = { ctx: null, master: null, engine: null, tyres: null };
+  // Settings mix (0-10 each): master over everything, music for the radio, effects for the rest.
+  const audio = { ctx: null, master: null, engine: null, tyres: null, mix: { master: 8, music: 7, effects: 8 } };
+  const levels = () => ({ out: audio.mix.master / 10, music: 0.16 * audio.mix.music / 7, effects: 0.55 * audio.mix.effects / 8 });
+  audio.setMix = (mix) => {
+    Object.assign(audio.mix, mix);
+    if (!audio.ctx) return;
+    const l = levels();
+    audio.out.gain.value = l.out; audio.master.gain.value = l.effects;
+    if (radio.bus) radio.bus.gain.value = l.music;
+  };
 
   audio.unlock = () => {
     if (audio.ctx) { audio.ctx.resume(); return; }
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     const ctx = (audio.ctx = new Ctx());
-    audio.master = ctx.createGain();
-    audio.master.gain.value = 0.55;
-    audio.master.connect(ctx.destination);
+    audio.out = ctx.createGain();
+    audio.out.gain.value = levels().out;
+    audio.out.connect(ctx.destination);
+    audio.master = ctx.createGain(); // the effects bus: engine, tyres, siren, guns
+    audio.master.gain.value = levels().effects;
+    audio.master.connect(audio.out);
 
     const saw = ctx.createOscillator(), sub = ctx.createOscillator();
     saw.type = 'sawtooth'; sub.type = 'square';
@@ -81,7 +93,7 @@ export function createSynthAudio() {
   const radio = { bus: null, station: -1, next: 0, step: 0 };
   const playRadio = (index) => {
     const ctx = audio.ctx;
-    if (!radio.bus) { radio.bus = ctx.createGain(); radio.bus.gain.value = 0.16; radio.bus.connect(audio.master); }
+    if (!radio.bus) { radio.bus = ctx.createGain(); radio.bus.gain.value = levels().music; radio.bus.connect(audio.out); }
     if (index !== radio.station) { radio.station = index; radio.step = 0; radio.next = ctx.currentTime + 0.05; }
     if (index < 0) return;
     const st = RADIO_STATIONS[index], beat = 60 / st.bpm / 2;

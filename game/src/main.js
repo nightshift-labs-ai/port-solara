@@ -185,7 +185,7 @@ export function bootPortSolara() {
     game.chase.aiming = game.arms.aiming;
     game.radio.heat = game.wantedLevel.pips >= 3; // Heat 96 cuts in at WANTED 3+
     const look = input.takeLook();
-    game.chase.look(look.x, look.y);
+    game.chase.look(look.x * (game.lookScale || 1), look.y * (game.lookScale || 1));
     updateCarTheft(game, dt);
     if (inCustody) {
       if (game.vehicle) game.vehicle.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide);

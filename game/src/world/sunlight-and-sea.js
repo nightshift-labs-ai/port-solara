@@ -73,17 +73,25 @@ export function createSunSoakedLighting(game) {
     scene.add(head);
   }
 
-  return {
-    sun, sunDir, sea,
+  const light = {
+    sun, sunDir, sea, skyScale: 1,
+    // The graphics preset's draw distance: the dome and sun disc shrink with the far plane.
+    setDrawDistance(far) {
+      light.skyScale = Math.min(1, (far - 20) / 460);
+      sky.scale.setScalar(light.skyScale);
+      sunDisc.scale.setScalar(light.skyScale);
+    },
     // Keeps the shadow frustum, the sky and the sun disc centred on the focus point.
     follow(focus, eye = focus) {
       sun.position.set(focus.x + sunDir.x * 140, sunDir.y * 140, focus.z + sunDir.z * 140);
       sun.target.position.set(focus.x, 0, focus.z);
       sky.position.set(eye.x, 0, eye.z);
-      sunDisc.position.set(eye.x + sunDir.x * 430, sunDir.y * 430, eye.z + sunDir.z * 430);
+      const d = 430 * light.skyScale;
+      sunDisc.position.set(eye.x + sunDir.x * d, sunDir.y * d, eye.z + sunDir.z * d);
       sunDisc.lookAt(eye.x, 0, eye.z);
     },
   };
+  return light;
 }
 
 export const HORIZON = 0xf2c8a4;

@@ -41,7 +41,7 @@ export function installPauseAndMap(game) {
   const items = [
     { label: 'RESUME', run: () => close() },
     { label: 'MAP', run: () => { pause.view = 'map'; draw(); } },
-    { label: 'SETTINGS', run: () => { pause.note = 'SETTINGS - volume, mouse and graphics land with the next build'; draw(); } },
+    { label: 'SETTINGS', run: () => { pause.view = 'settings'; pause.row = 0; pause.note = ''; draw(); } },
     { label: 'SAVE', run: () => { pause.note = game.saveGame ? game.saveGame('Pause menu') : 'Saving is not ready yet'; draw(); } },
     { label: 'QUIT TO TITLE', run: () => { close(false); game.quitToTitle?.(); } },
   ];
@@ -79,8 +79,18 @@ export function installPauseAndMap(game) {
       return;
     }
     if (game.mode !== 'paused') return;
-    if (e.code === 'Escape' || e.code === 'KeyP') { if (pause.view === 'map') { pause.view = 'menu'; draw(); } else close(); return; }
+    if (e.code === 'Escape' || e.code === 'KeyP') { if (pause.view !== 'menu') { pause.view = 'menu'; draw(); } else close(); return; }
     if (e.code === 'Tab' || e.code === 'KeyM') { if (pause.view === 'map') close(); else { pause.view = 'map'; draw(); } return; }
+    if (pause.view === 'settings') {
+      const n = SETTING_ROWS.length + 1;
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') pause.row = (pause.row + 1) % n;
+      if (e.code === 'ArrowUp' || e.code === 'KeyW') pause.row = (pause.row + n - 1) % n;
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') stepSetting(game, pause.row, -1);
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') stepSetting(game, pause.row, 1);
+      if ((e.code === 'Enter' || e.code === 'Space') && pause.row === SETTING_ROWS.length) pause.view = 'menu';
+      draw();
+      return;
+    }
     if (pause.view !== 'menu') return;
     if (e.code === 'ArrowDown' || e.code === 'KeyS') { pause.active = (pause.active + 1) % items.length; draw(); }
     if (e.code === 'ArrowUp' || e.code === 'KeyW') { pause.active = (pause.active + items.length - 1) % items.length; draw(); }
@@ -92,9 +102,68 @@ export function installPauseAndMap(game) {
   });
   canvas.addEventListener('click', (e) => {
     const hit = pause.rects.findIndex((r) => e.offsetX >= r.x && e.offsetX <= r.x + r.w && e.offsetY >= r.y && e.offsetY <= r.y + r.h);
-    if (hit >= 0) { pause.active = hit; items[hit].run(); }
+    if (hit < 0) return;
+    if (pause.view === 'settings') {
+      // A click on a row's left half lowers it, on the right half raises it; BACK returns.
+      const r = pause.rects[hit];
+      pause.row = hit;
+      if (hit === SETTING_ROWS.length) pause.view = 'menu';
+      else stepSetting(game, hit, e.offsetX < r.x + r.w / 2 ? -1 : 1);
+      draw();
+      return;
+    }
+    pause.active = hit; items[hit].run();
   });
   addEventListener('resize', () => { if (game.mode === 'paused') draw(); });
+}
+
+// The SETTINGS rows: volumes step by 1 (0-10), sensitivity by 0.1 (0.5-2.0), graphics flips.
+export const SETTING_ROWS = [
+  { key: 'master', label: 'MASTER VOLUME', min: 0, max: 10, step: 1 },
+  { key: 'music', label: 'MUSIC / RADIO', min: 0, max: 10, step: 1 },
+  { key: 'effects', label: 'EFFECTS', min: 0, max: 10, step: 1 },
+  { key: 'sensitivity', label: 'MOUSE SENSITIVITY', min: 0.5, max: 2, step: 0.1 },
+  { key: 'graphics', label: 'GRAPHICS', options: ['low', 'high'] },
+];
+
+export function stepSetting(game, row, dir) {
+  const r = SETTING_ROWS[row];
+  if (!r || !game.changeSetting) return;
+  const now = game.settings[r.key];
+  if (r.options) game.changeSetting(r.key, r.options[(r.options.indexOf(now) + dir + r.options.length) % r.options.length]);
+  else game.changeSetting(r.key, Math.round(Math.min(r.max, Math.max(r.min, now + dir * r.step)) * 10) / 10);
+}
+
+function settingText(r, v) {
+  if (r.options) return v === 'high' ? 'HIGH · shadows, 480 m' : 'LOW · no shadows, 300 m';
+  if (r.key === 'sensitivity') return `${v.toFixed(1)}x`;
+  return `${'|'.repeat(v)}${'·'.repeat(10 - v)} ${v}`;
+}
+
+function drawSettings(ctx, game, pause, rect, s) {
+  ctx.fillStyle = '#fff8ec';
+  ctx.font = `900 ${Math.round(48 * s)}px ${FONT}`;
+  ctx.fillText('SETTINGS', rect.x + 48 * s, rect.y + 96 * s);
+  const rows = [...SETTING_ROWS, { label: 'BACK' }];
+  rows.forEach((r, i) => {
+    const y = rect.y + (140 + i * 62) * s, x = rect.x + 40 * s, w = Math.min(rect.w - 80 * s, 720 * s), h = 50 * s, active = i === pause.row;
+    ctx.fillStyle = active ? 'rgba(255, 201, 60, 0.18)' : 'rgba(20, 48, 79, 0.75)';
+    ctx.fillRect(x, y, w, h);
+    ctx.lineWidth = 3 * s; ctx.strokeStyle = active ? '#ffc93c' : 'rgba(255, 248, 236, 0.4)';
+    ctx.strokeRect(x, y, w, h);
+    ctx.font = `800 ${Math.round(26 * s)}px ${FONT}`;
+    ctx.fillStyle = active ? '#ffc93c' : '#fff8ec';
+    ctx.fillText(r.label, x + 20 * s, y + 35 * s);
+    if (r.key) {
+      ctx.font = `700 ${Math.round(24 * s)}px ${FONT}`;
+      const t = `‹ ${settingText(r, game.settings[r.key])} ›`;
+      ctx.fillText(t, x + w - ctx.measureText(t).width - 20 * s, y + 35 * s);
+    }
+    pause.rects.push({ x, y, w, h });
+  });
+  ctx.font = `700 ${Math.round(18 * s)}px ${FONT}`;
+  ctx.fillStyle = 'rgba(255, 248, 236, 0.8)';
+  ctx.fillText('ARROWS CHANGE · ESC BACK · SAVED WITH YOUR GAME', rect.x + 44 * s, rect.y + rect.h - 28 * s);
 }
 
 // The overlay: in MAP view the city map fills the left and the side panel the right; in MENU view
@@ -109,7 +178,11 @@ export function drawPauseScreen(ctx, game, pause, items) {
   drawCityMap(ctx, game, mapRect, s);
   drawSidePanel(ctx, game, { x: W - panelW - pad, y: pad, w: panelW, h: H - pad * 2 }, s);
   pause.rects = [];
-  if (pause.view === 'menu') {
+  if (pause.view === 'settings') {
+    ctx.fillStyle = 'rgba(10, 26, 44, 0.8)';
+    ctx.fillRect(mapRect.x, mapRect.y, mapRect.w, mapRect.h);
+    drawSettings(ctx, game, pause, mapRect, s);
+  } else if (pause.view === 'menu') {
     ctx.fillStyle = 'rgba(10, 26, 44, 0.72)';
     ctx.fillRect(mapRect.x, mapRect.y, mapRect.w, mapRect.h);
     ctx.fillStyle = '#fff8ec';
@@ -320,8 +393,26 @@ export function showTitleScreen(game, onNewGame) {
   const items = [
     ...(save ? [{ label: continueLabel(save), run: () => { root.hidden = true; game.loadSave?.(save); onNewGame(); } }] : []),
     { label: 'NEW GAME', run: () => { root.hidden = true; if (game.mode !== 'title' || game.playedOnce) game.newGameState?.(); onNewGame(); } },
-    { label: 'CONTROLS', run: () => { controls.hidden = !controls.hidden; } },
+    { label: 'CONTROLS', run: () => { settingsPanel.hidden = true; controls.hidden = !controls.hidden; } },
+    { label: 'SETTINGS', run: () => { controls.hidden = true; settingsPanel.hidden = !settingsPanel.hidden; fillSettings(); } },
   ];
+  // The title's settings: a click on a row raises it (wrapping round), the same store as the pause.
+  const settingsPanel = document.createElement('div');
+  settingsPanel.className = 'controls-panel';
+  settingsPanel.hidden = true;
+  const fillSettings = () => {
+    settingsPanel.replaceChildren(...SETTING_ROWS.map((r, i) => {
+      const row = document.createElement('div');
+      row.innerHTML = `<b>${r.label}</b> &nbsp; ${settingText(r, game.settings[r.key])}`;
+      row.addEventListener('click', () => {
+        const v = game.settings[r.key];
+        if (!r.options && v >= r.max) game.changeSetting(r.key, r.min); else stepSetting(game, i, 1);
+        fillSettings();
+      });
+      return row;
+    }));
+  };
+  root.appendChild(settingsPanel);
   let active = 0;
   const lis = items.map((item, i) => {
     const li = document.createElement('li');

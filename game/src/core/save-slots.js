@@ -22,6 +22,7 @@ export function captureState(game, place) {
     time: Math.round(game.time * 100) / 100,
     at: { x: Math.round(f.x * 10) / 10, z: Math.round(f.z * 10) / 10, facing: game.player.facing },
     place,
+    settings: { ...(game.settings || DEFAULT_SETTINGS) },
   };
 }
 
@@ -40,11 +41,49 @@ export function applyState(game, s) {
   game.progress.courier = s.stats?.courier || 0;
   game.progress.bestLaps = { ...(s.stats?.bestLaps || {}) };
   if (s.savedAt) game.progress.savedAt = { clock: clockOf(s.savedAt), place: s.place };
+  if (s.settings) { applySettings(game, s.settings); writeSettings(game.settings); }
   if (game.vehicle) game.enterOrExit();
   game.player.x = s.at.x; game.player.z = s.at.z; game.player.facing = s.at.facing || 0;
   game.focus = game.player;
   game.chase.yaw = game.player.facing;
   game.wantedLevel.clear?.();
+}
+
+// Settings: volumes 0-10, mouse sensitivity 0.5-2.0, graphics LOW or HIGH. They live under their
+// own key (so the title already uses them) and ride along in every save.
+const SETTINGS_KEY = 'port-solara/settings';
+export const DEFAULT_SETTINGS = { master: 8, music: 7, effects: 8, sensitivity: 1, graphics: 'high' };
+// Graphics presets the perf test measures: shadow map size (0 = off), far plane and fog end.
+export const GRAPHICS_PRESETS = {
+  high: { shadow: 1024, far: 480, fogFar: 420 },
+  low: { shadow: 0, far: 300, fogFar: 260 },
+};
+
+export function readSettings() {
+  try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }; } catch { return { ...DEFAULT_SETTINGS }; }
+}
+
+export function writeSettings(settings) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+// Puts settings into the running game: the audio mix, mouse look speed and the graphics preset.
+export function applySettings(game, settings) {
+  game.settings = { ...DEFAULT_SETTINGS, ...settings };
+  const st = game.settings, g = GRAPHICS_PRESETS[st.graphics] || GRAPHICS_PRESETS.high;
+  game.audio?.setMix?.({ master: st.master, music: st.music, effects: st.effects });
+  game.lookScale = st.sensitivity;
+  const sun = game.light?.sun;
+  game.renderer.shadowMap.enabled = g.shadow > 0;
+  if (sun) {
+    sun.castShadow = g.shadow > 0;
+    if (g.shadow > 0 && sun.shadow.mapSize.x !== g.shadow) { sun.shadow.mapSize.set(g.shadow, g.shadow); sun.shadow.map?.dispose(); sun.shadow.map = null; }
+  }
+  game.camera.far = g.far; game.camera.updateProjectionMatrix();
+  game.light?.setDrawDistance?.(g.far);
+  if (game.scene.fog) game.scene.fog.far = g.fogFar;
+  game.scene.traverse((o) => { if (o.material && !Array.isArray(o.material)) o.material.needsUpdate = true; });
+  return st;
 }
 
 export function writeSlot(slot, state, now = Date.now()) {
@@ -91,7 +130,10 @@ export function clockOf(ms) {
 // Hooks the saves into the game: game.saveGame (pause menu / Calloway Salvage), game.autosave
 // (after a mission), game.loadSave (CONTINUE) and game.newGameState (NEW GAME after a quit).
 export function installSaveSlots(game) {
+  applySettings(game, readSettings());
+  game.changeSetting = (key, value) => { applySettings(game, { ...game.settings, [key]: value }); writeSettings(game.settings); return game.settings; };
   const fresh = captureState(game, 'Palmline Beach');
+  delete fresh.settings; // NEW GAME keeps the player's settings
   const record = (slot, place) => {
     const r = writeSlot(slot, captureState(game, place));
     game.progress.savedAt = { clock: clockOf(r.savedAt), place };
