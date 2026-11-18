@@ -11,6 +11,7 @@ import { PlayerOnFoot } from './player/player-on-foot.js';
 import { stealNearestCar, updateCarTheft, nearestCar } from './player/car-theft.js';
 import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
+import { WantedLevel } from './police/wanted-level.js';
 import { drawMinimap, planGridRoute } from './ui/minimap.js';
 import { showTitleScreen } from './ui/menus-and-map.js';
 import { createSynthAudio } from './audio/synth-audio.js';
@@ -73,6 +74,8 @@ export function bootPortSolara() {
   game.crowd = new PedestrianCrowd(game);
   game.walkersNear = (x, z) => game.crowd.near(x, z);
   game.tyres = new SkidMarksAndSmoke(scene);
+  game.wantedLevel = new WantedLevel();
+  game.copsSee = () => false; // replaced by the police line-of-sight check in M3 step 2
   game.audio = createSynthAudio();
   canvas.addEventListener('pointerdown', () => game.audio.unlock());
 
@@ -114,6 +117,8 @@ export function bootPortSolara() {
     }
     for (const car of game.cars) if (car !== game.vehicle && !car.ai && Math.abs(car.speed) > 0.05) car.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide);
     game.tyres.update(dt, game.vehicle);
+    game.wantedLevel.update(dt, game.focus, game.copsSee());
+    game.wanted = game.wantedLevel.pips;
     game.chase.update(dt, game.focus, game.collide);
     // Entering a district shows its title card, stamped with sim time so shots repeat.
     const district = PORT_SOLARA_NAMES.districts[districtAt(game.focus.x, game.focus.z)];

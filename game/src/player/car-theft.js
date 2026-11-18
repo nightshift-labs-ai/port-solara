@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { countWitnesses } from '../police/wanted-level.js';
 
 // F next to a car. A parked one opens at once. An occupied one is jacked: the car brakes hard,
 // Wren steps to the driver's door, drags the driver out (a short tween with a stumble), the
@@ -8,7 +9,10 @@ export function stealNearestCar(game) {
   const car = nearestCar(game);
   if (!car) return null;
   if (!car.ai) {
-    if (!car.owned) game.audio?.alarm();
+    if (!car.owned) {
+      game.audio?.alarm();
+      game.wantedLevel?.commit('theft', car.x, car.z, countWitnesses(game, car.x, car.z));
+    }
     takeTheWheel(game, car);
     return { car, jacked: false };
   }
@@ -19,6 +23,7 @@ export function stealNearestCar(game) {
   figure.visible = false;
   game.theft = { car, t: 0, side, from: { x: p.x, z: p.z }, figure };
   game.crowd?.panic(car.x, car.z, 14);
+  game.wantedLevel?.commit('theft', car.x, car.z, countWitnesses(game, car.x, car.z));
   return { car, jacked: true };
 }
 

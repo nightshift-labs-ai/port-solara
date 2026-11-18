@@ -1,4 +1,6 @@
 // Exposes window.__test for tools/selftest.mjs: snapshot, step(n), simulated keys, teleport, perf.
+import { countWitnesses } from '../police/wanted-level.js';
+
 export function exposeTestHooks(game) {
   window.__test = {
     start() { game.startPlay(); return this.snapshot(); },
@@ -12,6 +14,21 @@ export function exposeTestHooks(game) {
         traffic: this.traffic(),
         peds: this.peds(),
       };
+    },
+    // A theft with walkers gathered around gives 1 pip, an unseen one none; then, with no cop in
+    // sight, the pips clear once the escape time (8 s + 3 s per pip) has passed.
+    wanted() {
+      const wl = game.wantedLevel, p = game.focus;
+      wl.clear();
+      const unseen = wl.commit('theft', p.x, p.z, 0) ? wl.pips : 0;
+      game.crowd.gatherNear(p.x, p.z, 6, 10);
+      const witnesses = countWitnesses(game, p.x, p.z);
+      wl.commit('theft', p.x, p.z, witnesses);
+      game.step();
+      const pips = wl.pips, escape = wl.escapeSeconds, searching = !wl.inSight, t0 = game.time;
+      let n = 0;
+      while (wl.pips > 0 && n++ < 2000) game.step();
+      return { unseen, witnesses, pips, escape, searching, clearedAfter: Math.round((game.time - t0) * 10) / 10, pipsAfter: wl.pips };
     },
     // Walkers placed near the focus, and how many stand inside a building box.
     peds() {

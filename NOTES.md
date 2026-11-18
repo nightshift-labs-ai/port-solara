@@ -1,5 +1,7 @@
 # PORT SOLARA build notes
 
+- M3a step 1 (2026-11-18): police/wanted-level.js `WantedLevel` (theft seen within 25 m +1, pedHit/gunfire +1, copAssault/cruiserWrecked +2, 5 pips, escape 8 s + 3 s/pip unseen) hooked into both theft paths; HUD IN SIGHT / SEARCHING Ns tag under the pips, dashed minimap search circle (60 m + 25 m/pip) round the last-seen spot; `copsSee` is a stub until step 2; wanted self-test PASS (6 witnesses -> 1 pip, cleared after 11 s), 10/10 PASS, perf 152 draw calls; 1-chase.jpg re-shot (WANTED 1, SEARCHING), 2/4 unchanged. Next: step 2 police-ai.js.
+
 ## Done (M2 Traffic and theft: complete, all 7 steps, runs of 2026-11-18)
 - Step 4 player/car-theft.js `stealNearestCar`: F within 6 m of a traffic car detaches it from the
   pool, brakes it hard, tweens Wren to the driver's door (0.35 s), drags the driver out past her with

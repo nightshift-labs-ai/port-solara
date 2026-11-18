@@ -46,6 +46,19 @@ export function drawMinimap(ctx, game, x, y, size) {
     const end = route[route.length - 1];
     blip(ctx, end.x, end.z, 9 / scale * s, '#ffc21f', '#14304f');
   }
+  // Search circle: while WANTED and unseen, the SPD sweeps around Wren's last-seen spot.
+  const wl = game.wantedLevel;
+  if (wl && wl.pips > 0 && !wl.inSight) {
+    ctx.beginPath();
+    ctx.arc(wl.lastSeen.x, wl.lastSeen.z, wl.searchRadius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(70, 120, 255, 0.18)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(216, 50, 60, 0.85)';
+    ctx.lineWidth = 3 / scale * s;
+    ctx.setLineDash([10 / scale * s, 7 / scale * s]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   for (const car of game.cars) if (car !== game.vehicle) blip(ctx, car.x, car.z, 4.5 / scale * s, '#ffffff', '#14304f');
   ctx.restore();
 

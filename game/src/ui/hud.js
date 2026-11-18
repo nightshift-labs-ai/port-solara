@@ -39,12 +39,27 @@ export function drawHud(ctx, game, drawMinimap) {
   const mapX = w - mx - size, mapY = my;
   drawMinimap(ctx, game, mapX, mapY, size);
   const pipY = mapY + size + 12 * s;
-  panel(ctx, mapX, pipY, size, 136 * s);
+  const tagRow = game.wantedLevel?.pips > 0 ? 30 * s : 0;
+  panel(ctx, mapX, pipY, size, 136 * s + tagRow);
   ctx.fillStyle = WHITE; ctx.font = font(24 * s);
   ctx.fillText('WANTED', mapX + 14 * s, pipY + 30 * s);
+  // IN SIGHT (red) while a cop sees Wren, SEARCHING (amber) with the escape countdown otherwise.
+  const wl = game.wantedLevel;
+  if (wl && wl.pips > 0) {
+    const seen = wl.inSight;
+    const tag = seen ? 'IN SIGHT' : `SEARCHING ${Math.ceil(wl.escapeLeft)}s`;
+    ctx.font = font(15 * s);
+    const tw = ctx.measureText(tag).width + 14 * s;
+    const tx = mapX + 14 * s, ty = pipY + 86 * s;
+    ctx.fillStyle = seen ? '#d8323c' : '#e0a21f';
+    ctx.beginPath(); ctx.roundRect(tx, ty, tw, 24 * s, 6 * s); ctx.fill();
+    ctx.fillStyle = seen ? WHITE : '#14304f';
+    ctx.fillText(tag, tx + 7 * s, ty + 18 * s);
+    ctx.font = font(24 * s);
+  }
   for (let i = 0; i < 5; i++) shield(ctx, mapX + 14 * s + i * 42 * s, pipY + 40 * s, 38 * s, i < game.wanted, game.time);
   ctx.fillStyle = '#9fe0a0'; ctx.font = font(28 * s);
-  ctx.fillText('$' + game.cash.toLocaleString('en-US'), mapX + 14 * s, pipY + 122 * s);
+  ctx.fillText('$' + game.cash.toLocaleString('en-US'), mapX + 14 * s, pipY + 122 * s + tagRow);
 
   // Health, armour and weapon.
   const by = h - my - 96 * s;

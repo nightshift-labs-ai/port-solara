@@ -111,6 +111,15 @@ await test('steal', async () => {
   return s;
 });
 
+await test('wanted', async () => {
+  const s = await call(() => window.__test.wanted());
+  ok(s.unseen === 0, `an unseen theft raised WANTED to ${s.unseen}`);
+  ok(s.witnesses > 0 && s.pips === 1, `theft with ${s.witnesses} witnesses gave ${s.pips} pips`);
+  ok(s.searching, 'no cop in sight but the tag is not SEARCHING');
+  ok(s.pipsAfter === 0 && Math.abs(s.clearedAfter - s.escape) < 0.5, `pips ${s.pipsAfter} after ${s.clearedAfter} s (escape ${s.escape} s)`);
+  return s;
+});
+
 await test('skid', async () => {
   const s = await call(() => window.__test.drift());
   ok(!s.error, s.error);
