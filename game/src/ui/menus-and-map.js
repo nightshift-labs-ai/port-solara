@@ -1,5 +1,6 @@
 import { districtAt, LANDMARKS } from '../world/city-builder.js';
 import { nearestNode } from '../police/police-ai.js';
+import { latestSave, continueLabel } from '../core/save-slots.js';
 
 const FONT = '"DejaVu Sans", Verdana, sans-serif';
 
@@ -286,7 +287,9 @@ function drawSidePanel(ctx, game, r, s) {
   y += 54 * s;
   text(`$${game.cash.toLocaleString('en-US')}`, 36, '#7fe08a', 900); y += 44 * s;
   const saved = p.savedAt;
-  text(saved ? `Saved ${saved.clock} - ${saved.place}` : 'Not saved yet', 18, '#fff8ec', 700); y += 40 * s;
+  text(saved ? `Saved ${saved.clock} -` : 'Not saved yet', 18, '#fff8ec', 700); y += 24 * s;
+  if (saved) { text(saved.place, 18, '#fff8ec', 700); y += 4 * s; }
+  y += 32 * s;
   // A small legend for the place marks.
   const legend = [['H', '#3fae6a', 'Safehouse'], ['$', '#f2b134', 'Quist Auto'], ['G', '#c2412d', 'Gun shop'], ['P', '#3b7bff', 'SPD station'], ['R', '#e07a2f', 'Respray'], ['F', '#14304f', 'Races']];
   for (let i = 0; i < legend.length; i++) {
@@ -312,8 +315,11 @@ export function showTitleScreen(game, onNewGame) {
 
   const menu = document.createElement('ul');
   menu.className = 'title-menu';
+  // CONTINUE leads when a save exists, labelled from the newest of the three slots.
+  const save = latestSave();
   const items = [
-    { label: 'NEW GAME', run: () => { root.hidden = true; onNewGame(); } },
+    ...(save ? [{ label: continueLabel(save), run: () => { root.hidden = true; game.loadSave?.(save); onNewGame(); } }] : []),
+    { label: 'NEW GAME', run: () => { root.hidden = true; if (game.mode !== 'title' || game.playedOnce) game.newGameState?.(); onNewGame(); } },
     { label: 'CONTROLS', run: () => { controls.hidden = !controls.hidden; } },
   ];
   let active = 0;
@@ -339,6 +345,8 @@ export function showTitleScreen(game, onNewGame) {
     if (e.code === 'ArrowUp' || e.code === 'KeyW') { active = (active + items.length - 1) % items.length; paint(); }
     if (e.code === 'Enter' || e.code === 'Space') items[active].run();
   };
+  if (root.onTitleKey) removeEventListener('keydown', root.onTitleKey); // a quit to title shows it again
+  root.onTitleKey = onKey;
   addEventListener('keydown', onKey);
   return root;
 }

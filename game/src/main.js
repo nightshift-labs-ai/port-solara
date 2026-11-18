@@ -19,7 +19,8 @@ import { MissionRunner } from './missions/mission-runner.js';
 import { ChaseCamera } from './camera/chase-camera.js';
 import { drawHud } from './ui/hud.js';
 import { drawMinimap } from './ui/minimap.js';
-import { showTitleScreen, installPauseAndMap } from './ui/menus-and-map.js';
+import { showTitleScreen, installPauseAndMap, citySpots } from './ui/menus-and-map.js';
+import { installSaveSlots, nearSafehouse } from './core/save-slots.js';
 import { createSynthAudio, RADIO_STATIONS, SONG_SECONDS } from './audio/synth-audio.js';
 import { PORT_SOLARA_NAMES, FREE_ROAM_OBJECTIVE } from './story/port-solara-lore.js';
 import { readKeyboardAndMouse, FIXED_STEP_SECONDS, MAX_SUBSTEPS } from './core/fixed-step-input.js';
@@ -176,6 +177,7 @@ export function bootPortSolara() {
     for (const code of presses) {
       if (code === 'KeyF' && !game.theft && !inCustody) game.enterOrExit();
       if (code === 'KeyR' && game.vehicle) game.radio.station = (game.radio.station + 1) % 2; // Gull FM / Low Tide
+      if (code === 'KeyE' && nearSafehouse(game)) game.saveNote = { text: game.saveGame('Calloway Salvage'), at: game.time };
     }
     const onFoot = !game.vehicle && !game.theft && !inCustody;
     game.arms.update(dt, input.held, presses, onFoot);
@@ -243,12 +245,20 @@ export function bootPortSolara() {
         v.set(near.x, 1.9, near.z).project(camera);
         if (v.z < 1) game.prompt = { text: `[F] ${near.owned ? 'ENTER' : 'STEAL'} ${near.name}`, x: (v.x * 0.5 + 0.5) * hudCanvas.width, y: (-v.y * 0.5 + 0.5) * hudCanvas.height };
       }
+      // At the safehouse door: the save prompt, then for three seconds what the save did.
+      const home = !game.prompt && nearSafehouse(game);
+      if (home) {
+        const note = game.saveNote && game.time - game.saveNote.at < 3 ? game.saveNote.text.toUpperCase() : '[E] SAVE AT CALLOWAY SALVAGE';
+        v.set(home.x, 2.2, home.z).project(camera);
+        if (v.z < 1) game.prompt = { text: note, x: (v.x * 0.5 + 0.5) * hudCanvas.width, y: (-v.y * 0.5 + 0.5) * hudCanvas.height };
+      }
       drawHud(hudCtx, game, drawMinimap);
     }
   };
 
   game.startPlay = () => {
     game.mode = 'play';
+    game.playedOnce = true; // NEW GAME after a quit to title starts over from the boot state
     document.getElementById('title-screen').hidden = true;
     document.getElementById('hud-overlay').hidden = false;
     game.chase.yaw = game.player.facing;
@@ -269,6 +279,8 @@ export function bootPortSolara() {
     document.getElementById('hud-overlay').hidden = true;
     showTitleScreen(game, game.onNewGame);
   };
+  citySpots(game);
+  installSaveSlots(game);
   installPauseAndMap(game);
   showTitleScreen(game, game.onNewGame);
 

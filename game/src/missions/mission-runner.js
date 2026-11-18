@@ -146,6 +146,7 @@ export class MissionRunner {
     this.target = null;
     this.subtitle = null;
     this.marker.visible = false;
+    if (passed) game.autosave?.(m.title); // slot 1 holds the state after every finished job
   }
 
   // What the HUD's mission panel shows this frame (null when no mission runs).
