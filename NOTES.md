@@ -1,5 +1,47 @@
 # PORT SOLARA build notes
 
+## Done (M2 Traffic and theft, partial: steps 0-2 of 7, run of 2026-11-18)
+- README: make.fun badges under the title and the make.fun footer line.
+- Lane graph in world/road-network.js: 90 crossing nodes, 322 directed lanes (Palmline Boulevard
+  two lanes each way at 4.6/7.2 m, avenues and ruas one at 3 m, right-hand traffic), clearances past
+  the zebra stripes, `pointOnLane`, `turnChoices` (no U-turns), handed to features on `game.roads`.
+- Traffic signals at the 30 crossings on Palmline, Avenida 4 (x=0) and Avenida 6 (x=120): 22 s cycle
+  (8 s green, 2 s amber, 1 s all-red per axis), offsets per crossing; one instanced pole+housing mesh
+  and one instanced lamp mesh re-lit only on phase change (2 draw calls). Ticked from the fixed step,
+  also on the title so the drone orbit shows them.
+- traffic/traffic-drivers.js: `TrafficDriver` (lane following, signal stops with a braking curve,
+  amber run-through inside 6 m, gap keeping against every visible car and Wren on foot, boulevard lane
+  swap after 3 s blocked, quadratic-curve turns) and `createTrafficPool` (hard cap 24, cars built once
+  and recycled, spawn 45-170 m from the focus, despawn past 230 m, 2 refills every 0.5 s). Crossing
+  gate: straight and right turns share a crossing with their own axis, left turns need it empty;
+  inside a crossing only cars on the exit lane count for the gap.
+- New models: Saltrunner pickup, Dockhand van (teal band), Citrine Cab (lime, roof light). Traffic mix:
+  Pipit most common, then Promenade, Citrine, Saltrunner, Dockhand.
+- F on a traffic car currently takes it straight from the pool (no pull-out animation yet: step 4).
+
+## Self-test after M2 steps 1-2 (SwiftShader, 1280x800)
+- boot PASS (city 18-22 ms, 33 cars incl. pool), walk PASS (9.3 m), drive PASS (35.2 m/s, 75 health),
+  traffic PASS (24 active after 20 s, 0 overlaps, closest pair 2.82 m, up to 7 waiting at a red),
+  perf PASS (175 draw calls, 40,769 triangles, median render 1.1-1.9 ms, heap ~14 MB), console clean.
+- Originality PASS (19 files). Dossier 801,346 bytes, 26 output files byte-identical on two runs.
+- Shots: 1-chase.jpg 162.8 KiB (traffic and signal heads ahead on Palmline, minimap blips),
+  2-street.jpg 165.5 KiB (a Saltrunner passes at the left), 4-title.jpg 189.9 KiB at q76 (cars and
+  signals on the grid). No pedestrians yet in any shot.
+
+## Next (rest of M2, in order)
+- Step 3 people/pedestrian-crowd.js `PedestrianCrowd` (hook `game.walkersNear(x, z)` is already read by
+  traffic), step 4 player/car-theft.js `stealNearestCar` (pull-out tween, driver flees, uses
+  `game.traffic.detach`), step 5 camera feel + audio/synth-audio.js + skids/smoke, step 6 peds and
+  steal tests, re-stage 1-chase.jpg with peds and a braking civilian.
+
+## Bugs / debts (M2)
+- Draw calls 175 in the perf view (target 150, cap 200): each traffic car is 2 meshes; instance car
+  bodies per kind before pedestrians land.
+- No car-to-car collision: the player's car passes through traffic (traffic does brake for it).
+- Traffic ignores walkers until the crowd exists; the Albacore start spot sits in the boulevard's inner
+  northbound lane, so traffic behind it swaps to the outer lane after 3 s.
+- Left turns at unsignalled crossings wait for an empty crossing, which can queue a short line.
+
 ## Done (M1 City slice)
 - Plumbing: kit starter replaced; three.js (MIT) vendored in game/vendor/three; index.html with one
   import map, one module script, styles/hud.css and the ids city-view, hud-overlay, title-screen,
@@ -49,7 +91,3 @@
 - One 256 canvas per facade archetype instead of a single 1024 atlas.
 - Palmline Boulevard runs straight along the beach, not diagonal.
 - Under `ulimit -v 3000000` Node cannot start its TypeScript wasm, so main.ts runs without it.
-
-## Next (M2 Traffic and theft)
-- Road graph from road-network.js, lights, traffic drivers, pedestrians, carjacking, Saltrunner,
-  Dockhand, Citrine Cab, chase-camera feel, engine/tyre audio, skids and smoke.
