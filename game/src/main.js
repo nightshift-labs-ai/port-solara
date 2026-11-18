@@ -83,6 +83,7 @@ export function bootPortSolara() {
     const dt = FIXED_STEP_SECONDS;
     const input = game.input;
     game.time += dt; game.tick++;
+    game.roads.signals.update(game.time);
     if (game.mode !== 'play') { game.input.takePresses(); return; }
     for (const code of input.takePresses()) if (code === 'KeyF') game.enterOrExit();
     const look = input.takeLook();

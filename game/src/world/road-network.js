@@ -67,9 +67,117 @@ export function buildRoadNetwork(game) {
     }
   }
   const network = { roads, blocks, coastX, boulevardX: BOULEVARD_X, nsRoads: NS_ROADS, ewRoads: EW_ROADS };
+  buildLaneGraph(network);
+  network.signals = raiseTrafficSignals(group, network);
   game.roads = network;
   return network;
 }
+
+// The lane graph: one node per crossing, one directed lane object per road segment and direction
+// (Palmline Boulevard carries two lanes each way). Traffic drives on the right.
+function buildLaneGraph(net) {
+  const nodes = [], lanes = [];
+  const id = (i, j) => i * EW_ROADS.length + j;
+  NS_ROADS.forEach((x, i) => EW_ROADS.forEach((z, j) => {
+    nodes.push({ id: id(i, j), i, j, x, z, nsWidth: x === BOULEVARD_X ? 20 : ROAD_WIDTH, out: [], signal: null, holder: null });
+  }));
+  const link = (a, b, axis) => {
+    const dx = Math.sign(b.x - a.x), dz = Math.sign(b.z - a.z);
+    const length = Math.abs(b.x - a.x) + Math.abs(b.z - a.z);
+    const lane = {
+      id: lanes.length, from: a, to: b, axis, dx, dz, length,
+      heading: Math.atan2(-dx, -dz),
+      offsets: axis === 'z' && a.x === BOULEVARD_X ? [4.6, 7.2] : [3],
+      startS: crossingClearance(a, axis), stopS: length - crossingClearance(b, axis),
+    };
+    lanes.push(lane);
+    a.out.push(lane);
+  };
+  for (let i = 0; i < NS_ROADS.length; i++) {
+    for (let j = 0; j < EW_ROADS.length; j++) {
+      const n = nodes[id(i, j)];
+      if (i + 1 < NS_ROADS.length) { const e = nodes[id(i + 1, j)]; link(n, e, 'x'); link(e, n, 'x'); }
+      if (j + 1 < EW_ROADS.length) { const s = nodes[id(i, j + 1)]; link(n, s, 'z'); link(s, n, 'z'); }
+    }
+  }
+  net.nodes = nodes;
+  net.lanes = lanes;
+}
+
+// How far from a crossing's centre a lane starts or stops: past the far edge of the zebra stripes.
+function crossingClearance(node, axis) {
+  return (axis === 'z' ? ROAD_WIDTH : node.nsWidth) / 2 + 4.5;
+}
+
+// A point s metres along a lane from its start crossing, offset to the right of travel.
+export function pointOnLane(lane, s, offset, out = {}) {
+  out.x = lane.from.x + lane.dx * s - lane.dz * offset;
+  out.z = lane.from.z + lane.dz * s + lane.dx * offset;
+  return out;
+}
+
+// Where a car may go at the end of a lane: every way out of the next crossing except back.
+export function turnChoices(lane) {
+  return lane.to.out.filter((l) => l.to !== lane.from);
+}
+
+// The signal a lane sees at its end crossing: green, amber or red (an unsignalled crossing is green).
+export function signalColor(node, axis, time) {
+  if (!node.signal) return 'green';
+  const t = (time + node.signal.offset) % SIGNAL_CYCLE;
+  const g = axis === 'z' ? t : (t + SIGNAL_CYCLE / 2) % SIGNAL_CYCLE;
+  return g < SIGNAL_GREEN ? 'green' : g < SIGNAL_GREEN + SIGNAL_AMBER ? 'amber' : 'red';
+}
+
+// Signal heads on the far right corner of each approach to the main crossings: one instanced pole
+// and housing mesh and one instanced lamp mesh, re-lit only when a phase changes.
+function raiseTrafficSignals(group, net) {
+  net.nodes.forEach((node) => {
+    const a = SIGNAL_AVENUES.indexOf(node.x);
+    if (a >= 0) node.signal = { offset: (node.j * 4 + a * 7) % SIGNAL_CYCLE };
+  });
+  const heads = [];
+  for (const lane of net.lanes) {
+    const node = lane.to;
+    if (!node.signal) continue;
+    const crossHalf = lane.axis === 'z' ? ROAD_WIDTH / 2 : node.nsWidth / 2;
+    const roadHalf = lane.axis === 'z' ? node.nsWidth / 2 : ROAD_WIDTH / 2;
+    heads.push({
+      lane, node, color: null,
+      x: node.x + lane.dx * (crossHalf + 1.5) - lane.dz * (roadHalf + 1.2),
+      z: node.z + lane.dz * (crossHalf + 1.5) + lane.dx * (roadHalf + 1.2),
+    });
+  }
+  const box = new THREE.BoxGeometry(1, 1, 1);
+  const frame = new THREE.InstancedMesh(box, new THREE.MeshStandardMaterial({ color: 0x24303d, roughness: 0.55 }), heads.length * 2);
+  const lamps = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({ toneMapped: false }), heads.length);
+  const m = new THREE.Matrix4();
+  heads.forEach((h, k) => {
+    frame.setMatrixAt(k * 2, m.makeScale(0.2, 4.6, 0.2).setPosition(h.x, 2.3, h.z));
+    frame.setMatrixAt(k * 2 + 1, m.makeScale(0.56, 1.5, 0.56).setPosition(h.x, 4.9, h.z));
+  });
+  frame.castShadow = true;
+  group.add(frame, lamps);
+  const update = (time) => {
+    let dirty = false;
+    heads.forEach((h, k) => {
+      const c = signalColor(h.node, h.lane.axis, time);
+      if (c === h.color) return;
+      h.color = c;
+      const y = c === 'red' ? 5.38 : c === 'amber' ? 4.9 : 4.42;
+      lamps.setMatrixAt(k, m.makeScale(0.42, 0.42, 0.42).setPosition(h.x - h.lane.dx * 0.2, y, h.z - h.lane.dz * 0.2));
+      lamps.setColorAt(k, LAMP_COLORS[c]);
+      dirty = true;
+    });
+    if (dirty) { lamps.instanceMatrix.needsUpdate = true; lamps.instanceColor.needsUpdate = true; }
+  };
+  update(0);
+  return { heads, update };
+}
+
+const SIGNAL_AVENUES = [-180, 0, 120];
+const SIGNAL_CYCLE = 22, SIGNAL_GREEN = 8, SIGNAL_AMBER = 2;
+const LAMP_COLORS = { red: new THREE.Color(0xff2a1e), amber: new THREE.Color(0xffb21a), green: new THREE.Color(0x2bff7a) };
 
 function nsMaterial(tex, len) {
   const t = tex.clone();
