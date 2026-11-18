@@ -1,5 +1,48 @@
 # PORT SOLARA build notes
 
+## M6 Polish and freeze: partial (run of 2026-11-18 23:24-23:50 EET; steps 1, 2, 4, 5, 6 done, 3 not)
+- Step 1 golden hour (world/sunlight-and-sea.js): sun about 15 degrees up in the WSW (was 28),
+  warm 0xffbf7a sun at 3.1, hemisphere cool sky 0xb8c6ec over warm sand 0xeaae78 (shadows stay
+  blue-tinted, as the brief asks), sky bands gold horizon -> thin rose-peach -> blue (kept off a
+  pink/purple sunset palette, brief section 9.3), warmer fog/horizon 0xf7c08e, exposure 1.12. The
+  WANTED panel's real sim clock reads FRI 17:35 in the cover, which matches the light.
+  **No real bloom pass:** three.js addons (EffectComposer / UnrealBloomPass) are not vendored, so the
+  only "glow" is an additive halo behind the sun disc (+1 draw call). Police bars, tail lights and
+  signs do not glow yet. LOW keeps the halo (it is one quad).
+- Step 2 slim HUD (ui/hud.js): one shared `HUD_SCALE` 0.85 on every size and padding; `panel()` is
+  deep navy glass at 80% with a 1 px soft rim and a gold accent strip on the left edge. Contents are
+  unchanged. SPD RESPONSE: the distance now sits against its state tag (RESPONDING covered "49 m"
+  in the street shot; the bug was there at full size too). Title menu and controls strip (CSS) and
+  the map frame use the same slim style. **Not done:** round minimap, drawn weapon icons, a
+  bottom-centre controls strip in play (the title strip lists the real bindings).
+- Step 3 cover staging: **not done** (the camera still faces away from the sun, so the sun disc is
+  not in the cover; flanking cruisers and the helicopter are the M4 staging, which already has
+  SKYLARK 1 over the street and two Beacons near the Albacore).
+- Step 4 shots: all four re-shot on the shared save. 4-title.jpg: the drone now swings 250 m east
+  of the Sundial Tower looking west (main.js), so the needle no longer cuts across the top centre;
+  the sun glow sits behind the wordmark and the bay haze reads warm.
+- Step 5 A/B (before copies in out/ab/): the new cover shows more street (narrower mission and
+  SPD panels, right column clear of the cruiser) with a warm horizon and is still readable at 50%,
+  so it stays. Judge sheet rebuilt; at 50% it still reads car chase, police, wanted, minimap,
+  mission, on foot, combat, map and title.
+
+## Self-test after M6 (SwiftShader, 1280x800): SELFTEST PASS, 23/23
+- perf before (M5): HIGH 168 draw calls / 42,235 tris / median 2.6-5.6 ms; LOW 110 / 26,135 /
+  0.8-0.9 ms. After (M6): HIGH 169 / 42,379 / median 2.1 ms / heap 51 MB; LOW 110 / 26,135 /
+  1.5 ms. Frame time is far inside the 70 ms budget; HIGH's 169 draw calls are over the 150
+  target but under the 200 hard cap, as in M5. (Single runs: medians vary by a few ms.)
+- Originality PASS (32 files). main.ts twice: 40 files byte-identical, dossier 1,114,667 bytes.
+  (main.ts must run without `ulimit -v 3000000`: Node's TypeScript stripper cannot get its Wasm
+  memory under that cap.)
+- Shots: 1-chase.jpg 172.4 KiB (q80), 2-street.jpg 169.6 KiB (q88), 3-map.jpg 167.8 KiB (q92),
+  4-title.jpg 183.5 KiB (q84).
+
+## Next (rest of M6)
+- Cover staging: re-aim the chase camera so the low sun sits in frame; glow on police bars and
+  tail lights (a vendored bloom pass or additive light-bar halos), measured on SwiftShader.
+- Round minimap, drawn weapon icons (fists, Wasp, Hornet), dim the locked Hornet chip.
+- The map side panel still has its old 2 px white rim.
+
 ## M5 Shell and depth: done (steps 3-6 in the run of 2026-11-18 23:05-23:44 EET)
 - Step 3 settings (core/save-slots.js `DEFAULT_SETTINGS`, `GRAPHICS_PRESETS`, `applySettings`):
   master, music/radio and effects volume 0-10, mouse sensitivity 0.5-2.0x, graphics HIGH (1024
