@@ -15,7 +15,7 @@ export function dispatchPoliceUnits(game, makeCar) {
     car.ai = 'spd';
     return { ...r, index, car, model, active: false, state: 'IDLE', path: [], repathIn: 0, stuckFor: 0, reverseFor: 0, awayFor: 0, dist: 1e9, bumpCooldown: 0 };
   });
-  const glow = buildBarGlow(units.length + 1);
+  const glow = buildBarGlow(units.length + 2);
   game.scene.add(glow);
   const heli = buildHelicopter();
   game.scene.add(heli.group, heli.cone, heli.spot);
@@ -298,12 +298,20 @@ export function dispatchPoliceUnits(game, makeCar) {
         col.setXYZ(j, k === 0 ? (on ? 1 : 0.25) : 0.1, k === 0 ? 0.12 : (on ? 0.4 : 0.1), k === 0 ? 0.1 : (on ? 1 : 0.25));
       }
     });
-    // The helicopter's belly beacons use the last two sprites.
+    // SKYLARK 1 uses the last four sprites: the warm searchlight lamp under the belly, a red nav
+    // light on its left side, a green one on its right, and a white strobe on the tail fin.
     const j = units.length * 2, ph = Math.floor(game.time * 3) % 2;
-    pos.setXYZ(j, air.active ? air.car.x : 0, air.active ? air.y - 1.1 * HELI_SCALE : -50, air.car.z);
-    pos.setXYZ(j + 1, air.active ? air.car.x : 0, air.active ? air.y + 0.9 * HELI_SCALE : -50, air.car.z);
-    col.setXYZ(j, ph ? 1 : 0.2, 0.1, ph ? 0.1 : 1);
-    col.setXYZ(j + 1, 0.9, 0.85, 0.7);
+    heli.group.updateMatrixWorld();
+    const at = (k, x, y, z) => {
+      if (!air.active) { pos.setXYZ(j + k, 0, -50, 0); return; }
+      const w = heli.group.localToWorld(new THREE.Vector3(x, y, z));
+      pos.setXYZ(j + k, w.x, w.y, w.z);
+    };
+    at(0, 0, -0.8, -0.6); at(1, -1.0, 0.2, -0.4); at(2, 1.0, 0.2, -0.4); at(3, 0, 1.5, 6.1);
+    col.setXYZ(j, 1, 0.9, 0.62);
+    col.setXYZ(j + 1, 1, 0.08, 0.06);
+    col.setXYZ(j + 2, 0.1, 1, 0.25);
+    col.setXYZ(j + 3, ph ? 0.9 : 0.15, ph ? 0.9 : 0.15, ph ? 0.9 : 0.15);
     pos.needsUpdate = true; col.needsUpdate = true;
   }
 
@@ -342,6 +350,7 @@ const DOWN = new THREE.Vector3(0, -1, 0);
 function buildHelicopter() {
   const body = boxesToGeometry([
     { w: 1.9, h: 1.3, d: 3.4, x: 0, y: 0, z: 0, c: NAVY },
+    { w: 1.7, h: 0.06, d: 3.0, x: 0, y: -0.67, z: 0, c: WHITE },
     { w: 1.92, h: 0.5, d: 3.0, x: 0, y: 0.75, z: 0.1, c: WHITE },
     { w: 1.94, h: 0.14, d: 3.42, x: 0, y: 0.15, z: 0, c: GOLD },
     { w: 1.6, h: 0.9, d: 0.9, x: 0, y: 0.15, z: -1.95, c: GLASS },
@@ -359,6 +368,10 @@ function buildHelicopter() {
     { w: 10, h: 0.06, d: 0.32, x: 0, y: 0, z: 0, c: TRIM }, { w: 0.32, h: 0.06, d: 10, x: 0, y: 0, z: 0, c: TRIM },
   ]), POLICE_BODY);
   rotor.position.y = 1.5;
+  // The blur of the spinning blades: a faint pale disc (no depth write), one draw call.
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(5, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xdfe6f2, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
+  disc.position.y = 1.52;
+  group.add(disc);
   const tail = new THREE.Mesh(boxesToGeometry([{ w: 0.05, h: 1.8, d: 0.2, x: 0, y: 0, z: 0, c: TRIM }]), POLICE_BODY);
   tail.position.set(0.15, 1.0, 6.1);
   group.add(rotor, tail);
@@ -468,12 +481,12 @@ function buildBarGlow(count) {
   canvas.width = canvas.height = 64;
   const ctx = canvas.getContext('2d');
   const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.25, 'rgba(255,255,255,0.55)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+  grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.18, 'rgba(255,255,255,0.8)'); grad.addColorStop(0.45, 'rgba(255,255,255,0.3)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(count * 2 * 3).fill(-50), 3));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(count * 2 * 3), 3));
-  const mat = new THREE.PointsMaterial({ size: 3.4, map: new THREE.CanvasTexture(canvas), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const mat = new THREE.PointsMaterial({ size: 5.6, map: new THREE.CanvasTexture(canvas), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
   const points = new THREE.Points(geo, mat);
   points.frustumCulled = false;
   return points;

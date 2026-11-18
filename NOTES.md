@@ -1,5 +1,39 @@
 # PORT SOLARA build notes
 
+## M6 cover detail: done except the road streak (run of 2026-11-19 00:31-00:54 EET)
+- (1) SKYLARK 1 (police/police-ai.js, screenshot-scenes.js `FRAME`): staged at NDC (0.14, 0.66) and
+  30 m up (was 0.2, 0.5, 14 m), so it is about half the size on screen, higher and right of the sun,
+  in open sky between the mission panel and the minimap; its searchlight cone still lands on the
+  coupe. A white belly plate (in the body mesh) and four glow sprites from the shared bar-glow
+  Points (count + 2): a warm lamp under the belly, a red nav light on the left side, a green one on
+  the right, a white tail strobe (placed with the group's own matrix). A faint pale rotor disc (+1
+  draw call while the helicopter is up). It is now 60 m out, so the SPD list's fourth row is
+  MERCADO 3 41 m (real order by distance).
+- (2) Road sun streak: tried (an additive warm ground strip along the sun's bearing, in
+  `light.follow`) and **reverted**: it did not draw in the cover at y 0.06, 0.12 or 0.2 (the frame
+  was the same size every time). Not debugged this run. Lane dashes and speed streaks: not done.
+- (3) Police bar halos: sprite size 5.6 (was 3.4) with a hotter, wider core (gradient 1 / 0.8 /
+  0.3 / 0). Still the one-draw-call additive Points.
+- (4) Albacore rear (vehicles/car-models.js): a small raised spoiler on two trim struts in its own
+  paint, a bright bumper line, a dark diffuser with three bright fins and a lit cream plate (in the
+  lights mesh, so no extra draw call; the tail glow still finds only the two TAIL boxes).
+- (5) Cover speed 40 m/s (`FRAME.speed`): the speed panel reads 144 km/h (was 93), the real speed of
+  the staged state (the Albacore's top speed is 62 m/s).
+- A/B (out/ab/run4-before-1-chase.jpg vs the new cover, out/ab/run4-ab-100.jpg and -50.jpg): the new
+  cover kept (helicopter no longer a black blob, the rear reads as a car, 144 km/h). The coupe is a
+  little smaller in frame at the higher speed (about 25% of the width, was 27%).
+- Self-test (SwiftShader, 1280x800): SELFTEST PASS 23/23. Perf before (last run): HIGH 166 draw
+  calls / 41,655 tris / median 1.4-2.0 ms; LOW 108 / 25,743 / 1.5-2.8 ms. After: HIGH 166 / 41,751 /
+  median 1.7 ms / heap 32 MB; LOW 108 / 25,743 / 1.8 ms (the perf view has no helicopter up, so the
+  rotor disc's +1 call is not in its count). Inside the 4 ms target and the brief's budget.
+- Originality PASS (32 files). main.ts twice: 40 files byte-identical, dossier 1,121,486 bytes.
+- Shots: 1-chase.jpg 174.9 KiB, 2-street.jpg 172.2 KiB (the parked Albacore shows its new rear),
+  3-map.jpg 167.5 KiB, 4-title.jpg 183.7 KiB. Judge sheet rebuilt and read at 50%: the helicopter
+  reads as a lit aircraft in open sky, not a blob.
+- Next: find why the ground streak does not draw (check that `light.follow` runs in the shot and
+  what covers y 0.2 on Rua 5), then the sun reflection, visible lane dashes on Rua 5 and speed
+  streaks driven by real speed; round minimap, drawn weapon icons, a play-time controls strip.
+
 ## M6 cover light and staging: done (run of 2026-11-19 00:12-00:47 EET)
 - (a) Cover re-staged toward the sun (camera spot moved, sun untouched): the Albacore now runs due
   west on Rua 5 (z -30) from x -122 (already inside Palmline Beach, so no district card rises over

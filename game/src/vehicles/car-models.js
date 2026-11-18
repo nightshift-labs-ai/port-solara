@@ -53,6 +53,7 @@ const LIGHT_MATERIAL = new THREE.MeshBasicMaterial({ vertexColors: true, toneMap
 
 const GLASS = new THREE.Color(0x1d2b3a), TYRE = new THREE.Color(0x1b1c1f), RIM = new THREE.Color(0xc9ccd2);
 const HEAD = new THREE.Color(0xfff6d8), TAIL = new THREE.Color(0xff3326), TRIM = new THREE.Color(0x2a2d33);
+const PLATE = new THREE.Color(0xf4ecd4);
 
 function wheels(w, l, r) {
   const out = [];
@@ -83,6 +84,14 @@ export const CAR_SPECS = {
       { w: 1.56, h: 0.08, d: 1.4, x: 0, y: 1.27, z: 0.3, c },
       { w: 1.9, h: 0.1, d: 0.35, x: 0, y: 1.0, z: 2.1, c: TRIM },
       { w: 2.0, h: 0.16, d: 4.55, x: 0, y: 0.32, z: 0, c: TRIM },
+      // Rear detail: a small raised spoiler on two struts, a bright bumper line, a diffuser with
+      // three fins and a lit plate between them.
+      { w: 0.08, h: 0.16, d: 0.12, x: -0.62, y: 1.13, z: 2.0, c: TRIM }, { w: 0.08, h: 0.16, d: 0.12, x: 0.62, y: 1.13, z: 2.0, c: TRIM },
+      { w: 1.86, h: 0.06, d: 0.36, x: 0, y: 1.23, z: 2.04, c },
+      { w: 1.97, h: 0.04, d: 0.05, x: 0, y: 0.46, z: 2.26, c: RIM },
+      { w: 1.5, h: 0.12, d: 0.1, x: 0, y: 0.27, z: 2.27, c: TRIM },
+      { w: 0.05, h: 0.1, d: 0.14, x: -0.4, y: 0.27, z: 2.31, c: RIM }, { w: 0.05, h: 0.1, d: 0.14, x: 0, y: 0.27, z: 2.31, c: RIM }, { w: 0.05, h: 0.1, d: 0.14, x: 0.4, y: 0.27, z: 2.31, c: RIM },
+      { w: 0.5, h: 0.13, d: 0.04, x: 0, y: 0.58, z: 2.27, c: PLATE, glow: true },
       ...wheels(1.95, 1.45, 0.34),
       ...lightsFor(1.95, 4.5, 0.66),
     ],

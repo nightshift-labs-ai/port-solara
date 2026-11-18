@@ -40,7 +40,7 @@ function writeShotSave(game) {
 // flanking Beacons' offsets (ahead, sideways; + is the car's right), SKYLARK 1's screen point (NDC)
 // and height, and how far right of the low sun the arm looks (rad), so the sun sits up and left of
 // centre over the sea at the end of the street.
-const FRAME = { back: 2.8, up: 1.55, flank: [[6, -3.5], [9, 3.5]], heliX: 0.2, heliY: 0.5, heliUp: 14, sunRight: 0.2 };
+const FRAME = { back: 2.8, up: 1.55, flank: [[6, -3.5], [9, 3.5]], heliX: 0.14, heliY: 0.66, heliUp: 30, sunRight: 0.2, speed: 40 };
 // Where Wren stands for the Mercado fight (south of the van, facing the Clock Arch).
 const STREET = { x: 153.2, z: 75.5 };
 
@@ -100,7 +100,8 @@ export const SCENES = {
     pol.placeHelicopter(car.x - 27.6, car.z - 13.8);
     hold(['KeyW'], 20);
     // Squared up due west at chase speed again (a nudge from the pursuit can slow or turn it).
-    car.heading = Math.PI / 2; car.vx = -26; car.vz = 0; car.speed = 26; car.sync();
+    // FRAME.speed is 40 m/s (144 km/h), well under the Albacore's 62 m/s top speed.
+    car.heading = Math.PI / 2; car.vx = -FRAME.speed; car.vz = 0; car.speed = FRAME.speed; car.sync();
     // Civilian cars inside the flank slots go back to the pool (its own despawn), so the Beacons own them.
     for (const d of game.traffic.drivers) if (d.car && Math.hypot(d.car.x - car.x, d.car.z - car.z) < 14) game.traffic.despawn(d);
     // Two Beacons re-set on the flanks (7-10 m off), so both bars read in full beside the coupe.
