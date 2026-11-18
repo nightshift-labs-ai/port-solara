@@ -51,9 +51,12 @@
 ## Self-test after M4 (SwiftShader, 1280x800): SELFTEST PASS, 20/20
 - All M1-M3 tests unchanged; combat 5 shots / clip 7 / WANTED 1; enemy 3 shots, Wren 97.6 hp;
   blast PASS (+2 from a Beacon); autopilot m1 JOB DONE in 596 ticks, m5 front page; mission-list 5.
-- perf 196 draw calls / 44,945 triangles / median 1.7-3.1 ms / heap 22-23 MB (was 135 at the
-  first run of this session; under the 200 cap, over the 150 target; see debts).
-- Originality PASS (30 files). main.ts twice: 37 output files byte-identical, dossier 920,477 bytes.
+- perf 195-196 draw calls / 44,801 triangles / median 1.7-3.1 ms / heap 20-23 MB in the late perf
+  view (under the 200 cap, over the 150 target; see debts). A probe (out/, not committed) read 176-182
+  at the perf spot on a fresh boot too, and the same after mission-list / autopilot: the count follows
+  the view (traffic, walkers, chunks), not anything left behind by a test. Smoke and debris now hide
+  when idle (no draw calls until something smokes or blows).
+- Originality PASS (30 files). main.ts twice: 37 output files byte-identical, dossier 920,483 bytes.
 - Shots: 1-chase.jpg 183.1 KiB (q80), 2-street.jpg 179.2 KiB (q88), 4-title.jpg 189.0 KiB (q76).
   Judge sheet rebuilt; at 50% the cover reads mission, chase, police, helicopter, WANTED, minimap,
   subtitle, radio; the street cell reads on-foot combat, the van, the coupe prompt and Mara.
@@ -63,9 +66,8 @@
   unlocks; CONTINUE on the title (4-title.jpg final). Breaker shotgun (still cut).
 
 ## Bugs / debts (M4)
-- Perf view draw calls went to 196 late in the test run (135 earlier the same session): find out
-  what stays visible after the autopilot / mission-list tests (scorched shells, police after
-  WANTED 5) and trim back toward 150.
+- Draw calls 176-196 on Palmline depending on traffic and walkers (target 150): instance car bodies
+  per kind and fold sign panels before M5 adds the map and shop.
 - Story gating: every ring is open from the start (missions 2-5 do not wait for the one before).
 - Defend has no "leave the point = fail" rule; Aurum SUVs are parked props, they do not drive in.
 - Enemies do not collide with cars (they stand where the cover math puts them); crates as cover

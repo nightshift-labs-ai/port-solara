@@ -20,6 +20,7 @@ export class CarExplosions {
     this.debris = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 0.25, 0.7), new THREE.MeshStandardMaterial({ color: 0x2b2a2a, roughness: 0.9 }), DEBRIS);
     this.debris.frustumCulled = false;
     this.bits = Array.from({ length: DEBRIS }, () => ({ x: 0, y: -50, z: 0, vx: 0, vy: 0, vz: 0, spin: 0, life: 0 }));
+    this.puffs.visible = this.debris.visible = false; // until something smokes or blows
     game.scene.add(this.puffs, this.flash, this.debris);
     this.emitAcc = 0;
     this.blown = 0;
@@ -79,6 +80,10 @@ export class CarExplosions {
 
   updateParticles(dt) {
     const geo = this.puffs.geometry, pos = geo.attributes.position.array, col = geo.attributes.color.array;
+    // Idle (nothing smoking, nothing flying) costs no draw calls.
+    this.puffs.visible = this.life.some((l) => l > 0);
+    this.debris.visible = this.bits.some((b) => b.life > 0);
+    if (!this.puffs.visible && !this.debris.visible && this.flashLife <= 0) return;
     for (let k = 0; k < PUFFS; k++) {
       if (this.life[k] <= 0) continue;
       this.life[k] -= dt;
