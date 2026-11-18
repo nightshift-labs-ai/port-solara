@@ -146,6 +146,25 @@ await test('custody', async () => {
   return s;
 });
 
+await test('mission', async () => {
+  const s = await call(() => window.__test.mission());
+  ok(s.startsInside === 0, `${s.startsInside} mission start rings inside buildings`);
+  ok(s.started, 'walking into the mission 1 ring did not start it');
+  ok(s.deliverPanel && /^MISSION 1\/5/.test(s.deliverPanel.header) && /Quist Auto · \d/.test(s.deliverPanel.objective), 'mission panel missing header or live distance');
+  ok(s.card && s.card.title === 'JOB DONE', 'no JOB DONE result card');
+  ok(s.cash === 5000 && s.rep === 120 && s.done, `paid $${s.cash}, ${s.rep} REP, done ${s.done}`);
+  return s;
+});
+
+await test('gps', async () => {
+  const s = await call(() => window.__test.gps());
+  ok(s.points >= 4, `route has ${s.points} points`);
+  ok(s.onNodes && s.axisAligned, 'route leaves the road grid');
+  ok(s.endsAtTarget, 'route does not end at the marker');
+  ok(s.lengthM >= s.straightM && s.lengthM < s.straightM * 1.6, `route ${s.lengthM} m for ${s.straightM} m straight`);
+  return s;
+});
+
 await test('perf', async () => {
   await call(() => window.__test.teleport(-174.6, 0, 0));
   const p = await call(() => window.__test.perf(30));

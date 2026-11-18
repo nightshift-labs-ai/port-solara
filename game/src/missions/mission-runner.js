@@ -75,6 +75,8 @@ export class MissionRunner {
       return;
     }
     const game = this.game, f = game.focus, age = game.time - this.stepAt;
+    // Custody clears the heat, so it must end the job rather than count as losing the SPD.
+    if (game.custody) { this.finish(false, 'IN CUSTODY'); return; }
     if (step.target && !step.at) this.target = step.target(game);
     if (step.lines && step.kind !== 'dialogue') this.subtitle = lineAt(step.lines, age);
     if (step.seconds && age > step.seconds) { this.finish(false, step.failText || 'OUT OF TIME'); return; }

@@ -37,7 +37,7 @@ export function drawMinimap(ctx, game, x, y, size) {
   const route = game.route;
   if (route && route.length > 1) {
     ctx.strokeStyle = '#ffc21f';
-    ctx.lineWidth = 9 / scale * s;
+    ctx.lineWidth = 13 / scale * s;
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(route[0].x, route[0].z);

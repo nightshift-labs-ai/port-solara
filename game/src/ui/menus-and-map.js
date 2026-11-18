@@ -31,7 +31,7 @@ export function showTitleScreen(game, onNewGame) {
 
   const strip = document.createElement('div');
   strip.className = 'controls-strip';
-  strip.textContent = 'WASD MOVE · MOUSE LOOK · SHIFT RUN · F STEAL/EXIT CAR · SPACE HANDBRAKE';
+  strip.textContent = 'WASD MOVE · SHIFT RUN · F STEAL/EXIT CAR · SPACE HANDBRAKE · R RADIO';
   root.append(controls, menu, strip);
 
   const onKey = (e) => {
@@ -50,6 +50,8 @@ export const CONTROLS = [
   ['SHIFT', 'run'],
   ['SPACE', 'handbrake'],
   ['F', 'enter / leave a car'],
+  ['R', 'radio: Gull FM / Low Tide (Heat 96 at WANTED 3+)'],
+  ['GOLD RING', 'walk in to start a story mission'],
   ['ESC', 'release the mouse'],
 ];
 

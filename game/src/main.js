@@ -9,12 +9,12 @@ import { createTrafficPool } from './traffic/traffic-drivers.js';
 import { PedestrianCrowd } from './people/pedestrian-crowd.js';
 import { PlayerOnFoot } from './player/player-on-foot.js';
 import { stealNearestCar, updateCarTheft, nearestCar } from './player/car-theft.js';
-import { ChaseCamera } from './camera/chase-camera.js';
-import { drawHud } from './ui/hud.js';
 import { WantedLevel } from './police/wanted-level.js';
 import { dispatchPoliceUnits, routeOverLanes, nearestNode } from './police/police-ai.js';
 import { STORY_MISSIONS, SPEAKERS, rankFor } from './missions/story-missions.js';
 import { MissionRunner } from './missions/mission-runner.js';
+import { ChaseCamera } from './camera/chase-camera.js';
+import { drawHud } from './ui/hud.js';
 import { drawMinimap } from './ui/minimap.js';
 import { showTitleScreen } from './ui/menus-and-map.js';
 import { createSynthAudio, RADIO_STATIONS, SONG_SECONDS } from './audio/synth-audio.js';
@@ -175,7 +175,7 @@ export function bootPortSolara() {
     game.objective = wl.pips > 0 ? {
       title: 'LOSE THE SPD - BREAK LINE OF SIGHT',
       detail: wl.inSight ? `In sight · stay unseen ${wl.escapeSeconds}s to escape` : `Unseen ${Math.floor(wl.unseenFor)}s of ${wl.escapeSeconds}s · leave the search zone`,
-    } : FREE_ROAM_OBJECTIVE;
+    } : game.missions.openStarts[0] ? storyObjective(game.missions.openStarts[0].mission) : FREE_ROAM_OBJECTIVE;
   };
 
   const v = new THREE.Vector3();
@@ -252,6 +252,11 @@ function nearestRoadName(network, x, z) {
     bd = across; best = r.name;
   }
   return best;
+}
+
+// Free roam with a story mission open: the banner names it and points at its gold ring.
+function storyObjective(m) {
+  return { title: `STORY ${m.number}/${m.of} - ${m.title.toUpperCase()}`, detail: `Meet ${m.giver.split(' ')[0]} at the gold ring ${m.number} on the map` };
 }
 
 // Parked cars along the curbs: [kind, x, z, heading].

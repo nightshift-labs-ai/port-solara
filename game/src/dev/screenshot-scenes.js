@@ -62,6 +62,10 @@ export const SCENES = {
     hold([], 300);
     game.crowd.gatherNear(150, 30, 12, 18);
     game.startPlay();
+    // The cover's save state, an earlier step: mission 1 done, mission 3 just started at the Mercado.
+    game.missions.completed.add('ferry');
+    game.missions.rep = 380;
+    game.missions.start(game.story[2], 0);
     game.player.x = 153.5; game.player.z = 81.5; game.player.facing = 0.03;
     game.chase.yaw = 0.03;
     hold(['KeyW'], 85);

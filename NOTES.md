@@ -1,6 +1,76 @@
 # PORT SOLARA build notes
 
-## M3b in progress (run of 2026-11-18 20:21-20:37 EET: steps 0 and 1 done)
+## M3b Missions: done (steps 2-7 in the run of 2026-11-18 20:55-21:36 EET)
+- Cover fixes first: the grey disc round the car was SKYLARK 1's searchlight (cone base 5.2 m, so
+  the low chase camera sat inside it); cone and ground disc are now `SPOT_RADIUS` 2.6 m, disc
+  opacity 0.1. TIDE 14 is re-set alongside on the left, 4.5 m ahead, after the sim, so it reads in
+  full. The clock moved to the WANTED title row (WANTED 21 px, clock 16 px) so it never touches
+  the IN SIGHT / SEARCHING tag.
+- Step 2 missions/story-missions.js `STORY_MISSIONS`: all five by number, title and giver (1 Fresh
+  Off the Ferry / Mara, 2 Market Day / Mara, 3 The Harbor Run / Mara, 4 Ledger at Lantern Point /
+  Ilse, 5 Sundown / Mara); 1 and 3 playable, 2/4/5 `locked: 'Needs combat (M4)'`.
+  Mission 1: Mara dialogue, goto the Meridiana valet lane, steal any car, deliver to Quist Auto
+  (-90, 270), Mara's payoff; $5,000 and 120 REP. Mission 3: goto the Mercado, **the Mercado fight is
+  a dialogue beat (Ilse, Mara) until M4 combat**, steal the Albacore (moving marker on the car,
+  WANTED 3 on entry), lose the SPD and head for the Docks (0, 210) with a 3:00 timer and Mara /
+  Roarke on the radio, park at the Docks, payoff; $8,500 and 260 REP. `REP_RANKS` (six ranks),
+  `rankFor`, `SPEAKERS`. Start rings (small gold beam + ring, 2 draw calls each, hidden while a
+  mission runs or once done) and numbered gold minimap blips clamped to the map edge; walking or
+  driving within 5 m starts the mission. Free roam's banner names the next open story mission.
+- MissionRunner now: `lines` subtitles on any step, `target(game)` moving markers, `start(m, step)`,
+  REP and `completed`, custody fails the running job (IN CUSTODY), `resultCard()`.
+- Step 3 GPS: `game.planRoute` = lane-graph A* (`routeOverLanes`) from the crossing nearest Wren to
+  the one nearest the goal, re-planned every 30 ticks or when the goal moves 4 m; thick gold line
+  (13 px). Goal = mission marker, else the next open start ring, else Quist Auto. Result cards:
+  "JOB DONE" + mission name + "TIME m:ss · +$cash · +REP", or "JOB BLOWN" + reason ("OUT OF TIME",
+  "IN CUSTODY") + "RETRY AT THE GOLD RING"; 6 s with fades.
+- Step 4 subtitles in the gap between the health and speed panels on their baseline: canvas
+  portrait chip (flat faces: Mara hair-bun, Ilse teal bandana, Roarke SPD cap with gold badge),
+  gold speaker name, wrapped text. REP bar and "REP n · RANK" on the weapon row. Toast
+  "VEHICLE STOLEN: <car>" on a car's first theft.
+- Step 5 radio: `RADIO_STATIONS` in audio/synth-audio.js (GULL FM 101.4, LOW TIDE 88.2, HEAT 96;
+  invented songs and artists, 95 s per song), a 16-step lookahead sequencer (bass + lead
+  oscillators per step into one bus, only after the audio unlock, only in a car). R switches Gull
+  FM / Low Tide; Heat 96 takes over at WANTED 3+. Chip over the speed panel: level meter, station,
+  "song — artist". Title strip and CONTROLS list name R and the gold ring.
+- Step 6 tests: `mission` (start rings not inside buildings, walk into ring 1, through all 5 stages
+  with teleports, panel header + live distance, JOB DONE card, +$5,000, +120 REP, marked done) and
+  `gps` (route from Palmline to mission 3's marker: 8 points, every inner point a crossing, legs
+  axis-aligned, ends at the marker, 345 m for 319 m straight). Cover re-staged per brief section 3:
+  mission 3 stage 4/6 at WANTED 3 with the 2:58 timer and NEXT line, Mara subtitle with portrait,
+  REP 3 · RUNNER, gold GPS + police blips, HEAT 96 chip, cruisers with lit bars, SKYLARK 1, traffic,
+  walkers. 2-street.jpg is the same save state one step earlier (mission 3 stage 1/6, 47 m to the
+  Mercado marker).
+- Outline: wanted-level.js now leads with `WantedLevel` (constants moved below the class); main.js
+  imports follow the brief's table (police, missions, then camera, HUD, minimap, menus, audio).
+
+## Self-test after M3b (SwiftShader, 1280x800): SELFTEST PASS, 14/14
+- boot 34 ms, walk 9.3 m, drive 35.2 m/s, traffic 24 / 0 overlaps / 7 at a red, peds 32 / 0
+  inside, steal, wanted (cleared after 11 s), skid 82 strips / 13 puffs, police (4 cruisers,
+  roadblock, helicopter, 69 -> 8 m), custody 2.53 s, mission (5 stages, JOB DONE, $5,000, 120 REP),
+  gps (8 points on the grid), perf 127 draw calls / 39,337 triangles / median 1.4-2.5 ms / heap
+  16-18 MB in the perf view, console clean. The cover-scene draw count was not re-measured this run
+  (171 at M3a with all police up; the mission marker adds 2, start rings are hidden in a mission).
+- Originality PASS (27 files). main.ts twice: 34 output files byte-identical, dossier 916,339 bytes.
+- Shots: 1-chase.jpg 188.4 KiB (q80), 2-street.jpg 170.7 KiB (q88), 4-title.jpg 189.0 KiB (q76).
+  Judge sheet rebuilt; at 50% the cover reads mission, chase, police, helicopter, WANTED, minimap,
+  subtitle and radio.
+
+## Next (M4 Combat and story)
+- weapons-and-damage.js `fireWeapon`, Tidewater gunmen; replace mission 3's Mercado dialogue beat
+  with the fight; missions 2, 4 and 5 as step lists; shot 2 final (aiming, muzzle flash).
+
+## Bugs / debts (M3b)
+- The cover is at the 190 KiB limit (188.4 KiB at q80); any more detail drops its JPEG quality.
+- The left HUD column (mission panel, district card, SPD RESPONSE) is tall in the cover; the
+  district card could skip the cover once the map shot carries districts.
+- GPS's first leg runs straight from Wren to the nearest crossing (it can cut a block corner when she
+  stands mid-block or in a plaza).
+- A start ring is entered by distance only; there is no "[F] start" prompt or briefing card yet.
+- Mission 3's ring is open before mission 1 is done (no story gating yet; M5 save carries progress).
+- Radio is not saved and has no volume setting (M5 settings).
+
+## M3b steps 0-1 (run of 2026-11-18 20:21-20:37 EET)
 - Step 0 cover QA: tyre smoke is now one Points object of soft round sprites (64 px radial-gradient
   CanvasTexture, per-puff size 0.35 -> 1.25 m and alpha 0.42 fading to 0 within 1 s), emitted half
   as often, half a metre behind the rear wheels and drifting back, so it trails the car instead of

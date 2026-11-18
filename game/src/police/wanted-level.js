@@ -3,9 +3,6 @@
 // line of sight the last-seen spot follows Wren; once nobody sees her, the escape timer runs
 // (8 s + 3 s per pip) and the minimap shows a search circle around the last-seen spot. Leave the
 // circle or outlast the timer unseen and the heat clears.
-export const CRIME_HEAT = { theft: 1, pedHit: 1, gunfire: 1, copAssault: 2, cruiserWrecked: 2 };
-export const WITNESS_RANGE = 25;
-
 export class WantedLevel {
   constructor() {
     this.pips = 0;
@@ -42,6 +39,9 @@ export class WantedLevel {
 
   clear() { this.pips = 0; this.inSight = false; this.unseenFor = 0; }
 }
+
+export const CRIME_HEAT = { theft: 1, pedHit: 1, gunfire: 1, copAssault: 2, cruiserWrecked: 2 };
+export const WITNESS_RANGE = 25;
 
 // Walkers within 25 m of a spot: the witnesses to a crime there.
 export function countWitnesses(game, x, z) {
