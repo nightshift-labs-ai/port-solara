@@ -1,5 +1,57 @@
 # PORT SOLARA build notes
 
+## M5 Shell and depth: done (steps 3-6 in the run of 2026-11-18 23:05-23:44 EET)
+- Step 3 settings (core/save-slots.js `DEFAULT_SETTINGS`, `GRAPHICS_PRESETS`, `applySettings`):
+  master, music/radio and effects volume 0-10, mouse sensitivity 0.5-2.0x, graphics HIGH (1024
+  shadow map, far 480 m, fog to 420 m) or LOW (no shadows, far 300 m, fog to 260 m; the sky dome
+  and sun disc shrink with the far plane). Own localStorage key `port-solara/settings`, also copied
+  into every save and put back on load; NEW GAME keeps them. Pause SETTINGS view (arrows or
+  clicks, left/right halves) and a title SETTINGS panel (click a row to raise it). Audio has an
+  output bus: radio on the music level, engine/tyres/siren/guns on the effects level.
+- Step 4 missions/side-activities.js `SIDE_ACTIVITIES` + `SideActivities`, all on [E] at the map's
+  places with a prompt over each: four ring-road races from the F flags (loops of real crossings,
+  gold checkpoint marker, timer, best time in the save, first win $1,500 / 40 REP, a par run later
+  pays a third); courier drops for Mara from Quist Auto on foot (seeded drop 120-260 m out, 80 s,
+  $600 / 25 REP, Courier n/10); stolen-car sales at Quist Auto by kind and damage (Albacore $9,000
+  ... Pipit $1,100; +25% from rank 4; SPD cars refused); Brass & Barrel ammo ($200 for two clips)
+  and the Hornet ($2,500, locked until rank 3 or mission 4's hand-out; `PlayerWeapons.locked` is in
+  the save); Pelican Fuel respray ($500, clears WANTED and stands the SPD down, refused while a unit
+  sees the car). Banner and GPS follow the running activity. Radio was already done in M3b.
+- Step 5 tests and shots. New tests: save (safehouse save, reload, the title's first item reads
+  "CONTINUE - Story 3/5 - $18,450", load gives back cash, REP, story, races, courier, best lap,
+  weapon slot, unlocked Hornet and the spot), settings (persist over a reload; LOW really drops
+  shadows and the far plane), race (Coral Circuit through 4 checkpoints by test teleports, paid
+  $1,500, Races 1/4), respray (WANTED 2 unseen -> 0, $500), perf now on a fresh boot at HIGH and LOW.
+  `SHOT_SAVE` in dev/screenshot-scenes.js is the one save state of all four shots: missions 1-2 done,
+  REP 640 (rank 4 WHEELMAN), $18,450, Races 1/4 (North Ring 0:52.4), Courier 3/10, saved 14:32 at
+  Calloway Salvage. 3-map.jpg is the live Tab map on it (Wren moved inland so her arrow clears ring 1
+  and a race flag); 4-title.jpg writes it into slot 2 as a real record and re-shows the title, so
+  CONTINUE is read back from storage. Title strip shortened (it ran off the right edge).
+
+## Self-test after M5 (SwiftShader, 1280x800): SELFTEST PASS, 23/23
+- save, settings, race, respray PASS (above). perf on a fresh boot: HIGH 168 draw calls / 42,235
+  triangles / median 2.6-5.6 ms / heap 40-43 MB; LOW 110 draw calls / 26,135 triangles / median
+  0.8-0.9 ms (two runs).
+  (The old perf view after every test read 195; it now reloads first, so the numbers moved.)
+- Originality PASS (32 files). main.ts twice: 40 output files byte-identical, dossier 1,135,730
+  bytes (under 1.4 MiB). game/ 2.4 MB.
+- Shots: 1-chase.jpg 183.4 KiB (q80), 2-street.jpg 179.6 KiB (q88), 3-map.jpg 168.1 KiB (q92),
+  4-title.jpg 177.7 KiB (q72). Judge sheet rebuilt: at 50% it reads car chase, police, wanted,
+  minimap, mission, on foot, combat, map and title. Cover and street are the M4 stagings on the
+  shared save (the weapon row now says REP 4 · WHEELMAN).
+
+## Next (M6 Polish and freeze)
+- Handling, camera, effects, audio mix, perf (draw calls), A/B on judge sheets, README (controls,
+  side activities, settings). No new systems.
+
+## Bugs / debts (M5)
+- The HUD slot chips still show "3 HORNET" while it is locked (it cannot be selected; dim it).
+- Side activity results only toast (no JOB DONE-style card); courier has no package prop.
+- Races are crossing loops near each flag, not the full ring road; no rival racers.
+- The respray does not change the car's colour (merged vertex-coloured bodies).
+- Map district labels are small at 50% on the sheet; Lantern Point's label still sits over the sea.
+- The shot save's clock assumes the headless browser runs in UTC (it does here).
+
 ## M5 steps 1-2 Pause, map, saves: done (short run of 2026-11-18 22:28-22:48 EET)
 - Step 1 ui/menus-and-map.js `installPauseAndMap`: Esc (or P) pauses with RESUME, MAP, SETTINGS,
   SAVE, QUIT TO TITLE (arrows + Enter or a click); Tab (or M) opens the full map. Pausing freezes

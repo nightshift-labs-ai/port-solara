@@ -143,6 +143,9 @@ export const SCENES = {
     hold([], 300);
     game.startPlay();
     seedShotSave(game);
+    // Wren on a crossing inland of Palmline, clear of ring 1 and the race flag at her start.
+    const n = game.roads.nodes.reduce((b, p) => (Math.hypot(p.x + 90, p.z - 20) < Math.hypot(b.x + 90, b.z - 20) ? p : b));
+    game.player.x = n.x; game.player.z = n.z; game.player.facing = 0.6;
     hold([], 60);
     game.openPause('map');
   },
