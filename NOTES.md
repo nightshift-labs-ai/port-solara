@@ -20,7 +20,11 @@
   3-step mission to a passed result with no console errors.
 - HUD fix: the WANTED panel always keeps its tag row, so the clock no longer sits on "WANTED" (or on
   the cash) when no pips are lit.
-- Self-test after step 1: 12/12 SELFTEST PASS (no mission test yet; that is step 6).
+- Self-test after step 1: 12/12 SELFTEST PASS (no mission test yet; that is step 6); skid 13 puffs
+  alive; perf 152 draw calls / 41,207 triangles. Originality PASS (26 files). main.ts twice: 33
+  output files byte-identical, dossier 896,204 bytes (run main.ts without the `ulimit -v` cap: under
+  it Node's TypeScript stripper cannot reserve its Wasm memory). Shots: 1-chase.jpg 171.7 KiB,
+  2-street.jpg 172.1 KiB and 4-title.jpg 189.6 KiB unchanged from M3a. Judge sheet not rebuilt yet.
 - Next (step 2 on): story-missions.js STORY_MISSIONS (all five by name and giver, 1 and 3 playable;
   mission 3's Mercado fight becomes a short dialogue/escape step until M4 combat), start markers in
   the world and on the minimap; lane-graph gold GPS route (planGridRoute is still the old 3-leg
