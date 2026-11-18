@@ -14,16 +14,36 @@ export function stageScreenshotScene(game, name) {
 }
 
 export const SCENES = {
-  // The Albacore, just taken from the curb, handbrake-drifts through the Palmline crossing with
-  // Rua 5: skid marks and smoke, traffic held at the lights, walkers on the corners jumping clear.
+  // The SPD chase on Palmline: a seeded save state at WANTED 3 (the Albacore's theft was seen and
+  // a Beacon was rammed), the Albacore already at 26 m/s northbound with three Beacons on it (one
+  // alongside), a fourth at the Rua 5 side street, SKYLARK 1 near its orbit and the Bulwarks'
+  // roadblock dispatched ahead. Then 2.4 s of the real sim: pursuit, a handbrake drift into the
+  // crossing, walkers on the corner. The camera sits lower and closer than in play.
   chase(game, hold) {
     hold([], 600);
     game.crowd.gatherNear(-170, -26, 8, 9);
     game.startPlay();
-    game.player.x = game.albacore.x - 2.2; game.player.z = game.albacore.z;
+    const car = game.albacore;
+    game.player.x = car.x - 2.2; game.player.z = car.z;
     game.enterOrExit();
-    hold(['KeyW'], 144);
-    hold(['KeyW', 'KeyD', 'Space'], 22);
+    car.x = -174.6; car.z = 60; car.heading = 0; car.vx = 0; car.vz = -26; car.speed = 26; car.sync();
+    game.chase.framing = { back: 4.6, up: 1.9 };
+    game.chase.yaw = 0.1; game.chase.lastMode = null;
+    const wl = game.wantedLevel;
+    wl.clear();
+    wl.commit('theft', car.x, car.z, 3);
+    wl.commit('copAssault', car.x, car.z);
+    const pol = game.police;
+    pol.place(3, -160, -30, Math.PI / 2, 5);
+    hold(['KeyW'], 100);
+    // The pursuit closes up around the Albacore: one alongside, two ahead, SKYLARK 1 on its orbit.
+    const v = Math.abs(car.speed);
+    pol.place(1, car.x - 3.8, car.z + 1.0, 0, v);
+    pol.place(0, car.x + 3.6, car.z - 10, 0, v - 1);
+    pol.place(2, car.x - 3.8, car.z - 24, 0, v - 2);
+    pol.placeHelicopter(car.x + 13.8, car.z - 27.6);
+    hold(['KeyW'], 20);
+    hold(['KeyW', 'KeyD', 'Space'], 12);
   },
   // Wren on foot in Old Mercado's market square, the Clock Arch ahead and a Pipit to take.
   street(game, hold) {

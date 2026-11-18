@@ -35,7 +35,9 @@ export class ChaseCamera {
       let d = car.heading + this.lookOffset - this.yaw;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.yaw += d * Math.min(1, dt * (car.drifting ? 1.7 : 3.2));
-      const back = CAR_BACK + Math.min(0.8, speed * 0.02), up = CAR_UP;
+      // `framing` (set by the shot module) brings the arm lower and closer than play's 8 m / 3.5 m.
+      const fr = this.framing || { back: CAR_BACK, up: CAR_UP };
+      const back = fr.back + Math.min(0.8, speed * 0.02), up = fr.up;
       const wx = car.x + Math.sin(this.yaw) * back, wz = car.z + Math.cos(this.yaw) * back;
       // Position lag: a stiff spring, so hard acceleration stretches the arm a little.
       if (this.lastMode !== 'car') this.pos.set(wx, up, wz);

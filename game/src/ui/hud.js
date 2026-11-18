@@ -27,12 +27,27 @@ export function drawHud(ctx, game, drawMinimap) {
     const cw = Math.max(ctx.measureText(card.name).width, (ctx.font = font(22 * s, 700), ctx.measureText(card.sub).width)) + 44 * s;
     const cy = my + 104 * s;
     panel(ctx, mx, cy, cw, 86 * s);
-    ctx.fillStyle = GOLD; ctx.font = font(22 * s, 700);
-    ctx.fillText(card.sub, mx + 22 * s, cy + 30 * s);
     ctx.fillStyle = WHITE; ctx.font = font(38 * s);
-    ctx.fillText(card.name, mx + 22 * s, cy + 72 * s);
+    ctx.fillText(card.name, mx + 22 * s, cy + 44 * s);
+    ctx.fillStyle = GOLD; ctx.font = font(22 * s, 700);
+    ctx.fillText(card.sub, mx + 22 * s, cy + 74 * s);
     ctx.globalAlpha = 1;
   }
+
+  // Event toasts (police events) under the WANTED panel on the right, newest on top.
+  const toasts = (game.police ? game.police.events : []).filter((e) => game.time - e.at < TOAST_SECONDS).slice(-2).reverse();
+  const toastY = my + 230 * s + 12 * s + 136 * s + (game.wantedLevel?.pips > 0 ? 30 * s : 0) + 12 * s;
+  toasts.forEach((e, i) => {
+    const age = game.time - e.at;
+    ctx.globalAlpha = Math.min(1, age / 0.25, (TOAST_SECONDS - age) / 0.5);
+    ctx.font = font(21 * s);
+    const tw = ctx.measureText(e.text).width + 58 * s, tx = w - mx - tw, ty = toastY + i * 52 * s;
+    panel(ctx, tx, ty, tw, 44 * s);
+    ctx.fillStyle = Math.floor(game.time * 4) % 2 ? '#ff3b3b' : '#3b7bff';
+    ctx.beginPath(); ctx.arc(tx + 24 * s, ty + 22 * s, 8 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = WHITE; ctx.fillText(e.text, tx + 42 * s, ty + 29 * s);
+    ctx.globalAlpha = 1;
+  });
 
   // SPD RESPONSE: the live units nearest first, call sign, distance and a coloured state tag.
   const units = game.police ? game.police.active.slice().sort((a, b) => a.dist - b.dist) : [];
@@ -48,7 +63,7 @@ export function drawHud(ctx, game, drawMinimap) {
       ctx.fillText(u.call, px + 16 * s, ry + 22 * s);
       ctx.font = font(19 * s, 700); ctx.fillStyle = 'rgba(255,248,236,0.85)';
       ctx.textAlign = 'right';
-      ctx.fillText(`${Math.round(u.dist)} m`, px + 196 * s, ry + 22 * s);
+      ctx.fillText(`${Math.round(u.dist)} m`, px + 228 * s, ry + 22 * s);
       ctx.textAlign = 'left';
       const [bg, fg] = STATE_COLORS[u.state] || STATE_COLORS.RESPONDING;
       ctx.font = font(15 * s);
@@ -89,6 +104,11 @@ export function drawHud(ctx, game, drawMinimap) {
   for (let i = 0; i < 5; i++) shield(ctx, mapX + 14 * s + i * 42 * s, pipY + 40 * s, 38 * s, i < game.wanted, game.time);
   ctx.fillStyle = '#9fe0a0'; ctx.font = font(28 * s);
   ctx.fillText('$' + game.cash.toLocaleString('en-US'), mapX + 14 * s, pipY + 122 * s + tagRow);
+  // Weekday and clock from the game's own time of day (one game minute per second of play).
+  const clock = game.lore.clock, minutes = Math.floor(clock.startMinutes + game.time) % 1440;
+  ctx.fillStyle = WHITE; ctx.font = font(21 * s); ctx.textAlign = 'right';
+  ctx.fillText(`${clock.weekday} ${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, mapX + size - 14 * s, pipY + (tagRow ? 104 : 30) * s);
+  ctx.textAlign = 'left';
 
   // Health, armour and weapon.
   const by = h - my - 96 * s;
@@ -151,7 +171,8 @@ export function drawHud(ctx, game, drawMinimap) {
 
 export const CUSTODY_FADE = 0.6;
 
-export const CARD_SECONDS = 4.5;
+export const CARD_SECONDS = 3.1; // fully shown for 2.5 s, then a 0.6 s fade
+export const TOAST_SECONDS = 3.5;
 export const DISPATCH_ROWS = 4;
 // State tag colours [background, text].
 export const STATE_COLORS = {

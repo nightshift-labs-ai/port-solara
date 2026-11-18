@@ -76,6 +76,11 @@ export function dispatchPoliceUnits(game, makeCar) {
       police.arrestFor = 0; police.arrests++;
       return true;
     },
+    // Puts SKYLARK 1 in the air at a spot (shot staging); it then flies its orbit as usual.
+    placeHelicopter(x, z, y = HELI_HEIGHT) {
+      if (!air.active) police.toast('SPD HELICOPTER OVERHEAD');
+      air.active = true; air.car.x = x; air.car.z = z; air.y = y;
+    },
     reset() { units.forEach(deactivate); police.roadblock = null; air.active = false; air.car.x = air.car.z = 1e5; air.dist = 1e9; },
     toast(text) { police.events.push({ text, at: game.time }); if (police.events.length > 4) police.events.shift(); },
   };
@@ -185,7 +190,7 @@ export function dispatchPoliceUnits(game, makeCar) {
       u.state = 'PURSUIT';
       const fx = pSpeed > 1 ? pvx / pSpeed : 0, fz = pSpeed > 1 ? pvz / pSpeed : 0;
       const side = Math.sign((c.x - p.x) * -fz + (c.z - p.z) * fx) || 1;
-      if (u.index % 2) { tx = p.x + pvx * 0.5 - fz * 3.6 * side; tz = p.z + pvz * 0.5 + fx * 3.6 * side; }
+      if (u.index % 2) { tx = p.x + pvx * 0.15 - fz * 3.6 * side; tz = p.z + pvz * 0.15 + fx * 3.6 * side; }
       else { tx = p.x - fx * 1.8 - fz * 1.1 * side + pvx * 0.25; tz = p.z - fz * 1.8 + fx * 1.1 * side + pvz * 0.25; }
       if (u.dist < 6 && pips >= 2) { u.state = 'RAMMING'; ram = true; }
     }
@@ -255,9 +260,9 @@ export function dispatchPoliceUnits(game, makeCar) {
     if (pips < 3 && air.active && (air.y += dt * 8) > 70) { air.active = false; air.car.x = air.car.z = 1e5; }
     heli.group.visible = heli.cone.visible = heli.spot.visible = air.active;
     if (!air.active) return;
-    const a = game.time * 0.32;
-    const ox = p.x + f.x * 22 + Math.cos(a) * 20, oz = p.z + f.z * 22 + Math.sin(a) * 20;
-    const dx = ox - air.car.x, dz = oz - air.car.z, d = Math.hypot(dx, dz), step = Math.min(d, 38 * dt);
+    const a = game.time * 0.32 + 2.2;
+    const ox = p.x + f.x * 26 + Math.cos(a) * 14, oz = p.z + f.z * 26 + Math.sin(a) * 14;
+    const dx = ox - air.car.x, dz = oz - air.car.z, d = Math.hypot(dx, dz), step = Math.min(d, 60 * dt);
     if (d > 0.01) { air.car.x += dx / d * step; air.car.z += dz / d * step; }
     if (pips >= 3) air.y += (HELI_HEIGHT - air.y) * Math.min(1, dt * 0.8);
     air.dist = Math.hypot(p.x - air.car.x, p.z - air.car.z);
@@ -316,8 +321,8 @@ export const POLICE_SPECS = {
   beacon: { name: 'SPD BEACON', topSpeed: 58, accel: 12.5, grip: 7, length: 4.8, width: 1.9 },
   bulwark: { name: 'SPD BULWARK', topSpeed: 52, accel: 11, grip: 6.5, length: 5.0, width: 2.05 },
 };
-export const SIGHT_RANGE = 90, PURSUIT_RANGE = 40, DESPAWN_RANGE = 230, ROADBLOCK_AHEAD = 85;
-export const HELI_SIGHT = 140, HELI_HEIGHT = 22;
+export const SIGHT_RANGE = 90, PURSUIT_RANGE = 40, DESPAWN_RANGE = 230, ROADBLOCK_AHEAD = 120;
+export const HELI_SIGHT = 140, HELI_HEIGHT = 18;
 export const ARREST_RANGE = 6, CUSTODY_SECONDS = 2.5, CUSTODY_CARD = 4.2, BAIL = 400;
 // Where the SPD books Wren: sidewalk spots beside two posts (the nearest one is used).
 export const SPD_POSTS = [
@@ -357,7 +362,7 @@ function buildHelicopter() {
   const lightMat = new THREE.MeshBasicMaterial({ color: 0xfff1c8, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
   const cone = new THREE.Mesh(coneGeo, lightMat);
   const spot = new THREE.Mesh(new THREE.CircleGeometry(5.4, 28).rotateX(-Math.PI / 2), lightMat.clone());
-  spot.material.opacity = 0.3;
+  spot.material.opacity = 0.16;
   cone.visible = spot.visible = false;
   cone.frustumCulled = spot.frustumCulled = false;
   return { group, rotor, tail, cone, spot };
