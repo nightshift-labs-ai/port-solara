@@ -27,6 +27,12 @@ export function createSunSoakedLighting(game) {
   sun.shadow.normalBias = 0.6;
   scene.add(sun, sun.target);
 
+  // Warm bounce from the bright street behind a viewer facing the sun (no shadows): faces turned
+  // away from the low sun, like a car's rear in a chase toward it, keep their paint colour.
+  const bounce = new THREE.DirectionalLight(0xffc49a, 0.9);
+  bounce.position.set(-sunDir.x * 100, 30, -sunDir.z * 100);
+  scene.add(bounce);
+
   // Sky dome: deep blue overhead to warm peach at the horizon, plus a sun disc.
   const skyGeo = new THREE.SphereGeometry(450, 24, 12);
   const colors = [];
