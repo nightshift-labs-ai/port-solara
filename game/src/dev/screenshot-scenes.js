@@ -75,7 +75,7 @@ export const SCENES = {
     game.enterOrExit();
     // Westbound on Rua 5 (z -30) toward Palmline, the beach and the low sun over the sea.
     // It starts inside Palmline Beach (x < -120), so no district card rises over the sun.
-    car.x = -122; car.z = -31; car.heading = Math.PI / 2; car.vx = -26; car.vz = 0; car.speed = 26; car.sync();
+    car.x = -138; car.z = -31; car.heading = Math.PI / 2; car.vx = -26; car.vz = 0; car.speed = 26; car.sync();
     game.chase.framing = { back: FRAME.back, up: FRAME.up };
     game.chase.yaw = Math.PI / 2; game.chase.lastMode = null;
     const wl = game.wantedLevel;
