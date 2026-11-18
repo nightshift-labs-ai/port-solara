@@ -15,7 +15,7 @@ export function stageScreenshotScene(game, name) {
 
 // Cover framing: the arm behind and above the Albacore (it fills about 28% of the width), TIDE 14's
 // offset ahead/left of it, and SKYLARK 1's screen point (NDC) and height.
-const FRAME = { back: 2.8, up: 1.55, tideAhead: 11, tideLeft: 3.4, heliX: -0.03, heliY: 0.38, heliUp: 11 };
+const FRAME = { back: 2.8, up: 1.55, tideAhead: 8, tideLeft: -3.4, heliX: -0.04, heliY: 0.33, heliUp: 14 };
 
 export const SCENES = {
   // The SPD chase on Palmline: a seeded save state at WANTED 3 (the Albacore's theft was seen and

@@ -52,6 +52,7 @@
 - SKYLARK 1 reads small (11 m up, about 45 m out) between palm fronds.
 - No drive-by fire; fists only hit combat targets (no punching walkers, on purpose: no gore).
 - The tracer starts at a fixed muzzle point, not the gun mesh's world position.
+- Cover re-stage (2026-11-18 21:37 EET): TIDE 14 alongside on the right, 8 m ahead (the left slot sits under the SPD panel), in full; SKYLARK 1 at 14 m in the open sky between the district card and the bank sign; 1-chase.jpg 188.8 KiB (q80). Dossier and originality not re-run.
 
 ## M3b Missions: done (steps 2-7 in the run of 2026-11-18 20:55-21:36 EET)
 - Cover fixes first: the grey disc round the car was SKYLARK 1's searchlight (cone base 5.2 m, so
