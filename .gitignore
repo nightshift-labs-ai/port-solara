@@ -1,0 +1,4 @@
+out/
+node_modules/
+tools/selftest-report.json
+tools/judge-sheet*.jpg
