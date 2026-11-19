@@ -1,5 +1,54 @@
 # PORT SOLARA build notes
 
+## M6 cover v2: done (run of 2026-11-19 18:31-19:04 EET)
+- (1) Street fronts (world/city-builder.js, whole game): stucco tints are now limestone, coral,
+  teal, saffron, peach and sky-blue plaster (was pale cream/blush). `dressStreetFronts` adds, on
+  every street-facing Mercado/Palmline front: striped sloping awnings (canvas stripes x the tint),
+  lit shop signs from one canvas atlas of our names (GAIVOTA CAFÉ, BOLO'S FISH FRY, TIDECALL
+  MOBILE, CASA CORAL, SALT & LIME, MAREA BAR, FARMÁCIA SOL, PADARIA LUZ; per-instance row via an
+  instanced `aRow` attribute), and lamp posts with warm heads on the kerbs. Four instanced meshes,
+  no shadow casting, placed by hashes of each building's spot (the seeded random stream and so
+  traffic, walkers and parked cars are unchanged). Lamp posts have no collider (walkers' pavement
+  rings cross them; a 0.2 m post collider risked the peds test).
+- (2) Sky and grade (world/sunlight-and-sea.js, styles/hud.css): sky bands orange 0xff8a3a at the
+  horizon -> coral rose 0xee6f6a -> lavender-blue 0x6c78b4 -> deep blue 0x25428a overhead; no
+  white haze band; HORIZON/fog 0xf7935e; sun disc 0xffc27a with an orange halo; sun light 0xffa860
+  at 3.3; hemisphere lilac sky 0xc4b8e2 over warm sand. **The sun moved** to just north of due west
+  (azimuth 0.025 rad) and about 10 degrees up, so it hangs at the end of the east-west streets.
+  Final grade: CSS `saturate(1.16) contrast(1.07)` on #city-view only (never the HUD); graphics LOW
+  drops it (body.graphics-low, set in applySettings). Bloom stays the halo + bar glow sprites.
+  **Brief 9.3 tension:** the run asked for an orange-pink-violet sky; the brief bans a
+  pink/purple/orange sunset-gradient title/palette. A first violet zenith made the title read that
+  way, so the upper bands went lavender-blue / deep blue; UI and wordmark stay navy and gold.
+- (3) Camera (camera/chase-camera.js): `CAR_VIEWS` near (8 m / 3.5 m, fov 65-77, as before) and
+  high (9.5 m back, 5.2 m up, aim -0.2 m about 23 m ahead, fov 50-54). C cycles them while
+  driving (main.js); in the CONTROLS list, the title strip and the README. The cover uses `high`
+  (no shot-only framing any more).
+- (4) Cover (dev/screenshot-scenes.js chase): the coupe waits 300 ticks at the Rua 5 kerb at
+  x -22 (Old Mercado, so the district card is gone), then runs west at 40 m/s (144 km/h) toward
+  the Hotel Meridiana, the boulevard palms and the sun. GULL 11 1 m ahead / 3.7 m left, TIDE 14
+  5.5 m ahead / 3.7 m right, CORAL 7 and traffic ahead, walkers on both pavements
+  (`gatherNear(-92, -30, 14)`), SKYLARK 1 at 13 m up under NDC (0.06, 0.66), in front of the sun,
+  so the SPD list's fourth row is SKYLARK 1 48 m OVERHEAD (real). HUD fit at 1280x800 and on the
+  sheet: no panel covers the car, the cruisers or the street centre. The coupe is about 13% of the
+  frame width (the sun cannot stay in frame with a narrower lens from this height).
+- (5) A/B (out/ab/before.jpg vs the new cover, out/ab/v2-ab-100.jpg and -50.jpg): **kept**; clearly
+  more city (coloured facades, awnings, signs, lamps both sides), warmer light, sun at the street
+  end, chase still readable. Weak spot: the searchlight washes the coupe's roof toward cream (the
+  rear still reads red). 2-street and 4-title re-shot with the new grade and still read (title strip
+  now has C CAMERA and still fits); 3-map unchanged in look.
+- Self-test (SwiftShader, 1280x800): SELFTEST PASS 23/23. Perf before: HIGH 166 draw calls / 41,751
+  tris / median 1.8 ms; LOW 108 / 25,743 / 1.5 ms. After: HIGH 172 / 61,563 / median 2.9 ms /
+  heap 43 MB; LOW 112 / 45,291 / 1.5 ms (awnings, signs, posts, heads: +4 calls each view plus the
+  instanced triangles). Inside the 300k-triangle and 200-call caps; still over the 150 target.
+- Originality PASS (32 files). main.ts run three times: 40 files byte-identical (sha256 compared),
+  dossier 1,118,099 bytes.
+- Shots: 1-chase.jpg 176.0 KiB (q76), 2-street.jpg 173.2 KiB (q88), 3-map.jpg 167.7 KiB (q92),
+  4-title.jpg 179.1 KiB (q80). Judge sheet rebuilt.
+- Next: tone the searchlight on the coupe (or a smaller ground disc) so the roof keeps its coral;
+  a few signs sit behind the SPD and WANTED panels in the cover; real bloom; lane dashes; round
+  minimap; drawn weapon icons; dim the locked Hornet chip.
+
 ## M6 cover pass: framing and bounce done, road streak reverted again (run of 2026-11-19 00:45-00:56 EET)
 - (1) Framing (screenshot-scenes.js chase): the Albacore starts at x -138 on Rua 5 (was -122; -130
   still left the OSTRA BANK board's corner under the minimap), so the board passes out of frame and

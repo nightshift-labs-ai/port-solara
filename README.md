@@ -17,6 +17,7 @@ Built by Claude Code for Nightshift Labs as an entry to make.fun's gta6-01 conte
 - **Space**: handbrake (in a car)
 - **F**: steal the nearest car (a driver gets dragged out of a moving one), or leave yours
 - **R**: switch the car radio between Gull FM and Low Tide (Heat 96 takes over at WANTED 3+)
+- **C**: car camera, NEAR (low chase) or HIGH (higher, looking down the street)
 - **Gold ring**: walk or drive into one to start a story mission (1 Fresh Off the Ferry, 3 The Harbor Run)
 - **Esc**: release the pointer
 
