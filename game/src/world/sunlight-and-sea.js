@@ -38,10 +38,10 @@ export function createSunSoakedLighting(game) {
   const skyGeo = new THREE.SphereGeometry(450, 24, 12);
   const colors = [];
   const pos = skyGeo.attributes.position;
-  // Late-afternoon bands: saturated orange at the horizon, coral rose above it, a dusky violet
-  // and a deep blue-indigo overhead. A natural sky only: the UI and the wordmark stay navy and
-  // gold, never a sunset-gradient palette (brief section 9.3). No white haze band at the horizon.
-  const top = new THREE.Color(0x29357e), mid = new THREE.Color(0x7a5a9e), rose = new THREE.Color(0xee6f6a), low = new THREE.Color(0xff8a3a);
+  // Late-afternoon bands: saturated orange at the horizon, coral rose above it, a dusky
+  // lavender-blue and deep blue overhead (kept off a pink/purple sunset-gradient look: the UI and
+  // the wordmark stay navy and gold, brief section 9.3). No white haze band at the horizon.
+  const top = new THREE.Color(0x25428a), mid = new THREE.Color(0x6c78b4), rose = new THREE.Color(0xee6f6a), low = new THREE.Color(0xff8a3a);
   for (let i = 0; i < pos.count; i++) {
     const h = Math.max(0, pos.getY(i) / 450);
     const c = h < 0.09 ? low.clone().lerp(rose, h / 0.09)
