@@ -6,6 +6,7 @@ export class ChaseCamera {
   constructor(camera) {
     this.camera = camera;
     this.mode = 'foot';
+    this.view = 'near'; // the car view: 'near' or 'high' (C)
     this.yaw = 0;
     this.pitch = 0.18;
     this.lookOffset = 0;
@@ -35,8 +36,9 @@ export class ChaseCamera {
       let d = car.heading + this.lookOffset - this.yaw;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.yaw += d * Math.min(1, dt * (car.drifting ? 1.7 : 3.2));
-      // `framing` (set by the shot module) brings the arm lower and closer than play's 8 m / 3.5 m.
-      const fr = this.framing || { back: CAR_BACK, up: CAR_UP };
+      // The player's car view (C cycles NEAR / HIGH); `framing` (set by the shot module) overrides it.
+      const view = CAR_VIEWS[this.view] || CAR_VIEWS.near;
+      const fr = this.framing || view;
       const back = fr.back + Math.min(0.8, speed * 0.02), up = fr.up;
       const wx = car.x + Math.sin(this.yaw) * back, wz = car.z + Math.cos(this.yaw) * back;
       // Position lag: a stiff spring, so hard acceleration stretches the arm a little.
@@ -47,8 +49,9 @@ export class ChaseCamera {
       }
       // Look-ahead: aim further down the road as speed rises, leaning into the velocity.
       const ahead = 6 + Math.min(7, speed * 0.2);
-      this.target.set(car.x - Math.sin(this.yaw) * ahead + car.vx * 0.08, 1.3, car.z - Math.cos(this.yaw) * ahead + car.vz * 0.08);
-      cam.fov += ((65 + Math.min(12, speed * 0.24)) - cam.fov) * Math.min(1, dt * 2);
+      this.target.set(car.x - Math.sin(this.yaw) * ahead + car.vx * 0.08, view.aimY, car.z - Math.cos(this.yaw) * ahead + car.vz * 0.08);
+      const fov = view.fov + Math.min(view.fovGain, speed * 0.24);
+      cam.fov = this.lastMode !== 'car' || this.lastView !== this.view ? fov : cam.fov + (fov - cam.fov) * Math.min(1, dt * 2);
     } else {
       const p = focus;
       // RMB shoulder aim: the arm pulls in to 2.4 m over the right shoulder and the lens narrows.
@@ -76,7 +79,22 @@ export class ChaseCamera {
     cam.lookAt(this.target);
     cam.updateProjectionMatrix();
     this.lastMode = this.mode;
+    this.lastView = this.view;
+  }
+
+  // C while driving: NEAR (8 m behind, 3.5 m up) or HIGH (10 m behind, 5.4 m up, looking down the
+  // street over the roof, so both pavements and the cars round you show). The arm jumps to the new
+  // spot on the next frame (the position spring starts over).
+  cycleView() {
+    this.view = this.view === 'high' ? 'near' : 'high';
+    this.lastMode = null;
+    return this.view;
   }
 }
 
-const CAR_BACK = 8, CAR_UP = 3.5, POSITION_SPRING = 12;
+// back / up: the arm; aimY: the look-at height down the road; fov + fovGain: the lens at speed.
+export const CAR_VIEWS = {
+  near: { back: 8, up: 3.5, aimY: 1.3, fov: 65, fovGain: 12 },
+  high: { back: 9.5, up: 5.2, aimY: -0.2, fov: 50, fovGain: 4 },
+};
+const POSITION_SPRING = 12;
