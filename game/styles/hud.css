@@ -1,7 +1,9 @@
 #hud-overlay { position: fixed; inset: 0; pointer-events: none; }
 #hud-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #f3c9a0; font-family: "DejaVu Sans", Verdana, sans-serif; }
-#city-view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#city-view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; filter: saturate(1.16) contrast(1.07); }
+/* The final grade (a little more colour and contrast on the 3D view only, never the HUD); off at graphics LOW. */
+body.graphics-low #city-view { filter: none; }
 #title-screen { position: fixed; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 4vw 6vh; color: #fff8ec; }
 #title-screen[hidden] { display: none; }
 #pause-map { position: fixed; inset: 0; z-index: 5; }

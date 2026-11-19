@@ -12,13 +12,14 @@ export function createSunSoakedLighting(game) {
   scene.fog = new THREE.Fog(HORIZON, 140, 420);
   scene.background = new THREE.Color(HORIZON);
 
-  // Golden hour: cool sky fill keeps the shadows blue, warm sand bounce from below.
-  const hemi = new THREE.HemisphereLight(0xb8c6ec, 0xeaae78, 1.2);
+  // Golden hour: a lilac sky fill keeps the shadows cool (never black), warm sand bounce from below.
+  const hemi = new THREE.HemisphereLight(0xc4b8e2, 0xf0a878, 1.25);
   scene.add(hemi);
 
-  // The sun sits low over the sea to the west-south-west, about 15 degrees up (around 18:00).
-  const sunDir = new THREE.Vector3(-Math.cos(0.26) * 0.93, Math.sin(0.26), Math.cos(0.26) * 0.37).normalize();
-  const sun = new THREE.DirectionalLight(0xffbf7a, 3.1);
+  // The sun sits low over the sea a hair north of due west, about 10 degrees up (around 18:20), so
+  // it hangs at the far end of the east-west streets that run down to the beach.
+  const sunDir = new THREE.Vector3(-Math.cos(0.17) * Math.cos(0.025), Math.sin(0.17), -Math.cos(0.17) * Math.sin(0.025)).normalize();
+  const sun = new THREE.DirectionalLight(0xffa860, 3.3);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   const cam = sun.shadow.camera;
@@ -37,20 +38,21 @@ export function createSunSoakedLighting(game) {
   const skyGeo = new THREE.SphereGeometry(450, 24, 12);
   const colors = [];
   const pos = skyGeo.attributes.position;
-  // Golden-hour bands: warm gold at the horizon, a thin rose-peach band, then clear blue overhead.
-  // The rose stays a soft band near the horizon (no purple, blue overhead): brief section 9.3.
-  const top = new THREE.Color(0x2a5fa8), mid = new THREE.Color(0x92b2d8), rose = new THREE.Color(0xf4a596), low = new THREE.Color(0xffa45e);
+  // Late-afternoon bands: saturated orange at the horizon, coral rose above it, a dusky violet
+  // and a deep blue-indigo overhead. A natural sky only: the UI and the wordmark stay navy and
+  // gold, never a sunset-gradient palette (brief section 9.3). No white haze band at the horizon.
+  const top = new THREE.Color(0x29357e), mid = new THREE.Color(0x7a5a9e), rose = new THREE.Color(0xee6f6a), low = new THREE.Color(0xff8a3a);
   for (let i = 0; i < pos.count; i++) {
     const h = Math.max(0, pos.getY(i) / 450);
-    const c = h < 0.1 ? low.clone().lerp(rose, h / 0.1)
-      : h < 0.27 ? rose.clone().lerp(mid, (h - 0.1) / 0.17) : mid.clone().lerp(top, Math.min(1, (h - 0.27) / 0.5));
+    const c = h < 0.09 ? low.clone().lerp(rose, h / 0.09)
+      : h < 0.3 ? rose.clone().lerp(mid, (h - 0.09) / 0.21) : mid.clone().lerp(top, Math.min(1, (h - 0.3) / 0.45));
     colors.push(c.r, c.g, c.b);
   }
   skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   const sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false, toneMapped: false }));
   sky.renderOrder = -10;
   scene.add(sky);
-  const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(15, 24), new THREE.MeshBasicMaterial({ color: 0xfff1c8, fog: false, toneMapped: false }));
+  const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(15, 24), new THREE.MeshBasicMaterial({ color: 0xffc27a, fog: false, toneMapped: false }));
   sunDisc.renderOrder = -8;
   // The sun's glow: a soft additive halo behind the disc (a cheap stand-in for a bloom pass).
   const glow = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), new THREE.MeshBasicMaterial({
@@ -111,17 +113,17 @@ export function createSunSoakedLighting(game) {
   return light;
 }
 
-export const HORIZON = 0xfab27e;
+export const HORIZON = 0xf7935e;
 
 function sunGlowTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
-  grad.addColorStop(0, 'rgba(255,236,190,1)');
-  grad.addColorStop(0.14, 'rgba(255,196,120,0.62)');
-  grad.addColorStop(0.42, 'rgba(255,150,80,0.24)');
-  grad.addColorStop(1, 'rgba(255,120,70,0)');
+  grad.addColorStop(0, 'rgba(255,214,150,1)');
+  grad.addColorStop(0.14, 'rgba(255,164,84,0.66)');
+  grad.addColorStop(0.42, 'rgba(255,112,60,0.26)');
+  grad.addColorStop(1, 'rgba(240,90,70,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
   const t = new THREE.CanvasTexture(c);

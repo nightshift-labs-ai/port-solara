@@ -81,6 +81,8 @@ export function applySettings(game, settings) {
     if (g.shadow > 0 && sun.shadow.mapSize.x !== g.shadow) { sun.shadow.mapSize.set(g.shadow, g.shadow); sun.shadow.map?.dispose(); sun.shadow.map = null; }
   }
   game.camera.far = g.far; game.camera.updateProjectionMatrix();
+  // LOW also drops the CSS colour grade on the 3D view (styles/hud.css).
+  document.body.classList.toggle('graphics-low', g.shadow === 0);
   game.light?.setDrawDistance?.(g.far);
   if (game.scene.fog) game.scene.fog.far = g.fogFar;
   game.scene.traverse((o) => { if (o.material && !Array.isArray(o.material)) o.material.needsUpdate = true; });
