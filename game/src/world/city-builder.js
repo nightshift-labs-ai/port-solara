@@ -6,7 +6,8 @@ export function buildCityDistricts(game) {
   const { scene, roads, random, collide, lore } = game;
   const lots = { stucco: [], glass: [], shed: [], roof: [], clutter: [], slab: [] };
   const tints = {
-    stucco: [0xfbf6ec, 0xf1dfc0, 0xf6c9a8, 0xbfe3dc, 0xf7e7b4, 0xf3d2c9],
+    // Limestone white beside coral, teal, saffron, peach and sky-blue plaster: every street has colour.
+    stucco: [0xfbf3e4, 0xf3a184, 0x7fcfc2, 0xf4cd68, 0xf7c49c, 0x9ec9ea],
     glass: [0x9fd0e6, 0x7fb7d6, 0xb6dde0, 0x8fc7c4],
     shed: [0xe8e2d6, 0xc9d6dd, 0xe6c7a5, 0xd9483b],
   };
@@ -54,10 +55,107 @@ export function buildCityDistricts(game) {
   scene.add(plainBoxes(lots.clutter.map((c) => ({ x: c.x, y: c.y + c.s / 2, z: c.z, w: c.s, h: c.s, d: c.s * 0.8 })), 0xd9d4ca));
   scene.add(plainBoxes(lots.slab.map((b) => ({ x: b.cx, y: 0.09, z: b.cz, w: b.maxX - b.minX + 6, h: 0.18, d: b.maxZ - b.minZ + 6 })), 0xe4ddd0, false));
 
+  dressStreetFronts(game, lots.stucco);
   buildLandmarks(game);
   plantPalms(game);
   raiseSigns(game);
   return { lots };
+}
+
+// Street life on the Mercado and Palmline fronts: a striped awning over each street-facing shop
+// front, a lit shop sign with our own names over some of them, and lamp posts on the kerbs.
+// Placement is hashed from each building's spot, so the world's seeded random stream is untouched.
+// Four instanced meshes (four draw calls), none of them cast shadows.
+function dressStreetFronts(game, stucco) {
+  const { scene, roads } = game;
+  const awnings = [], signs = [], lamps = [];
+  const nearRoad = (v, list) => list.some((r) => Math.abs(r - v) < 12);
+  for (const b of stucco) {
+    const hash = Math.abs(Math.round(b.x * 7.31 + b.z * 13.17)) % 997;
+    // The four faces: outward normal (nx, nz), face centre, face length.
+    for (const [nx, nz] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+      const fx = b.x + nx * b.w / 2, fz = b.z + nz * b.d / 2;
+      if (nz && !nearRoad(fz, roads.ewRoads)) continue;
+      if (nx && !nearRoad(fx, roads.nsRoads) && Math.abs(fx - roads.boulevardX) > 14) continue;
+      const len = nz ? b.w : b.d, k = (hash + nx * 3 + nz * 5 + 8) % 5;
+      const run = Math.min(len * 0.62, 16);
+      awnings.push({ x: fx + nx * 0.85, z: fz + nz * 0.85, nx, nz, run, color: AWNING_COLORS[k] });
+      if ((hash + k) % 3 !== 0) signs.push({ x: fx + nx * 0.16, z: fz + nz * 0.16, nx, nz, run: Math.min(run * 0.7, 7.5), row: (hash + k * 3 + nx + nz * 2 + 9) % SHOP_NAMES.length });
+      // Lamp posts at each end of the front, on the kerb past the awning.
+      if (len > 14) for (const s of [-1, 1]) lamps.push({ x: fx + nx * 3.1 + nz * s * len * 0.42, z: fz + nz * 3.1 - nx * s * len * 0.42 });
+    }
+  }
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), c = new THREE.Color();
+  // Awnings: a thin box sloping down and out from the wall at 3.6 m, in canvas stripes over the tint.
+  const awningMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.12, 1.7), new THREE.MeshStandardMaterial({ map: awningStripes(), roughness: 0.8 }), Math.max(1, awnings.length));
+  awnings.forEach((a, i) => {
+    const yaw = Math.atan2(a.nx, a.nz);
+    q.setFromEuler(e.set(0.32, yaw, 0, 'YXZ'));
+    m.compose(new THREE.Vector3(a.x, 3.45, a.z), q, new THREE.Vector3(a.run, 1, 1));
+    awningMesh.setMatrixAt(i, m);
+    awningMesh.setColorAt(i, c.setHex(a.color));
+  });
+  // Shop signs: one canvas atlas of our shop names, each instance picks its row; unlit (they glow).
+  const signMat = new THREE.MeshBasicMaterial({ map: shopSignAtlas() });
+  signMat.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nattribute float aRow;')
+      .replace('#include <uv_vertex>', `#include <uv_vertex>
+      vMapUv = vec2(vMapUv.x, (vMapUv.y + ${SHOP_NAMES.length - 1}.0 - aRow) / ${SHOP_NAMES.length}.0);`);
+  };
+  const signGeo = new THREE.BoxGeometry(1, 1.15, 0.22);
+  signGeo.setAttribute('aRow', new THREE.InstancedBufferAttribute(new Float32Array(signs.map((s) => s.row)), 1));
+  const signMesh = new THREE.InstancedMesh(signGeo, signMat, Math.max(1, signs.length));
+  signs.forEach((s, i) => {
+    q.setFromEuler(e.set(0, Math.atan2(s.nx, s.nz), 0));
+    m.compose(new THREE.Vector3(s.x, 4.75, s.z), q, new THREE.Vector3(s.run, 1, 1));
+    signMesh.setMatrixAt(i, m);
+  });
+  // Lamp posts (dark green iron) and their warm heads.
+  const poleMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.22, 6, 0.22).translate(0, 3, 0), new THREE.MeshStandardMaterial({ color: 0x2f4a44, roughness: 0.6 }), Math.max(1, lamps.length));
+  const headMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.7, 0.32, 0.7), new THREE.MeshBasicMaterial({ color: 0xffe2a8 }), Math.max(1, lamps.length));
+  lamps.forEach((l, i) => {
+    m.makeTranslation(l.x, 0.18, l.z); poleMesh.setMatrixAt(i, m);
+    m.makeTranslation(l.x, 6.25, l.z); headMesh.setMatrixAt(i, m);
+  });
+  awningMesh.count = awnings.length; signMesh.count = signs.length;
+  poleMesh.count = headMesh.count = lamps.length;
+  awningMesh.receiveShadow = poleMesh.receiveShadow = true;
+  scene.add(awningMesh, signMesh, poleMesh, headMesh);
+}
+
+const AWNING_COLORS = [0xe2553f, 0x1d9c94, 0xf2b134, 0x2f6fb0, 0xf08a5d];
+// Our own shop names (brief section 1 signs plus small Mercado shops), each on its own colour.
+const SHOP_NAMES = [
+  ['GAIVOTA CAFÉ', '#1d9c94', '#fff6e0'], ["BOLO'S FISH FRY", '#e2553f', '#fff6e0'], ['TIDECALL MOBILE', '#2f6fb0', '#ffe9a8'],
+  ['CASA CORAL', '#f2b134', '#1b2a44'], ['SALT & LIME', '#2e8f4e', '#fff6e0'], ['MAREA BAR', '#123a5e', '#ffcf5a'],
+  ['FARMÁCIA SOL', '#f7f4ee', '#1d7f5a'], ['PADARIA LUZ', '#c4583a', '#fff1c8'],
+];
+
+function shopSignAtlas() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 64 * SHOP_NAMES.length;
+  const g = c.getContext('2d');
+  SHOP_NAMES.forEach(([text, bg, fg], r) => {
+    g.fillStyle = bg; g.fillRect(0, r * 64, 512, 64);
+    g.fillStyle = fg; g.fillRect(0, r * 64, 512, 4); g.fillRect(0, r * 64 + 60, 512, 4);
+    g.textAlign = 'center'; g.font = 'bold 40px "DejaVu Sans", Verdana, sans-serif';
+    g.fillText(text, 256, r * 64 + 46, 480);
+  });
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+function awningStripes() {
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 4;
+  const g = c.getContext('2d');
+  // Light and shaded stripes: multiplied by the instance tint they read as two shades of one colour.
+  for (let x = 0; x < 64; x += 8) { g.fillStyle = (x / 8) % 2 ? '#ffffff' : '#b9b2a8'; g.fillRect(x, 0, 8, 4); }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
 
 // Which district a point belongs to; the map, HUD and spawners all ask this.
