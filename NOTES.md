@@ -1,5 +1,76 @@
 # PORT SOLARA build notes
 
+## M18 the map shows the route and the city: steps 1-3 kept, only the optional items dropped (run of 2026-11-20 15:08-15:37 EET)
+- Baseline: out/ab/before_m18/ (four shots, judge sheet, sha256.txt, outline.txt, map-fresh.jpg equal
+  to the committed 3-map). Start sha 9c21600. menus-and-map.js changed; main.js one line (step 3).
+- Order note: the step 4 verdict commit (902e9ff) first recorded step 3 as dropped for time; there was
+  time after all, so step 3 ran after it and has its own keep rule and verdict (e43f656).
+- Route (step 1): drawCityMap plans `game.planRoute(game.focus, game.gpsGoal())` itself (writes no
+  state, never game.route) and strokes it in map metres after the roads: navy casing 18 px, gold
+  #ffc21f 12 px, round joins. In the shot: 8 points, 338.6 m / 324 px at 1280, from Wren (-120, 30)
+  east along z 30 to node (180, 30), then 38.6 m back to ring 3 (153.5, 58); last point = ring 3.
+- Waypoint tag: `3 · THE HARBOR RUN` from storyStatus's current entry (number, title upper-cased),
+  900 20 px, plate cap + 6 px padding (26 px tall at 1280), navy 0.92 with a 1.5 px gold rim; drawn
+  only when gpsGoal() === the current mission's start object. drawWaypointTag tries 8 directions
+  nearest-first, 6-90 px outside ring 3's rim (22.5 px), and takes the first plate inside the map
+  (8 px margin) clear of names (+3 px rim), badges, rings, the arrow, the hint plate (MAP_HINT, same
+  arithmetic as drawPauseScreen) and the route within 9 px. Chosen: SW at 6 px (1024 box 211.9-417.5 x
+  377.8-398.6, cap 11.2 px), route clearance 32.5 px.
+- Legend: no GPS entry. Row 2 with it would have about 18 units of spare (< 28); the code adds it only
+  when 28 fit (wider canvases), so the legend matches what each canvas draws.
+- Landmarks (step 2, drawLandmarkGlyphs, after the roads and before the route, metres from LANDMARKS
+  and buildLandmarks' boxes, strokes >= 2 px): Sundial navy podium 34x30, white needle base r 12, gold
+  fin 23.5x26 centred 6 m east (its top view), white needle tip; Hotel Meridiana white 30x36, teal rim;
+  Quist lot 26x16 #2b3240; three cranes at coastX(z) + 14 (z 175, 215, 255): 8 m leg square, 6x9 cab,
+  52 m boom x - 38..x + 14 (39.8 x 1.84 px at 1024); lighthouse red disc r 5 px with a white ring.
+  Shallows: the coastX polyline stroked 40 m wide in #2c9aa1 before the sand (20 m shows offshore).
+- Label moves: LABEL_NUDGE palmline [0, -50] (box y 314-336 -> 266-288, off the hotel) and coral
+  [42, 25] (x 349-618 -> 389-659, off the Sundial).
+- Probe (out/m18/probe.mjs, 1280x800, canvas call log while game.drawPause() redraws; pixel counts on
+  raw RGB scaled with flags=area from the JPEG; before / step 1 / step 2 committed):
+  (a) route lastIsRing true; gold px 116 / 1,899 / 1,953 at 1024 and 13 / 74 / 86 in the cell (outside
+  ring 3 and the tag; the baseline 116 / 13 is the Quist badge, step 2 adds the Sundial fin in the cell).
+  (b) tag in the map, overlap 0 with names, discs, arrow, hint plate, glyphs; route clearance 32.5 px.
+  (c) 5 names, 14 discs, arrow and legend all present; name-vs-disc 2 / 427.2 px2 throughout; glyph
+  under a name: Meridiana 50%, Sundial 43.3% before the nudges -> 0; names >= 21 px apart;
+  non-ground cell px (RGB distance >= 30 vs step 1) Sundial 65, Meridiana 49, cranes 10 + 9 + 9 east of
+  coastX, Quist 20, lighthouse 10.
+  (d) cell means (fixed skip set: blocks under both frames' names, discs, arrow, tag, plus landmark
+  blocks): coral 151.0/191.9/229.0, mercado 231.9/164.0/131.0, saltworks 169/183/196; moves <= 0.2,
+  pairwise distances within 0.1 (coral-mercado 130.2, coral-saltworks 38.6, mercado-saltworks 92.5).
+  Palmline: 6 px measured at step 1 (moved 0.0); at step 2 every palmline block is in the skip set
+  (both name positions, badges, ring 2, arrow, hotel), so it is not measured.
+  Guard: all five story ids done, game.drawPause() does not throw.
+- Footprints (step 3): main.js `game.cityLots = buildCityDistricts(game).lots;` (+21 bytes, the only
+  main.js change). drawCityMap fills each stucco, glass and shed lot, clipped to the block holding its
+  centre, in that block's DISTRICT_TINT plus navy rgba(20, 48, 79, 0.10), after the blocks and before
+  the roads; roof, clutter and slab skipped; no new hue. Keep rule vs step 2's frame: Saltworks shed
+  vs the open south half of block (90, 240) luma 166.0 vs 180.1 (step 14.1); Palmline's 6 m west
+  margin 202.5 vs the bar 178.8; cell means moved coral 17.9, mercado 20.7, saltworks 17.0 (< 25);
+  pairwise coral-mercado 130.2 -> 121.1, coral-saltworks 38.6 -> 36.6, mercado-saltworks 92.5 ->
+  85.4 (smallest ratio 0.923, smallest pair coral-saltworks 36.6); YAVG 104.0 -> 103.1 at 1024 and in
+  the cell. A/B out/ab/m18-fp-1024-before/after.jpg, m18-fp-cell-before/after.jpg, zoom
+  out/m18/s3-zoom.jpg: Mercado's 2x2 squares, Palmline's paired bars and the Saltworks shed read as
+  buildings, not noise. Kept.
+- A/B: out/ab/m18-map-1024-before/after.jpg, m18-map-cell-before/after.jpg, m18-sheet-cell-before/
+  after.jpg, m18-sheet-cell-pair.jpg (pair from step 2). YAVG 105.1 -> 104.0 (step 2) -> 103.1 (final)
+  at 1024 and in the cell (sheet cell 104.8 -> 102.8). Verdict: kept. At 1024 a gold GPS line runs from Wren's arrow to ring 3 with
+  the Harbor Run tag; the needle, hotel, lighthouse and red cranes over a lighter shallow band read as
+  places. In the cell the gold line and tag still read; names, badges, rings and the career column as
+  before.
+- Shots: 1-chase 180.7 KiB q76, 2-seafront 172.5 KiB q88, 4-title 187.0 KiB q88, all sha256 equal to
+  the start; 3-map 186.1 KiB q88 -> 189.3 q88 (step 1) -> 169.8 KiB q84 (step 2) -> 173.3 KiB q84.
+- Gates (final code): SELFTEST PASS 31/31, 'pause-tabs' included, no test added or changed (perf
+  HIGH 172 / 2.3 ms, LOW 112 / 2.4 ms; 22:00 173 / 113; market view 196 / 2.1 ms: play views
+  unchanged); originality PASS (37 files); main.ts twice byte-identical (45 entries, dossier 1,142,010
+  bytes); outline rows unchanged except main.js 19,262 -> 19,283 bytes, 19 files left out, the cut
+  still inside weapons-and-damage.js; shots 180.7 / 172.5 / 173.3 / 187.0 KiB, each under 190.
+- Weak spots: the route is planned whenever the tab draws (also behind PAUSED and SETTINGS, dimmed);
+  it overshoots ring 3 to node (180, 30) and hooks back, since ring 3 is not on a crossing; the tag sits
+  SW of ring 3 next to ring 2's grey tick (6 px gap); no Mercado Central glyph (ring 3 covers it); the
+  Gull Bridge is off the map bounds; footprints blur in the cell (they only darken the blocks there);
+  the legend has no GPS key at 1280/1024; the optional bridge and street name were not tried.
+
 ## M17 title over the bay: done, nothing dropped (run of 2026-11-20 13:03-13:30 EET)
 - Baseline: out/ab/before_m17/ (four shots, judge sheet, sha256.txt, outline.txt, *-fresh.jpg; a
   fresh shoot of the untouched tree listed no changed shot). Start sha 20f1f95.
