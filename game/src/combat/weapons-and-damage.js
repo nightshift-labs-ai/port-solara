@@ -6,7 +6,7 @@ import { countWitnesses } from '../police/wanted-level.js';
 // Returns { x, y, z, kind: 'target' | 'car' | 'wall' | 'ground' | 'air', what, dist }.
 export function fireWeapon(game, from, dir, range, ignore = null) {
   const targets = (game.combatTargets || []).filter((t) => t.alive && t !== ignore && Math.hypot(t.x - from.x, t.z - from.z) < range + 3);
-  const cars = allCars(game).filter((c) => c !== ignore && c.model.visible && Math.hypot(c.x - from.x, c.z - from.z) < range + 4);
+  const cars = allCars(game).filter((c) => c.model.visible && Math.hypot(c.x - from.x, c.z - from.z) < range + 4);
   const p = { x: 0, y: 0, z: 0 };
   for (let s = 0.6; s <= range; s += RAY_STEP) {
     p.x = from.x + dir.x * s; p.y = from.y + dir.y * s; p.z = from.z + dir.z * s;
@@ -172,15 +172,6 @@ export class PlayerWeapons {
   // A shot effect for anyone (the enemy crews share Wren's flash, tracer and spark pools).
   showEffect(muzzle, hit, smg) { showShot(this.fx, muzzle, hit, smg ? CREW_SMG_FLASH : CREW_FLASH); }
 
-  // An SPD round from a cruiser (its own car never stops it). A car other than Wren's in the line
-  // holds the round: no flash or tracer, and the hit comes back marked `held`.
-  policeRound(muzzle, dir, range, car) {
-    const hit = fireWeapon(this.game, muzzle, dir, range, car);
-    if (hit.kind === 'car' && hit.what !== this.game.vehicle) return { ...hit, held: true };
-    showShot(this.fx, muzzle, hit, POLICE_FLASH);
-    return hit;
-  }
-
   rand() { this.seed = (this.seed * 1664525 + 1013904223) >>> 0; return this.seed / 4294967296; }
 }
 
@@ -193,7 +184,6 @@ function allCars(game) {
 
 const RAY_STEP = 0.4, TRACERS = 6, SPARKS = 48, FLASHES = 4, FLASH_LIFE = 0.06, FLASH_RGB = 0xfffbe8;
 const TRACER_W = 0.1, TRACER_LIFE = 0.12, TRACER_RGB = 0xfff0c8, CREW_FLASH = 1.2, CREW_SMG_FLASH = 1.0;
-const POLICE_FLASH = 1.0;
 
 function buildShotEffects(scene) {
   const add = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };

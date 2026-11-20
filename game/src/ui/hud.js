@@ -72,11 +72,9 @@ export function drawHud(ctx, game, drawMinimap) {
       const ry = py + (48 + i * 34) * s;
       ctx.fillStyle = WHITE; ctx.font = font(20 * s);
       ctx.fillText(u.call, px + 16 * s, ry + 22 * s);
-      // A cruiser that fired in the last 1.2 s reads SHOOTING in place of PURSUIT.
-      const tag = u.state === 'PURSUIT' && u.shootingFor > 0 ? 'SHOOTING' : u.state;
-      const [bg, fg] = STATE_COLORS[tag] || STATE_COLORS.RESPONDING;
+      const [bg, fg] = STATE_COLORS[u.state] || STATE_COLORS.RESPONDING;
       ctx.font = font(15 * s);
-      const tw = ctx.measureText(tag).width + 14 * s;
+      const tw = ctx.measureText(u.state).width + 14 * s;
       // The distance sits right against the state tag, so a long tag never covers it.
       ctx.font = font(19 * s, 700); ctx.fillStyle = 'rgba(255,248,236,0.85)';
       ctx.textAlign = 'right';
@@ -85,8 +83,7 @@ export function drawHud(ctx, game, drawMinimap) {
       ctx.font = font(15 * s);
       ctx.fillStyle = bg;
       ctx.beginPath(); ctx.roundRect(px + pw - 16 * s - tw, ry + 3 * s, tw, 24 * s, 6 * s); ctx.fill();
-      if (tag === 'SHOOTING') { ctx.strokeStyle = SHOOTING_RIM; ctx.lineWidth = 2; ctx.stroke(); }
-      ctx.fillStyle = fg; ctx.fillText(tag, px + pw - 9 * s - tw, ry + 21 * s);
+      ctx.fillStyle = fg; ctx.fillText(u.state, px + pw - 9 * s - tw, ry + 21 * s);
     });
     if (more > 0) {
       ctx.fillStyle = 'rgba(255,248,236,0.8)'; ctx.font = font(17 * s, 700);
@@ -263,9 +260,7 @@ export const DISPATCH_ROWS = 4;
 export const STATE_COLORS = {
   PURSUIT: ['#d8323c', '#fff8ec'], RAMMING: ['#ff7a1a', '#14304f'], ROADBLOCK: ['#e0a21f', '#14304f'],
   SEARCHING: ['#3b7bff', '#fff8ec'], RESPONDING: ['#6b86a8', '#fff8ec'], LEAVING: ['#4a5566', '#fff8ec'],
-  SHOOTING: ['#fff3d6', '#c8202c'],
 };
-const SHOOTING_RIM = '#d8323c'; // the SHOOTING tag's 2 px alarm-red rim
 export const GOLD = '#ffc93c';
 export const WHITE = '#fff8ec';
 export const NAVY_GLASS = 'rgba(10, 20, 44, 0.8)';
