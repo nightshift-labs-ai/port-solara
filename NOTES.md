@@ -1,5 +1,58 @@
 # PORT SOLARA build notes
 
+## M13 HUD parity: done, round minimap tried and not kept (run of 2026-11-20 09:33-10:06 EET)
+- Baseline: out/ab/before_m13/ (four shots, judge sheet, sha256.txt, outline.txt; chase-fresh.jpg
+  q76 and seafront-fresh.jpg q92 shot from the untouched tree, byte-identical to the committed
+  shots, so the shoot is deterministic). Start sha 6119933.
+- (1) Minimap fills: `DISTRICT_TINT` stays in menus-and-map.js (already exported by M12, file not
+  touched; no import cycle, only main.js and test-hooks.js import hud.js / minimap.js); minimap.js
+  and hud.js import it. Each block: full tint from `game.districtAt(b.cx, b.cz)`, then
+  rgba(20,48,79,0.15) over the same rect (15%): palmline #89b994, coral #83aacf, mercado #c8927a,
+  saltworks #93a3b2 (lantern has no blocks); an unknown id keeps the old #c9c2b4 undeepened.
+- District plate (always in play): panel 230 x 34 units, 8 under the map; a 12-unit chip in the
+  full tint of `districtAt(focus)` with a cream rim (rgba 255,248,236,0.85); the lore name in WHITE
+  from font(21 * s), baseline 24 below the plate top, shrunk to 184 units by drawRepColumn's loop
+  (whole px steps). At 1280x800: plate y 234.3-263.2 px; pipY = plate + 42 units, the WANTED panel
+  y 270.0-411.1 (38 units = 32.3 px lower); toastY + 38 units, two toasts y 421.3-502.9; the
+  prompt's column rule 450 -> 488 units.
+- Toast rule: in a car a toast is drawn only if it ends at least 8 units above the radio chip's top
+  (above the speed panel's top with no radio), newest first. 1280x800: both shot-1 toasts show
+  (chip top 555.5); 1280x720 by the same arithmetic: chip top 478.7, first toast ends 455.5,
+  second 499.7, so only the newest shows.
+- (2) CONDITION: the car's own `health` (car-physics.js, 100 at spawn, wall hits, SPD rams and
+  gunfire lower it; no new state, no save key). SPEED_H 150 -> 186 units, bottom kept (arc, number,
+  KM/H, name keep their pixels); speed panel top 640.5 -> 609.9 px. Row: CONDITION at 14 in the
+  HEALTH label colour 16 in, `NN%` (rounded, clamped 0-100) at 15 in white right-aligned 16 in,
+  baseline 22; bar() 9 units at 27-36 below the top, 198 wide, colour from the shown value with
+  car-explosions.js's marks: #5ad16a at 45+, #e0a21f 22-44 (smokes), #ff6b5b under 22 (burns).
+  Radio chip in a car rises 36 units: 586 -> 555.5 px. Shot 1 reads CONDITION 100% (the staged
+  Albacore's true health); shot 2 is on foot, no row.
+- (3) Round minimap (circle clip, story-disc clip and rim; radial clamps; N at 0.42) tried:
+  out/m13/chase-3.jpg, seafront-3.jpg, out/m13/*-sq-vs-round.jpg. Not kept: the circle cuts the
+  corners (about 21% less map; the chase's gold route is cut short on the left) and a circle over
+  the square plate and WANTED panel is less tidy; blips, arrow and N read the same. minimap.js put
+  back to the step-2 commit.
+- (4) A/B (out/ab/m13-chase-*, m13-seafront-*, m13-sheet-*: 1024 before/after at -q:v 2, right
+  column 330x640 crops and pairs, sheet cover and shot-2 cell, side-by-side 100/50): (a) fills kept:
+  shot 1 green top row, blue right third, terracotta elsewhere, gold route sharp on terracotta;
+  shot 2 green and blue blocks stand off the beach. (b) plate and moved column kept: OLD MERCADO /
+  PALMLINE BEACH read at 1024x640, column tidy, no panel touches another; in the cell the plate is
+  a thin strip, no worse. (c) CONDITION kept: full green bar, radio chip clear of the toasts.
+  Cruisers, helicopter, Albacore, Wren, gunmen and SUV unchanged.
+- Shots: 1-chase 180.7 KiB at q76, 2-seafront 186.3 KiB at q92; 3-map and 4-title byte-identical
+  to before_m13 and to fresh shoots (out/m13/map-check.jpg q88, title-check.jpg q80, sha256 equal).
+  Left-62% psnr vs the untouched fresh shoots: inf (q76/q76) and inf (q92/q92). Diff vs 6119933:
+  hud.js, minimap.js, the two shots, NOTES.md.
+- Gates: SELFTEST PASS 29/29 (out/m13/selftest-2.log; perf HIGH 172 / median 2.6 ms, LOW 112 /
+  2.2 ms; an earlier background run also passed 29/29 but overlapped the round-map try). Originality PASS (36 files). main.ts twice:
+  44 files byte-identical, dossier 1,173,257 bytes; outline rows unchanged, cut still inside
+  weapons-and-damage.js (18 files left out, hud.js and minimap.js past it); new code about 2.1 KB.
+- Weak spots: car health is not saved (a loaded game starts each car at 100); a respray does not
+  repair, so CONDITION only resets with another car; shot 2's plate reads PALMLINE BEACH under
+  "Hold Lantern Point" because Wren stands near (-182, -286), which districtAt (lantern needs
+  x < -300) puts in Palmline Beach (true, and it also drives building styles, so neither moved);
+  the 1280x720 toast drop is arithmetic, not shot (shoot.mjs is fixed at 1280x800).
+
 ## M12 district map + save-slot title: done (run of 2026-11-20 09:16-10:00 EET)
 - Baseline: out/ab/before_m12/ (four shots, judge sheet, sha256.txt, outline.txt, title-fresh.jpg
   shot from the untouched tree at quality 80).
