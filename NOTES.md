@@ -1,5 +1,72 @@
 # PORT SOLARA build notes
 
+## M21 the Albacore keeps its coral paint in the cover: kept with C1, nothing dropped (run of 2026-11-20 18:42-19:11 EET)
+- Baseline: out/ab/before_m21/ (four shots, judge sheet, sha256.txt, outline.txt, *-fresh.jpg). Start
+  sha 21fd562 (game/ and shots = 7a6350c), tree clean. A fresh four-shot shoot reproduced all four
+  committed sha256 (no drift), so one before probe (out/m21/before.png + .json) was enough.
+- Cause: low-sun specular glare on the glossy shared paint (BODY_MATERIAL, roughness 0.38). Westbound
+  the sun (~10 degrees up, just north of west) is ahead of the coupe; eastbound the warm bounce light
+  does the same; the chase camera meets the roof at ~20 and the deck at ~24 degrees, near the sun's
+  mirror angle, and ACES squeezes the specular to cream. There is no environment map and no bloom. The
+  faces turned to the camera were deep red all along (rear face Y 63.7 at 1024). How the probe
+  confirmed it: C1 changed only the coupe's roughness (a specular term) and the roof went from
+  (255,246.8,215.3) to (234.7,93.9,39.6), within ~5 RGB of the graded glare-model prediction ~(239,95,41),
+  while 0 px changed outside the Albacore box: SKYLARK 1's cone (unchanged) is not the cause, so M6
+  cover v2's searchlight line is marked wrong. The cone-hidden diagnostic was not due (roof G 93.9 is
+  inside 70-125).
+- Change (game/src/vehicles/car-models.js only, +340 bytes): a second module-level paint SATIN_PAINT
+  beside BODY_MATERIAL (MeshStandardMaterial, vertex colours, roughness 0.78, metalness 0.15, same
+  shader program); CAR_SPECS.albacore gets finish 'satin' and buildCarModel picks SATIN_PAINT for it
+  where the body mesh is built. BODY_MATERIAL is untouched and every other car (traffic, parked, the
+  wrecks' restore path) keeps it; the wreck swap and placeProp restore work on any material. The
+  satin coat covers the whole merged body: rear window, trim, bumper line, diffuser fins, plate, tyres.
+- Candidates: C1 (0.78) passed every probe check first; C2 and C3 were not due.
+- Measures, before -> C1 predicted (ungraded / graded) -> after (probe PNG; committed JPEG):
+  (G1) 1024 roof+hood (x 480-544, y 396-412): (255,246.8,215.3) R-G 8.2 S 0.156 hue 47.6 Y 245.7 ->
+  (217,101,57) R-G 115 S 0.74 Y 131 / ~(239,95,41) R-G ~144 S ~0.83 Y ~132 -> (234.7,93.9,39.6) R-G 140.8
+  S 0.831 hue 16.7 Y 129.8; JPEG (253.6,247.8,214.5) R-G 5.9 -> (233.8,94.5,39.2) R-G 139.3 S 0.832 hue
+  17.0 Y 129.8. Pass (R-G >= 80, S >= 0.55, hue 5-30, Y 105-200).
+  (G2) 512 cell roof+hood R-G 8.2 -> 140.8, S 0.156 -> 0.832 (PNG); JPEG R-G 6.5 -> 141.0, S 0.152 ->
+  0.829; whole top (236-276 x 196-236) predicted R-G 96 / S 0.73 (ungraded), PNG R-G 33.4 -> 119.8, S
+  0.316 -> 0.853, JPEG 32.1 -> 119.2, 0.312 -> 0.849; sheet cover roof+hood R-G 7.2 -> 141.2, S 0.153 ->
+  0.832. Pass. (The higher-than-ungraded numbers are the CSS grade, saturate 1.16 contrast 1.07.)
+  (G3) 1280 deck (605-675 x 576-586) R-G 42.1 -> 163.1 (PNG, predicted 126 ungraded), JPEG 38.0 ->
+  163.1. Pass.
+  (F1) roof+hood Y minus rear face (494-530 x 498-507): 182.0 -> 63.0 (PNG), 181.3 -> 62.7 (JPEG);
+  rear face Y 63.7 -> 66.8. (F2) minus the arch ring (448-608 x 370-385, Y 76.2 both): 169.5 -> 53.6
+  (predicted ~55). Both >= 40.
+  (G4) camera, Albacore (x, z, heading, speed 39.96, health 100), units 0-3 with states, SKYLARK 1, 24
+  traffic, 32 walkers, tick 961, time 16.02, shot fx (0 flashes / tracers / sparks), 196 calls, 65,971
+  triangles, 38 programs: all equal; only the body material differs (roughness 0.38 -> 0.78, no longer
+  shared with a parked Pipit). Probe PNG at 1280: 25,369 px changed inside the Albacore box x 540-740,
+  y 484-676, 0 outside. Committed JPEG: 31,832 inside the grid box x 528-752, y 480-688, 0 outside
+  (none even at the edge). Probe re-run on the committed code: PNG and JSON byte-identical to C1's.
+- (G7), written before the before images (out/m21/g7-read.txt): 512 cell, the orange-red coupe first,
+  the black-and-white cruisers second, then the cone into the sunset; 1024 "a red-orange coupe chased
+  by black-and-white cruisers down a sunset street, a helicopter's searchlight over it, a car burning at
+  the left kerb"; 768 cover the same. Before: a pale cream car as light as the white cruisers. Light
+  bars, SKYLARK 1, cone, sunset, M19's fire and every HUD panel as before. 3x crop (out/ab/m21-car3x):
+  uniform colour per face, no seam, z-fighting, black or white face or banding; rear window stays
+  black, bumper line light grey. Verdict: kept. A/B out/ab/m21-chase-1024, m21-cover, m21-cell,
+  m21-car3x (-before/-after.jpg).
+- YAVG: probe PNG 100.37 -> 99.13 (1024), 100.48 -> 99.24 (768x480); committed JPEG 98.25 -> 96.80
+  (1024), 98.31 -> 96.86 (768x480); sheet cover 97.91 -> 96.48. The drop is a little over 1.2 but all
+  of it is inside the car box (0 px changed outside): a coral car is darker than a glaring cream one.
+- Shots: 1-chase 184,221 bytes (179.9 KiB) at q76 (was 181.0 KiB q76, no quality step); 2-seafront
+  172.5 q88, 3-map 173.3 q84, 4-title 187.0 q88 KiB, sha256 equal to before_m21 (the parked Albacore
+  in 2-seafront stays hidden). Judge sheet rebuilt.
+- Gates: SELFTEST PASS 31/31 (run alone; perf HIGH 172 / 1 ms, LOW 112 / 1.1 ms; 22:00 173 / 113; market
+  view 196 / 1 ms), originality PASS (37 files), main.ts twice byte-identical (45 entries, dossier
+  1,140,841 bytes; shots 184,221 / 176,592 / 177,412 / 191,496 bytes), outline rows unchanged (only
+  car-models.js 194 -> 197 lines, 9,425 -> 9,765 bytes), 19 files left out (236,544 -> 236,945 bytes),
+  cut at 163,840 still inside weapons-and-damage.js.
+- Weak spots: every other car keeps the glossy paint and still glares cream at low sun (the white
+  cruisers and cream cars hide it); a soft warm sheen stays on the coupe's roof; the satin coat also
+  dulls the coupe's rear window, trim, bumper line and diffuser a little; a thin dark line now shows
+  at the front of the roof (the windscreen box's top in front of the roof slab, hidden by the glare
+  before); the cone's dark arch still frames the coupe; any later change to the sun, exposure, chase
+  camera height or this paint changes 1-chase.
+
 ## M20 SPD open fire from the cruisers: tried, old code and shot kept ((G7) failed) (run of 2026-11-20 17:30-17:59 EET)
 - Baseline: out/ab/before_m20/ (four shots, judge sheet, sha256.txt, outline.txt, *-fresh.jpg). Start
   sha 7a6350c, tree clean. A fresh four-shot shoot reproduced all four committed sha256 (no drift).
@@ -754,7 +821,7 @@
 - (5) A/B (out/ab/before.jpg vs the new cover, out/ab/v2-ab-100.jpg and -50.jpg): **kept**; clearly
   more city (coloured facades, awnings, signs, lamps both sides), warmer light, sun at the street
   end, chase still readable. Weak spot: the searchlight washes the coupe's roof toward cream (the
-  rear still reads red). 2-street and 4-title re-shot with the new grade and still read (title strip
+  rear still reads red) (wrong: glare, see M21). 2-street and 4-title re-shot with the new grade and still read (title strip
   now has C CAMERA and still fits); 3-map unchanged in look.
 - Self-test (SwiftShader, 1280x800): SELFTEST PASS 23/23. Perf before: HIGH 166 draw calls / 41,751
   tris / median 1.8 ms; LOW 108 / 25,743 / 1.5 ms. After: HIGH 172 / 61,563 / median 2.9 ms /
