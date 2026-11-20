@@ -1,5 +1,65 @@
 # PORT SOLARA build notes
 
+## M16 burning Aurum: done, nothing dropped (run of 2026-11-20 12:42-13:19 EET)
+- Baseline: out/ab/before_m16/ (four shots, judge sheet, sha256.txt, outline.txt; a fresh shoot of
+  the untouched tree listed no changed shot). Start sha 39615d2 (M15 left every shot as M14's).
+- (1) The burning look, for every burning car (combat/car-explosions.js). Smoke is untouched (same
+  Points, material, colour 0.32/0.31/0.3, PUFFS 72 pool, `life` array, start 1.2 m, rise 1.5 m/s,
+  life 1.6 s, jitter), so a smoking car draws the same pixels. A burning car (health < 22, or a
+  wreck for 9 s) now emits flames instead of smoke-pool fire puffs: their own additive Points made
+  after the smoke (FLAMES 48, FLAME_SIZE 3.2, depthWrite off, toneMapped off, same soft texture),
+  one per emit (every 4th tick) along the front half (0.05-0.45 x length forward, +/- 0.5 m across;
+  wrecks +/- 1.2 m around the middle) at 1.15 m, rising 3.8-4.6 m/s for 0.85 s, born (0.8, 0.36,
+  0.07) and cooled per tick by FLAME_COOL (0.985, 0.96, 0.9) toward a dim deep red. explode()'s six
+  fire puffs are flames now. Every second emit a burning car also puffs smoke from the flame tips
+  (PLUME_Y 4.4 m) into the smoke pool: a pale plume at night. GLOWS 2 additive warm sprites (3.0 m
+  at 1.4 m over the hood, opacity 0.4) and 2 additive ground quads (10 m, y 0.07, opacity 0.5) go to
+  the first two burning cars in allCars order; flicker (+/- 0.2 on scale and opacity) is two sines of
+  game.time and the car's x/z. Glows and pools are placed and hidden every tick from `burning`,
+  before the emit gate; the idle early return counts flames alive and visible glows. Nothing draws a
+  random number, casts a shadow or feeds the sim. Draw calls: idle 0, a smoking car 1, a burning car
+  at most +3 (flames, its glow, its pool); all 8 objects at most.
+- 'burn' self-test after 'blast' (window.__test.burn(): parks a van at blast()'s spot (-168.6, 14);
+  other visible cars under 45 wait at 100 and are put back, here the Albacore from 'drive'): at
+  health 18 after 60 steps 13 flames, glow and pool on, glow scale 3.356 -> 3.454 across one step,
+  a smoke puff above 4 m; draw-call share 3 (perf(5) with and without the fire objects, no step
+  between); 4 m from the van 157 calls, median 2.4 ms (6.6 in selftest-1); at 30 after 60 steps no flame, glow or pool,
+  smoke alive; hidden and 120 steps: nothing alive.
+- (2) Shot 2 staging: the shot setup pre-damages aurumA to 32 (SEAFRONT.suv) when mission 4 places it
+  (a state reachable in play, like the clock and the shot save); the fight's 9 stray Hornet hits
+  (2.75 each, rounds at the guards behind it) take it under 22 at 10.70 s (the 4th hit, 21.0); it
+  burns at 7.25 in the frame (game.time 12.27, about 1.6 s alight), not wrecked. Nothing else in the
+  scene changed (stand, holds, aims, pose line, frame tick). The hit times are M14's trace; the
+  frame health 32 - 9 x 2.75 = 7.25 confirms the count.
+- Probe (out/m16/probe.mjs, 1024x640): 13 flames alive (a full column is 0.9 x 0.85 / (4/60) =
+  11.5), glow and pool on, glow radius 54.2 px; hood (506.7, 325.7), flames x 471-527, flame tips
+  y 155.7, plume top y 115.9 (stall tops about y 225); fire centre (506.7, 268.2) 69.2 px from guard
+  2's flash (452.3, 311) and 165.9 from Wren's. M14's probe (out/m14/probe.mjs, unchanged; its rays
+  skip additive objects) gives M14's numbers exactly: yaw 2.594, FRI 21:45, WANTED 0, Wren 94;
+  standing guards 56.3 / 55.7 px, one down 0.42 s; flashes 31.4 (guard, behind the cabin) / 37.0 px;
+  tracer 3.99 px; 7 unoccluded fronts over 411.6 px; 8 shoppers, 3 running.
+- Tries: try 1 (FLAME_COOL 0.975/0.95) passed every gate but its tongues above the awnings were
+  faint ((a) V-U -14.6 against -15.9); try 2 (0.985/0.96) kept. 2-seafront.jpg is try 2 (psnr inf).
+- (3) A/B (out/ab/m16-seafront-1024-before/after.jpg, m16-cell-before/after.jpg, m16-cell-pair.jpg,
+  m16-fire3x-before/after.jpg), before -> after: hood crop Y 55.4 -> 126.4 (V-U 48.2); cell hood
+  53.4 -> 121.2 (sheet 53.2 -> 120.6); (a) flame band Y 59.4 -> 82.1, V-U -35.9 -> -11.3; (b) cell
+  band 56.2 -> 79.9 (sheet 55.8 -> 79.4); (c) guard 1 28.7 -> 33.9 (limit 40.7); (d) stall rows
+  94.9 -> 97.2 and 97.7 -> 97.7; fire crop 77.7 -> 96.2; frame 68.1 -> 69.7 at 1024, cell 67.7 ->
+  69.4 (sheet). Kept: in both views the SUV burns orange with a pale plume in the same fight and
+  market, same HUD and look; in the cell an orange fire, not a white lamp.
+- Shots: 1-chase 180.7 (q76), 2-seafront 172.5 (q88), 3-map 186.1 (q88), 4-title 183.2 (q80) KiB;
+  1, 3 and 4 sha256 equal to before_m16 after both four-shot checks (steps 1 and 2).
+- Gates: SELFTEST PASS 31/31 (out/m16/selftest-2.log, run after the last car-explosions.js change;
+  selftest-1 on step 1's constants also passed 31/31; 'burn' 13 flames, share 3, 2.4 ms at 4 m).
+  Perf 17:22 HIGH 172 / 5.4 ms, LOW 112 / 6.0 ms; 22:00 173 / 113; market view 196 calls, 67,583
+  triangles, 3.2 ms (counts unchanged: nothing burns there). ORIGINALITY PASS (37 files). main.ts twice: 45 entries
+  byte-identical, dossier 1,154,343 bytes. Outline: the same numbered rows and 19 files left out
+  (228,531 bytes); the cut still falls inside weapons-and-damage.js; only the totals moved.
+- Weak spots: the traffic-signal pole and its head cross the fire column (no world edits); only one
+  standing guard shows in shot 2 (guard 2 and its flash are behind the cabin); the SUV's first damage
+  (to 32) happens off screen; no fire in shot 1; the column is round soft sprites (no tongue shapes),
+  so up close it reads more as a blaze than as single flames.
+
 ## M15 beach boulevard chase: tried, old shot kept ((d) and (g) fail) (run of 2026-11-20 11:37-12:11 EET)
 - Baseline: out/ab/before_m15/ (four shots, judge sheet, sha256.txt, outline.txt; four fresh shoots
   from the untouched tree, each sha256 equal to its committed shot, so all four scenes shoot
