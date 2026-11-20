@@ -74,10 +74,10 @@ function writeAutosaveShot(game) {
 // v2: the player's own HIGH car view (C in play), down Rua 5 through the Old Mercado toward the
 // Palmline front, the beach and the low sun at the end of the street; cruisers beside the coupe.
 const FRAME = { start: -22, flank: [[1, -3.7], [5.5, 3.7]], heliX: 0.06, heliY: 0.66, heliUp: 13, speed: 40 };
-// Where Wren stands for the Lantern Point stand, from game.anchors.lantern (on the boulevard, 16 m
-// toward the point, about 16 m from the first gunman), and the way she first faces (south-west, up
-// the shore; aimAt then turns the camera onto the gunman). The sun sits just off the right edge.
-const SEAFRONT = { dx: -2, dz: -16, yaw: 2.12 };
+// Where Wren stands for the Lantern Point stand, from game.anchors.lantern (on the boulevard's sand
+// side, 28 m from the nearest walkers' ring corner), the yaw the frame is held near (the SUV, the
+// guards and Feira das Lanternas in the WIDE view) and which first-wave guard goes down.
+const SEAFRONT = { dx: -6.5, dz: -11.5, yaw: 2.6, down: 0 };
 
 // Turns the shoulder camera until its crosshair ray runs through a world point (a few passes,
 // because the arm's height moves with the pitch).
@@ -171,19 +171,42 @@ export const SCENES = {
     const a = game.anchors.lantern;
     game.player.x = a.x + SEAFRONT.dx; game.player.z = a.z + SEAFRONT.dz;
     game.player.facing = game.chase.yaw = SEAFRONT.yaw;
+    game.chase.footView = 'wide'; // C on foot: the stand, the SUV and the market in one view
     hold([], 200); // the LANTERN POINT card has come and gone
     game.missions.start(game.story[3], 2);
     game.arms.give('hornet');
-    hold([], 75); // the first wave lands at 1 s
-    const [first] = game.enemies.active;
-    const aim = () => aimAt(game, first.x, first.height * 0.62, first.z);
-    aim(); hold([], 30);
-    for (let i = 0; i < 2; i++) {
-      aim(); hold(['Mouse0'], 3); aim(); hold([], 40);
+    hold([], 75); // the first wave (three guards) lands at 1 s
+    // Real fire at one guard until it is down (never while it is behind the SUV).
+    const crew = game.enemies.active.slice(), target = crew[SEAFRONT.down];
+    for (let n = 0; n < 80 && target.alive; n++) {
+      if (target.state === 'cover') { hold([], 5); continue; }
+      aimAt(game, target.x, target.height * 0.62, target.z); hold(['Mouse0'], 5);
     }
-    game.enemies.active.forEach((e) => { e.health = Math.max(e.health, 60); e.state = 'peek'; e.timer = 9; });
-    hold([], 40);
-    aim(); hold(['Mouse0'], 1); hold([], 2);
+    if (game.arms.clip.clip < 10) { hold(['KeyR'], 1); hold([], 100); }
+    const standing = crew.filter((e) => e.alive);
+    standing.forEach((e) => { e.health = Math.max(e.health, 60); e.state = 'peek'; e.timer = 9; });
+    // One last aim (a standing guard, or chest height between two) that puts the yaw nearest 2.6.
+    const spots = standing.map((e) => [e.x, e.height * 0.62, e.z]);
+    for (const a of standing) for (const b of standing) for (const t of [0.25, 0.5, 0.75]) if (a !== b) spots.push([a.x + (b.x - a.x) * t, 1.2, a.z + (b.z - a.z) * t]);
+    const off = () => Math.abs(Math.atan2(Math.sin(game.chase.yaw - 2.6), Math.cos(game.chase.yaw - 2.6)));
+    let best = spots[0], bestOff = Infinity;
+    for (const s of spots) {
+      const y0 = game.chase.yaw, p0 = game.chase.pitch;
+      aimAt(game, ...s);
+      if (off() < bestOff) { bestOff = off(); best = s; }
+      game.chase.yaw = y0; game.chase.pitch = p0;
+    }
+    if (best) aimAt(game, ...best);
+    // The frame: Mouse0 held until Wren's and a guard's flash show at once, the downed guard
+    // 0.4-2.8 s down.
+    const lit = (x, z) => game.arms.fx.flashes.some((f) => f.visible && Math.hypot(f.position.x - x, f.position.z - z) < 1.5);
+    game.input.setKey('Mouse0', true);
+    for (let i = 0; i < 90; i++) {
+      game.step();
+      const down = target.alive ? 1 : target.downFor;
+      if (lit(game.player.x, game.player.z) && standing.some((e) => lit(e.x, e.z)) && down >= 0.4 && down <= 2.8) break;
+    }
+    game.input.setKey('Mouse0', false);
   },
   // The Tab map on the shared save: story 3/5 with The Harbor Run current, Races 1/4,
   // Courier 3/10, REP rank 4, cash and "Saved 14:32 - Calloway Salvage"; Wren on Palmline.

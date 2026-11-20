@@ -41,7 +41,7 @@ export const WEAPONS = [
 // (REP 4) and the Gannet (REP 5).
 export const DEFAULT_LOCKED = ['hornet', 'breaker', 'gannet'];
 
-// Wren's arms: slots, ammo, RMB shoulder aim, LMB fire, and the shot effects (one flash sprite, a
+// Wren's arms: slots, ammo, RMB shoulder aim, LMB fire, and the shot effects (four flash sprites, a
 // pool of tracers, one Points cloud of sparks). Gunfire panics walkers and, seen, raises WANTED.
 export class PlayerWeapons {
   constructor(game) {
@@ -170,7 +170,7 @@ export class PlayerWeapons {
   }
 
   // A shot effect for anyone (the enemy crews share Wren's flash, tracer and spark pools).
-  showEffect(muzzle, hit, smg) { showShot(this.fx, muzzle, hit, smg ? 0.62 : 0.8); }
+  showEffect(muzzle, hit, smg) { showShot(this.fx, muzzle, hit, smg ? CREW_SMG_FLASH : CREW_FLASH); }
 
   rand() { this.seed = (this.seed * 1664525 + 1013904223) >>> 0; return this.seed / 4294967296; }
 }
@@ -182,17 +182,21 @@ function allCars(game) {
   return list;
 }
 
-const RAY_STEP = 0.4, TRACERS = 6, SPARKS = 48;
+const RAY_STEP = 0.4, TRACERS = 6, SPARKS = 48, FLASHES = 4, FLASH_LIFE = 0.06, FLASH_RGB = 0xfffbe8;
+const TRACER_W = 0.1, TRACER_LIFE = 0.12, TRACER_RGB = 0xfff0c8, CREW_FLASH = 1.2, CREW_SMG_FLASH = 1.0;
 
 function buildShotEffects(scene) {
   const add = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };
-  const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTexture(), color: 0xfff0b0, ...add }));
-  flash.visible = false;
-  scene.add(flash);
+  const star = starTexture(), flashes = [];
+  for (let i = 0; i < FLASHES; i++) {
+    const f = new THREE.Sprite(new THREE.SpriteMaterial({ map: star, color: FLASH_RGB, ...add }));
+    f.visible = false; f.userData.life = 0;
+    scene.add(f); flashes.push(f);
+  }
   const tracerGeo = new THREE.BoxGeometry(1, 1, 1);
   const tracers = [];
   for (let i = 0; i < TRACERS; i++) {
-    const m = new THREE.Mesh(tracerGeo, new THREE.MeshBasicMaterial({ color: 0xffd27a, ...add }));
+    const m = new THREE.Mesh(tracerGeo, new THREE.MeshBasicMaterial({ color: TRACER_RGB, ...add }));
     m.visible = false; m.userData.life = 0;
     scene.add(m);
     tracers.push(m);
@@ -203,20 +207,21 @@ function buildShotEffects(scene) {
   const sparks = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffb347, size: 0.16, ...add }));
   sparks.frustumCulled = false;
   scene.add(sparks);
-  return { flash, flashLife: 0, tracers, next: 0, sparks, vel: new Float32Array(SPARKS * 3), life: new Float32Array(SPARKS), nextSpark: 0 };
+  return { flashes, tracers, next: 0, sparks, vel: new Float32Array(SPARKS * 3), life: new Float32Array(SPARKS), nextSpark: 0 };
 }
 
 function showShot(fx, muzzle, hit, size) {
-  fx.flash.position.set(muzzle.x, muzzle.y, muzzle.z);
-  fx.flash.scale.setScalar(size);
-  fx.flash.material.rotation = (fx.next * 1.7) % 6.28;
-  fx.flash.visible = true; fx.flashLife = 0.06;
+  const f = fx.flashes[fx.next % FLASHES];
+  f.position.set(muzzle.x, muzzle.y, muzzle.z);
+  f.scale.setScalar(size);
+  f.material.rotation = (fx.next * 1.7) % 6.28;
+  f.visible = true; f.userData.life = FLASH_LIFE;
   const t = fx.tracers[fx.next++ % TRACERS];
   const dx = hit.x - muzzle.x, dy = hit.y - muzzle.y, dz = hit.z - muzzle.z, len = Math.hypot(dx, dy, dz);
   t.position.set(muzzle.x + dx / 2, muzzle.y + dy / 2, muzzle.z + dz / 2);
-  t.scale.set(0.045, 0.045, len);
+  t.scale.set(TRACER_W, TRACER_W, len);
   t.lookAt(hit.x, hit.y, hit.z);
-  t.visible = true; t.userData.life = 0.09; t.material.opacity = 1;
+  t.visible = true; t.userData.life = TRACER_LIFE; t.material.opacity = 1;
   if (hit.kind === 'air') return;
   // A burst of sparks off whatever the round met, kicked back toward the shooter.
   const pos = fx.sparks.geometry.attributes.position.array, n = hit.kind === 'target' ? 6 : 10;
@@ -230,11 +235,11 @@ function showShot(fx, muzzle, hit, size) {
 }
 
 function updateShotEffects(fx, dt) {
-  if (fx.flashLife > 0) { fx.flashLife -= dt; if (fx.flashLife <= 0) fx.flash.visible = false; }
+  for (const f of fx.flashes) if (f.visible && (f.userData.life -= dt) <= 0) f.visible = false;
   for (const t of fx.tracers) {
     if (!t.visible) continue;
     t.userData.life -= dt;
-    t.material.opacity = Math.max(0, t.userData.life / 0.09);
+    t.material.opacity = Math.max(0, t.userData.life / TRACER_LIFE);
     if (t.userData.life <= 0) t.visible = false;
   }
   const pos = fx.sparks.geometry.attributes.position.array;

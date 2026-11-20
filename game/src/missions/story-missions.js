@@ -82,7 +82,7 @@ export const STORY_MISSIONS = [
       { kind: 'defend', text: 'Hold Lantern Point against the Aurum SUVs', target: (game) => game.anchors.lantern, hold: 20,
         props: [{ car: 'aurumA', dx: -11, dz: -5, heading: Math.PI / 2 }, { car: 'aurumB', dx: 11, dz: -7, heading: -Math.PI / 2 }],
         waves: [
-          { at: 1, squad: [{ crew: 'gilded', dx: -13, dz: -9, cover: 0 }, { crew: 'gilded', dx: -9, dz: -10, cover: 0 }] },
+          { at: 1, squad: [{ crew: 'gilded', dx: -13, dz: -9, cover: 0 }, { crew: 'gilded', dx: -9, dz: -10, cover: 0 }, { crew: 'gilded', dx: -16, dz: -8, cover: 0 }] },
           { at: 12, squad: [{ crew: 'gilded', dx: 13, dz: -11, cover: 1 }, { crew: 'gilded', dx: 9, dz: -12, cover: 1 }, { crew: 'gilded', dx: 15, dz: -4, cover: 1 }] },
         ],
         lines: [

@@ -175,7 +175,7 @@ export function createNightMarket(game) {
   const clampRun = (p, x, z) => (p.stall < 5 ? [Math.max(-226, Math.min(-186, x)), z] : [x, Math.max(-257.5, Math.min(-200, z))]);
 
   const market = {
-    stalls, poles, shoppers,
+    stalls, poles, shoppers, root,
     state: () => ({
       stalls: stalls.length, lanterns, gold, glows: root.visible && glows.visible, open: open ? shoppers.length : 0,
       fleeing: shoppers.filter((p) => p.state === 'run').length,
