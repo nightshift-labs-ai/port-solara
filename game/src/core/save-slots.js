@@ -2,6 +2,8 @@
 // mission; slots 2 and 3 take turns for saves made at Calloway Salvage or from the pause menu.
 // A save holds the story step, cash, REP, weapons and ammo, owned cars, side activity counts,
 // the sim time and where Wren stood.
+import { zeroStats } from '../story/career-stats.js';
+
 export const SAVE_SLOTS = 3;
 export const AUTOSAVE_SLOT = 1;
 const KEY = 'port-solara/save-slot-';
@@ -19,6 +21,7 @@ export function captureState(game, place) {
     weapons: { slot: game.arms.slot, ammo: game.arms.ammo.map((a) => ({ clip: a.clip, reserve: a.reserve })), locked: [...game.arms.locked] },
     cars: game.cars.filter((c) => c.owned && !c.ai).map((c) => c.name),
     stats: { races: game.progress.races, courier: game.progress.courier, bestLaps: { ...(game.progress.bestLaps || {}) } },
+    career: { ...(game.stats || zeroStats()) }, // career numbers (story/career-stats.js)
     time: Math.round(game.time * 100) / 100,
     at: { x: Math.round(f.x * 10) / 10, z: Math.round(f.z * 10) / 10, facing: game.player.facing },
     place,
@@ -41,6 +44,7 @@ export function applyState(game, s) {
   game.progress.races = s.stats?.races || 0;
   game.progress.courier = s.stats?.courier || 0;
   game.progress.bestLaps = { ...(s.stats?.bestLaps || {}) };
+  game.stats = { ...zeroStats(), ...(s.career || {}) }; // saves from before M8 load with zeros
   if (s.savedAt) game.progress.savedAt = { clock: clockOf(s.savedAt), place: s.place };
   if (s.settings) { applySettings(game, s.settings); writeSettings(game.settings); }
   if (game.vehicle) game.enterOrExit();

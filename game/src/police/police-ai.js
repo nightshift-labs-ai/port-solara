@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { countTimeBooked } from '../story/career-stats.js';
 
 // The SPD on the street. A pool of six units is built once (four Beacon cruisers, two Bulwark
 // SUVs) and answers the WANTED level: 1 = one cruiser, 2 = two, 3 = four plus a two-car roadblock
@@ -74,6 +75,7 @@ export function dispatchPoliceUnits(game, makeCar) {
       game.wantedLevel.clear();
       police.reset();
       police.arrestFor = 0; police.arrests++;
+      countTimeBooked(game);
       return true;
     },
     // Puts SKYLARK 1 in the air at a spot (shot staging); it then flies its orbit as usual.

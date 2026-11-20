@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { countWitnesses } from '../police/wanted-level.js';
+import { countCarStolen } from '../story/career-stats.js';
 
 // F next to a car. A parked one opens at once. An occupied one is jacked: the car brakes hard,
 // Wren steps to the driver's door, drags the driver out (a short tween with a stumble), the
@@ -41,7 +42,7 @@ export function nearestCar(game) {
 // Wren is in the driver's seat: hide her, switch the camera, and mark the car as hers.
 export function takeTheWheel(game, car) {
   game.vehicle = car;
-  if (!car.owned) game.toast?.(`VEHICLE STOLEN: ${car.name}`);
+  if (!car.owned) { game.toast?.(`VEHICLE STOLEN: ${car.name}`); countCarStolen(game); }
   car.owned = true;
   game.player.setVisible(false);
   game.chase.mode = 'car';

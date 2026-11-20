@@ -212,6 +212,40 @@ export function exposeTestHooks(game) {
       game.wantedLevel.clear(); pol.reset(); game.player.health = 100;
       return out;
     },
+    // Career numbers move at their event sites: jack a traffic car, down a gunman, blow a parked
+    // van, then lose a 1-pip tag by the escape timer. A clear() (custody, respray, loads) must not
+    // count as an escape.
+    career() {
+      const st = game.stats, before = { ...st }, wl = game.wantedLevel;
+      const theft = this.steal();
+      if (game.vehicle) this.enterNearest();
+      wl.clear(); game.police.reset();
+      this.teleport(-168.6, 30, 0);
+      const [e] = game.enemies.spawnSquad([{ crew: 'tidewater', x: -168.6, z: 18 }], 'test');
+      game.enemies.hurt(e, 999);
+      game.enemies.clear();
+      const van = game.placeProp('van', -168.6, 10, Math.PI / 2);
+      van.health = 0; game.step();
+      van.model.visible = false; van.x = van.z = 1e5; van.sync();
+      wl.clear(); game.police.reset();
+      game.police.enabled = false; // the escape timer alone
+      const p = game.focus;
+      game.crowd.gatherNear(p.x, p.z, 6, 10);
+      wl.commit('theft', p.x, p.z, Math.max(1, countWitnesses(game, p.x, p.z)));
+      const tagged = wl.pips;
+      wl.clear();
+      const escapesAfterClear = game.stats.policeEscapes - before.policeEscapes;
+      wl.commit('theft', p.x, p.z, Math.max(1, countWitnesses(game, p.x, p.z)));
+      let n = 0;
+      while (wl.pips > 0 && n++ < 2000) game.step();
+      game.police.enabled = true;
+      const s = game.stats, d = (k) => Math.round((s[k] - before[k]) * 10) / 10;
+      game.player.health = 100; wl.clear(); game.police.reset();
+      return {
+        jacked: theft.inCar, tagged, carsStolen: d('carsStolen'), gangDowned: d('gangDowned'), carsBlownUp: d('carsBlownUp'),
+        policeEscapes: d('policeEscapes'), escapesAfterClear, highestWanted: s.highestWanted, metresDriven: d('metresDriven'), secondsPlayed: d('secondsPlayed'),
+      };
+    },
     // Each of the five story missions starts and shows its panel; then it is called off.
     missionList() {
       if (game.vehicle) this.enterNearest();

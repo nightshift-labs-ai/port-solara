@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { countCarBlownUp } from '../story/career-stats.js';
 
 // Car damage you can see: under 45 health a car smokes from the hood, under 22 it burns, at 0 it
 // blows (a white-orange flash, a ring of debris boxes, a camera shake by distance, a scorched shell
@@ -58,6 +59,7 @@ export class CarExplosions {
     car.wrecked = true; car.wreckedAt = game.time; car.health = 0;
     car.speed = 0; car.vx = car.vz = 0;
     this.blown++;
+    countCarBlownUp(game);
     this.flash.position.set(car.x, 1.6, car.z); this.flash.scale.setScalar(11); this.flash.visible = true; this.flashLife = 0.4;
     this.bits.forEach((b, i) => {
       const a = i / DEBRIS * Math.PI * 2;

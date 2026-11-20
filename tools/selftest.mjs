@@ -191,6 +191,17 @@ await test('blast', async () => {
   return s;
 });
 
+await test('career', async () => {
+  const s = await call(() => window.__test.career());
+  ok(s.jacked && s.carsStolen === 1, `a jack counted ${s.carsStolen} cars stolen`);
+  ok(s.gangDowned === 1, `a downed gunman counted ${s.gangDowned}`);
+  ok(s.carsBlownUp === 1, `a blown van counted ${s.carsBlownUp}`);
+  ok(s.tagged >= 1 && s.escapesAfterClear === 0, `clear() counted ${s.escapesAfterClear} escapes`);
+  ok(s.policeEscapes === 1 && s.highestWanted >= 1, `the escape timer counted ${s.policeEscapes} escapes (highest ${s.highestWanted})`);
+  ok(s.secondsPlayed > 0, 'no time played counted');
+  return s;
+});
+
 await test('autopilot', async () => {
   const s = await call(() => window.__test.autopilot(0));
   ok(s.card && s.card.title === 'JOB DONE' && s.done, `mission 1 ended without JOB DONE (${JSON.stringify(s.card)})`);
@@ -227,10 +238,11 @@ await test('save', async () => {
     g.missions.rep = 640; g.cash = 18450;
     g.progress.bestLaps = { race1: 52.4 }; g.progress.races = 1; g.progress.courier = 3;
     g.arms.give('hornet'); g.arms.select(1);
+    g.stats.carsStolen = 7;
     const h = g.spots.find((p) => p.id === 'safehouse');
     g.player.x = h.x + 1; g.player.z = h.z; g.focus = g.player;
     const note = g.saveGame('Calloway Salvage');
-    return { note, cash: g.cash, rep: g.missions.rep, story: [...g.missions.completed].sort(), races: g.progress.races, courier: g.progress.courier, best: g.progress.bestLaps.race1, slot: g.arms.slot, locked: [...g.arms.locked], x: g.player.x, z: g.player.z };
+    return { note, carsStolen: g.stats.carsStolen, cash: g.cash, rep: g.missions.rep, story: [...g.missions.completed].sort(), races: g.progress.races, courier: g.progress.courier, best: g.progress.bestLaps.race1, slot: g.arms.slot, locked: [...g.arms.locked], x: g.player.x, z: g.player.z };
   });
   ok(/^Saved to slot/.test(before.note), `save refused: ${before.note}`);
   await reload();
@@ -239,9 +251,9 @@ await test('save', async () => {
   const after = await call(`(() => {
     const g = window.portSolara, s = (${newestSave.toString()})();
     g.loadSave(s); g.startPlay();
-    return { cash: g.cash, rep: g.missions.rep, story: [...g.missions.completed].sort(), races: g.progress.races, courier: g.progress.courier, best: g.progress.bestLaps.race1, slot: g.arms.slot, locked: [...g.arms.locked], x: g.player.x, z: g.player.z, place: g.progress.savedAt && g.progress.savedAt.place };
+    return { carsStolen: g.stats.carsStolen, cash: g.cash, rep: g.missions.rep, story: [...g.missions.completed].sort(), races: g.progress.races, courier: g.progress.courier, best: g.progress.bestLaps.race1, slot: g.arms.slot, locked: [...g.arms.locked], x: g.player.x, z: g.player.z, place: g.progress.savedAt && g.progress.savedAt.place };
   })()`);
-  for (const k of ['cash', 'rep', 'races', 'courier', 'best', 'slot']) ok(after[k] === before[k], `${k}: ${before[k]} -> ${after[k]}`);
+  for (const k of ['carsStolen', 'cash', 'rep', 'races', 'courier', 'best', 'slot']) ok(after[k] === before[k], `${k}: ${before[k]} -> ${after[k]}`);
   ok(JSON.stringify(after.story) === JSON.stringify(before.story) && after.locked.length === 0, 'story or weapons differ');
   ok(Math.hypot(after.x - before.x, after.z - before.z) < 0.2 && after.place === 'Calloway Salvage', 'Wren is not back at the safehouse');
   return { label, ...after };

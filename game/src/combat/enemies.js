@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { fireWeapon } from './weapons-and-damage.js';
+import { countGangMemberDowned, countClinicVisit } from '../story/career-stats.js';
 
 // Tidewater gunmen (teal bandanas) and Gilded Hand guards (gold pins): a pool of six figures that
 // run to the far side of a car or crate from Wren, crouch, peek and shoot with spread, flee when
@@ -57,7 +58,7 @@ export class EnemyCrews {
   hurt(e, d) {
     if (!e.alive) return;
     e.health -= d;
-    if (e.health <= 0) { e.alive = false; e.state = 'down'; e.downFor = 0; this.game.toast?.(`${e.crew.label} DOWN`); return; }
+    if (e.health <= 0) { e.alive = false; e.state = 'down'; e.downFor = 0; this.game.toast?.(`${e.crew.label} DOWN`); countGangMemberDowned(this.game); return; }
     if (e.health < e.crew.fleeAt) { e.state = 'flee'; e.fledFor = 0; return; }
     if (e.state === 'cover') e.timer = Math.min(e.timer, 0.25); // a hit draws them up to answer
   }
@@ -157,6 +158,7 @@ export class EnemyCrews {
     const game = this.game, pl = game.player;
     pl.health = 100; pl.armour = 0;
     game.cash -= CLINIC_FEE;
+    countClinicVisit(game);
     if (game.missions?.active) game.missions.finish(false, `LIGHTS OUT · ST. ELMO CLINIC -$${CLINIC_FEE}`);
     else game.toast?.(`LIGHTS OUT · ST. ELMO CLINIC -$${CLINIC_FEE}`);
     this.clear();

@@ -26,6 +26,7 @@ import { createSynthAudio, RADIO_STATIONS, SONG_SECONDS } from './audio/synth-au
 import { PORT_SOLARA_NAMES, FREE_ROAM_OBJECTIVE } from './story/port-solara-lore.js';
 import { readKeyboardAndMouse, FIXED_STEP_SECONDS, MAX_SUBSTEPS } from './core/fixed-step-input.js';
 import { createSeededRandom, createSpatialHash } from './core/seeded-world-tools.js';
+import { zeroStats, countPlayTime, countMetresDriven, countMetresOnFoot, countWantedChange } from './story/career-stats.js';
 
 // Boots Port Solara: one shared game object, the city, Wren and the cars, and a 60 Hz fixed-step loop.
 export function bootPortSolara() {
@@ -174,6 +175,7 @@ export function bootPortSolara() {
     game.traffic.update(dt, game.focus);
     game.crowd.update(dt, game.focus);
     if (game.mode !== 'play') { game.input.takePresses(); return; }
+    countPlayTime(game, dt);
     const inCustody = game.police.updateCustody(dt);
     const presses = input.takePresses();
     for (const code of presses) {
@@ -197,18 +199,22 @@ export function bootPortSolara() {
       // Wren is busy at the driver's door; the tween owns her until the car is hers.
     } else if (game.vehicle) {
       game.vehicle.update(dt, { throttle: input.axis('KeyS', 'KeyW'), steer: input.axis('KeyA', 'KeyD'), handbrake: input.held.has('Space') }, game.collide);
+      countMetresDriven(game, dt);
       if (game.vehicle.lastImpact > 6) { game.chase.shake = Math.min(1, game.vehicle.lastImpact / 20); game.vehicle.lastImpact = 0; }
       game.player.x = game.vehicle.x; game.player.z = game.vehicle.z;
     } else {
       const aim = game.arms.aiming || game.arms.firing > 0;
       game.player.update(dt, { x: input.axis('KeyA', 'KeyD'), z: input.axis('KeyW', 'KeyS') }, game.chase.yaw, !aim && (input.held.has('ShiftLeft') || input.held.has('ShiftRight')), game.collide, aim ? game.chase.yaw : null);
       game.player.pose(aim ? game.arms.weapon.id : null);
+      countMetresOnFoot(game, dt);
     }
     for (const car of game.cars) if (car !== game.vehicle && !car.ai && Math.abs(car.speed) > 0.05) car.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide);
     game.tyres.update(dt, game.vehicle);
     game.blasts.update(dt); // before the police, so a blown Beacon is their +2 wreck this tick
     game.police.update(dt);
+    const had = game.wantedLevel.pips;
     game.wantedLevel.update(dt, game.focus, game.copsSee());
+    countWantedChange(game, had); // an escape only when the timer takes the last pip
     game.wanted = game.wantedLevel.pips;
     game.missions.update(dt);
     game.side.update(dt);
@@ -296,6 +302,7 @@ export function bootPortSolara() {
   };
   citySpots(game);
   game.side = new SideActivities(game);
+  game.stats = zeroStats(); // career numbers (story/career-stats.js); NEW GAME and loads reset them
   installSaveSlots(game);
   installPauseAndMap(game);
   showTitleScreen(game, game.onNewGame);

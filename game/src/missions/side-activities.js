@@ -1,5 +1,6 @@
 import { buildMarker } from './mission-runner.js';
 import { nearestNode } from '../police/police-ai.js';
+import { countRaceWon, countCourierJob, countCarSold, countHornetBought, countRespray } from '../story/career-stats.js';
 
 // Side activities between story jobs, all started with [E] at a place on the Tab map:
 // ring-road races (from the race flags, in a car), courier drops for Mara (Quist Auto, on foot),
@@ -132,6 +133,7 @@ export class SideActivities {
     car.x = car.z = 1e5; car.speed = car.vx = car.vz = 0; car.model.visible = false; car.sync();
     g.cash += price;
     g.progress.sold = (g.progress.sold || 0) + 1;
+    countCarSold(g); // progress.sold is not saved; the career count is
     return `SOLD ${car.name} +${money(price)}`;
   }
 
@@ -141,6 +143,7 @@ export class SideActivities {
       if (g.cash < shop.hornet) return 'NOT ENOUGH CASH';
       g.cash -= shop.hornet;
       g.arms.give('hornet');
+      countHornetBought(g);
       return `HORNET SMG -${money(shop.hornet)}`;
     }
     const w = g.arms.weapon;
@@ -160,6 +163,7 @@ export class SideActivities {
     g.cash -= cost;
     g.wantedLevel.clear();
     g.police.reset?.();
+    countRespray(g);
     return `RESPRAYED -${money(cost)} · HEAT CLEARED`;
   }
 
@@ -201,8 +205,10 @@ export class SideActivities {
       cash = first ? def.cash : a.time <= def.par ? Math.round(def.cash / 3) : 0;
       rep = first ? def.rep : 0;
       line = `TIME ${clock(a.time)} · BEST ${clock(g.progress.bestLaps[a.id])}`;
+      countRaceWon(g);
     } else if (passed) {
       g.progress.courier = Math.min(g.progress.courierOf, g.progress.courier + 1);
+      countCourierJob(g);
       cash = SIDE_ACTIVITIES.courier.pay; rep = SIDE_ACTIVITIES.courier.rep;
       line = `TIME ${clock(a.time)} · COURIER ${g.progress.courier}/${g.progress.courierOf}`;
     }
