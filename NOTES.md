@@ -1,5 +1,59 @@
 # PORT SOLARA build notes
 
+## M20 SPD open fire from the cruisers: tried, old code and shot kept ((G7) failed) (run of 2026-11-20 17:30-17:59 EET)
+- Baseline: out/ab/before_m20/ (four shots, judge sheet, sha256.txt, outline.txt, *-fresh.jpg). Start
+  sha 7a6350c, tree clean. A fresh four-shot shoot reproduced all four committed sha256 (no drift).
+- Tried (commit a8fed35, reverted in 0ec7fb3; the code is there for a later try): a Beacon in PURSUIT at
+  WANTED 3+ fires at the END of driveUnit (after c.update and contact) when Wren's car moves > 8 m/s,
+  u.dist < 30, its round timer is out and clearLine holds; then the next round in 0.6 s and the tag
+  SHOOTING for 1.2 s (two per-unit timers zeroed in activate(), counted down after u.dist; u.state never
+  gets a new value). Muzzle 0.7 m ahead of the centre, width/2 + 0.35 m across on Wren's side, y 1.3;
+  aim (her x, 0.8, z) with +/- 0.012 per axis from a per-unit LCG seeded from u.index (enemies.js
+  rand() shape; game.random untouched); range = aim distance + 4. The round goes through a new
+  game.arms.policeRound(muzzle, dir, range, car): fireWeapon with the shooter's car as `ignore` (its
+  car filter now skips `ignore`; null and enemy callers unchanged), showShot at POLICE_FLASH 1.0, and a
+  car other than Wren's in the line comes back `held` (no flash, no tag, timer restarts). A hit on her
+  car takes 2 health, never below 30. police-ai.js imports nothing new (weapons-and-damage.js would
+  move ahead of story-missions.js in the dossier walk and shift the cut). Budgets: +1,776 / +490 / +365.
+- The self-tests cannot reach the rule ('police' on foot, 'custody' WANTED 1, the rest WANTED 0); the
+  31-test run on the M20 code passed (out/m20/selftest-m20code.log).
+- Frame (out/m20/probe.mjs logs every round through an observer on window.portSolara): GULL 11 and CORAL
+  7 fire on hold 20's first tick (941), TIDE 14 on the frame tick (961: place() reset its timer); all
+  three hit the Albacore, none held; health 100 -> 94. Tick-941 flashes and tracers are gone by the
+  frame and their 15 sparks are all below the view; the 10 live sparks in view are at the frame's hit.
+- Candidate A only (precheck: 9x9 mean Y at the OUT 0.35 muzzle 158.9 <= 190; OUT 0.12 would sit on the
+  body at 210.3; A's flash box, radius 17.8 + 6 px at 1024, clears the bar box (626.9) and the toast,
+  so B and C were not due). Flash (598.3, 337.5), hit (548.2, 396.9) in the Albacore at 1024.
+- Keep rule, before -> after: (G1) flash-only px (Y >= 220, dY >= 40, off the tracer) 0 -> 134 / 75 / 26
+  (1024 32 px box / 768 24 px / 512 16 px) on the probe PNGs, 0 -> 132 / 73 / 26 on the committed
+  JPEG and the sheet cover; tracer px counted apart 129 / 65 / 37. (G2) tracer 0% -> 100% (54/54
+  samples) on PNG and JPEG. (G3) TIDE 14 PURSUIT, timers 0.6 / 1.2, one flash and one tracer at full
+  life, health 94, HUD TIDE 14 SHOOTING, CORAL 7 SHOOTING (tag 0.87 s left), GULL 11 RAMMING,
+  CONDITION 94%, every other text as before. (G4) camera, Albacore, units 0-5, SKYLARK 1, 24 traffic
+  cars, 32 walkers, tick 961 equal; calls 196 -> 198; 5,855 changed px at 1280, 0 outside the flash
+  box, tracer corridor, hit box, the two SPD rows' distance-and-tag cells and CONDITION; 0 in every
+  light bar, SKYLARK 1, the minimap, both toasts and every other panel. (G5) 2-4 sha256 equal, game/
+  diff only the three files, 1-chase 181.7 KiB at q76 (no quality step). YAVG (probe PNGs) 100.37 ->
+  100.73 at 1024, 100.48 -> 100.84 at 768x480.
+- (G7), written before the before images (out/m20/g7-read.txt): 1024 reads "the right cruiser is
+  shooting at the coupe", but in the 512 cell the first thing noticed is the white tracer LINE; the
+  1.0 flash is a small knot that merges into the white Beacon's front corner, and in the 3x crop the
+  tracer outweighs the star at 1024 too. The two pale cream SHOOTING tags also read less like an alarm
+  than the solid red PURSUIT tags they replace. Verdict: revert (the rule's "line rather than a flash").
+  A/B: out/ab/m20-chase-1024, m20-cover, m20-cell, m20-shot3x (-before/-after.jpg).
+- Shots after the revert: 1-chase 185,294 bytes (181.0 KiB) q76, sha256 equal to before_m20, as are
+  2-seafront 172.5 q88, 3-map 173.3 q84, 4-title 187.0 q88 KiB and the judge sheet.
+- Gates (final code = 7a6350c's game/): SELFTEST PASS 31/31 (run alone; perf HIGH 172 / 1.0 ms, LOW
+  112 / 0.9 ms; 22:00 173 / 113; market view 196 / 1.2 ms), originality PASS (37 files), main.ts twice
+  byte-identical (45 entries, dossier 1,142,338 bytes; shots 185,294 / 176,592 / 177,412 / 191,496
+  bytes), outline identical to before_m20 (19 files left out, cut inside weapons-and-damage.js).
+- Weak spots (of the tried code, for a next try): no officer is modelled, the round leaves the door; a
+  white Beacon swallows a white flash at sheet size (a muzzle on the dark road or a warmer, larger
+  police flash would read, but showShot and its pools are shared with shot 2); the tracer outweighs
+  the flash; walkers do not panic at SPD fire; only Beacons in PURSUIT fire; CORAL 7 reads SHOOTING
+  with no flash in the frame; rounds never burn the car; the scene's re-placement times TIDE 14's round
+  to the frame tick, so any edit to the chase timing, FRAME.flank or the shot effects changes 1-chase.
+
 ## M19 burning Pipit in the chase: kept with W2, nothing dropped (run of 2026-11-20 16:13-16:42 EET)
 - Baseline: out/ab/before_m19/ (four shots, judge sheet, sha256.txt, outline.txt, *-fresh.jpg). Start
   sha 8d518e3. A fresh four-shot shoot reproduced all four committed sha256 (no drift). Only
