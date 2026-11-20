@@ -1,5 +1,53 @@
 # PORT SOLARA build notes
 
+## M12 district map + save-slot title: done (run of 2026-11-20 09:16-10:00 EET)
+- Baseline: out/ab/before_m12/ (four shots, judge sheet, sha256.txt, outline.txt, title-fresh.jpg
+  shot from the untouched tree at quality 80).
+- (1) MAP tab: each block is filled from `DISTRICT_TINT[districtAt(b.cx, b.cz)]` (menus-and-map.js,
+  exported): Palmline Beach #9ed1a0, Coral Heights #97bfe6, Old Mercado #e8a382, Saltworks Docks
+  slate #a9b7c4, Lantern Point #f1c86a (chips only; it has no blocks and gets no disc, its label is
+  enough). Sea, sand, white roads, cream names with the navy rim, badges, rings, arrow and N as
+  before. The current story ring sits on terracotta, so it gets a thin navy ring outside its cream
+  rim. Key: a second strip row, the four block districts (14-unit chip, navy rim, name at 15 in
+  title case, measured widths, spare shared out, dropped if under 28 units between entries; fits at
+  1280x800, and by the same arithmetic at 1024x640). legendH 40 -> 70 at s = 1; the map scales to its rect.
+- (2) Title: `.save-cards`, a child of #title-screen (absolute, right 4vw, bottom calc(9vh + 50px)
+  = level with the last menu item at 1280x800, width min(400px, 31vw)); shown only when a slot holds
+  a save, hidden while CONTROLS or SETTINGS is open and below 1150 px. CONTINUE is still the first
+  `.title-menu li` and loads latestSave(). Each card reads only its own record (textContent):
+  row 1 `SLOT n · PLACE` (gold) and the weekday and time the HUD shows after loading (record `clock`,
+  else 17:20 + `time`; `saveClockText` in menus-and-map.js mirrors hud.js clockText, which needs a
+  game); row 2 (20 px) `step/of  TITLE` of the first open mission in game.story, or STORY COMPLETE,
+  and `completionOfSave(game, rec)` % in gold (completion-percentage.js: a game-shaped view of the
+  record through completionOf, never stored); row 3 a DISTRICT_TINT chip and the district of the
+  record's `at`, cash in #7fe08a. Empty: `SLOT n · EMPTY` (EMPTY dim) and one dim hint (slot 1
+  "Written after each story mission", 2 and 3 "E at Calloway Salvage or pause > SAVE"). CONTINUE's
+  slot has the gold rim; a click on a filled card loads it by CONTINUE's path.
+- Title staging (SCENES.title): `localStorage.clear()` once at the start (moved out of
+  writeShotSave). 120 steps, then writeAutosaveShot: ferry + market, $15,150 = 18,450 - 1,500
+  (North Ring first win) - 3 x 600 (courier), 525 REP = 640 - 40 - 3 x 25, races/courier 0, no best
+  laps, career SHOT_CAREER with racesWon/courierDone 0, 8.6 km driven, 1.5 km on foot, 2700 s;
+  Wren at Market Day's last placed step (the ambush, Old Mercado); writeSlot(1, captureSave('After
+  Market Day'), SHOT_SAVE.savedAt - 45 min) = 13:47 UTC, FRI 17:22; then Wren (x, z, facing,
+  focus), completed, rep, cash, progress and stats are put back. 300 more steps, seedShotSave,
+  stats = SHOT_CAREER, writeShotSave -> writeSlot(2, ...) at 14:32 UTC, FRI 17:27. Slot 3 empty.
+  Cards: 24% / 31% (shot 3's ring), both 3/5 THE HARBOR RUN; CONTINUE unchanged. Left 55% psnr vs
+  title-fresh.jpg: inf at quality 80 (the drone frame did not move).
+- (3) A/B (out/ab/m12-map-*, m12-title-*: 1024 before/after at -q:v 2, cells, side-by-side 100/50):
+  3-map kept (four colours tell apart in the 256x160 cell; everything else reads as before);
+  4-title kept (wordmark, sun and CONTINUE uncovered, cards about 9.6% of the frame, text readable
+  at 1024x640; cell unchanged apart from a tidy column at the right).
+- (4) Shots: 1-chase 176.6 and 2-seafront 184.1 KiB byte-identical to before_m12; 3-map 186.1 KiB at
+  quality 88, 4-title 183.2 KiB at quality 80. SELFTEST PASS 29/29 ('save' now also reads the three
+  cards: 1 and 3 EMPTY, card 2 THE HARBOR RUN, $18,450, CALLOWAY SALVAGE and 37% = the MAP tab after
+  loadSave; perf HIGH 172 / 4.6 ms, LOW 112 / 2.0 ms). Originality PASS (36 files). main.ts twice:
+  44 files byte-identical, dossier 1,164,669 bytes; outline rows unchanged, cut still inside
+  weapons-and-damage.js (18 files left out); every file M12 edits is past the cut.
+- Weak spots: the card column's bottom is a calc tied to the strip's 50 px height (a font change
+  moves it); Palmline Beach is one block column, so its green is a thin strip; slot times are only
+  five game minutes apart (the title's step budget); the card click is not covered by the
+  self-test; new code is about 7.4 KB, over the 5 KB plan.
+
 ## M11 time of day + night seafront: done (run of 2026-11-20 08:09-08:48 EET)
 - Baseline: the four committed shots re-shot from the untouched tree were byte-identical
   (sha256 lists in out/ab/before_m11/ and out/ab/rebase_m11/), so before_m11 is the reference.
