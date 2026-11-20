@@ -1,5 +1,50 @@
 # PORT SOLARA build notes
 
+## M15 beach boulevard chase: tried, old shot kept ((d) and (g) fail) (run of 2026-11-20 11:37-12:11 EET)
+- Baseline: out/ab/before_m15/ (four shots, judge sheet, sha256.txt, outline.txt; four fresh shoots
+  from the untouched tree, each sha256 equal to its committed shot, so all four scenes shoot
+  deterministically). Start sha bf7b821. Before 1-chase at 1024x640: YAVG 98.1, SATAVG 23.8.
+- Tried framing (probe only, reverted): mission 3's "Lose the SPD, reach the Docks" step, run south
+  down Palmline Boulevard. The Albacore waits in the median at (-180, 16) heading PI with Wren 2.2 m
+  east (the PALMLINE BEACH card comes and goes), then runs from (-185.0, 3.75) at 26 m/s. At the
+  frame it is at (-185.0, 34.0), 40 m/s, health 100. Camera (-181.96, 5.2, 23.63), yaw 2.842,
+  lookOffset -0.295 (set to -0.30). Roadblock z 128.65 (8.65 and 7.35 m from the median trunks at 120
+  and 136); the banner reads 0.3 km; MARA's line, the SPD list, the toasts, CONDITION 100% and
+  FRI 17:36 all came from the real state. The Old Mercado walkers were dropped and unit 3 was left to
+  the dispatch. The flanks were [2.5, -2.6] (left, box x 392-556, cone margin 0.41-0.50 m) and
+  [7.5, 4.8] / [7, 5.6] (right). Palms on both sides, the sand, a teal sea wedge (A2 crop at 1024
+  x 768-820 / y 224-252: UAVG 131.6 > VAVG 108.2) and the coral cranes all read
+  (out/m15/probe-A.jpg, probe-A3.jpg).
+- Unproject note: the scene's helicopter unproject uses the camera's previous matrix unless
+  `camera.updateMatrixWorld()` runs first. Probe A placed SKYLARK 1 at (556, 76), under the mission
+  panel, instead of the planned (775, 80).
+- Probes (1280x800, out/m15/): A (L -0.30) and B (L -0.38): car z 33.25, health 100, roadblock z 127.9;
+  right flank [7, 5.6] box to x 894, under toast 2 (889.3). A2 / A3 (start 3.75, heli NDC x 0.21 /
+  0.13): SKYLARK 1 at (776, 82) / (725, 82). A3's body sits on the crane jib, and the right flank
+  [7.5, 4.8] bar is 1.70 / 1.15 m inside the cone. Grid (G30/G34/G38: heli NDC x 0.10-0.45, y
+  0.80-0.95; right flank 3-9 m ahead, 4.4-6.4 m right, within 9 m): 813 spots clear the cone and
+  2016 clear the panels, but none clear both (best -0.14). The open sky window (x ~690-860, y < 95)
+  sets the cone's direction: at bar height its axis is about 2.7-3.2 m right and 7 m ahead of the
+  car, right where a right-flank Beacon within 9 m has to sit to stay out of the toasts.
+- Verdict: (d) fails (no layout clears the panels, the cone and SKYLARK 1 together). (g) fails too:
+  A2's frame YAVG is 85.8 against the before's 98.1 at 1024x640 (SATAVG 24.7 vs 23.8). The run
+  stopped at the probes: no step 2 commit, so the remaining checks (a)-(c), (e), (f), (h) and (i)
+  were not judged. The scene and 1-chase.jpg were checked out from bf7b821 and the sheet rebuilt;
+  1-chase sha256 equals before_m15's. Shots 1 and 2 still differ as before (Old Mercado street at
+  golden hour vs Lantern Point at night).
+- Byte checks: 2-seafront, 3-map and 4-title shoot to their committed sha256 (out/m15/*-check.jpg);
+  `git diff --stat bf7b821` lists only NOTES.md. Shots 180.7 (q76) / 170.9 (q88) / 186.1 (q88) /
+  183.2 (q80) KiB.
+- Gates: SELFTEST PASS 30/30 (out/m15/selftest-1.log; perf HIGH 172 / 4.4 ms, LOW 112 / 3.6 ms;
+  night 173 / 113; market view 196 / 3.3 ms). ORIGINALITY PASS (37 files). main.ts twice: 45 files
+  byte-identical, dossier 1,152,255 bytes. Outline identical to before_m15 (the cut still falls
+  inside weapons-and-damage.js; 19 files, 220,080 bytes left out).
+- For a next try (weak spots): no sun disc on the boulevard; the sea is only a wedge; the GPS route
+  turns east at the nearest Rua; the sand is empty; the plate and layout match shot 2. Ways to clear
+  the cone (none tried here): a right flank in the outer southbound lane about 3 m ahead (outside
+  this run's allowed spots; 0.3 m from the Albacore), a sky window further left (needs the top fronds
+  out of frame), or both Beacons on the median side.
+
 ## M14 Lantern Point night market: done, nothing dropped (run of 2026-11-20 10:26-11:05 EET)
 - Baseline: out/ab/before_m14/ (four shots, judge sheet, sha256.txt, outline.txt; four fresh shoots
   from the untouched tree, sha256 equal to the committed shots). Start sha 42e8733.
