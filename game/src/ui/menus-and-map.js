@@ -32,7 +32,7 @@ const SPOT_PLAN = [
 ];
 
 // District names move off the story rings that sit near their middles (metres).
-const LABEL_NUDGE = { mercado: [-30, 75], coral: [0, 25], lantern: [40, 30] };
+const LABEL_NUDGE = { mercado: [-30, 75], coral: [42, 25], lantern: [40, 30], palmline: [0, -50] };
 // Map blocks and title card chips take their district's colour (Lantern Point has no blocks).
 export const DISTRICT_TINT = { palmline: '#9ed1a0', coral: '#97bfe6', mercado: '#e8a382', saltworks: '#a9b7c4', lantern: '#f1c86a' };
 const MAP_HINT = 'TAB CLOSE · ESC MENU · Q / E TABS';
@@ -290,6 +290,10 @@ function drawCityMap(ctx, game, rect, s) {
   ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
   ctx.save();
   ctx.translate(ox, oz); ctx.scale(k, k);
+  // Shallows: the shore line stroked 40 m wide in a lighter teal; the sand covers its landward half.
+  ctx.beginPath();
+  for (let z = minZ - 200; z <= maxZ + 200; z += 10) ctx.lineTo(roads.coastX(z), z);
+  ctx.lineWidth = 40; ctx.lineJoin = 'round'; ctx.strokeStyle = '#2c9aa1'; ctx.stroke();
   ctx.fillStyle = '#e8d6ae';
   ctx.beginPath();
   ctx.moveTo(roads.coastX(minZ - 200), minZ - 200);
@@ -306,6 +310,7 @@ function drawCityMap(ctx, game, rect, s) {
     if (r.axis === 'z') { ctx.moveTo(r.at, r.from); ctx.lineTo(r.at, r.to); } else { ctx.moveTo(r.from, r.at); ctx.lineTo(r.to, r.at); }
     ctx.stroke();
   }
+  drawLandmarkGlyphs(ctx, roads, k, s);
   // GPS: the same lane-graph A* the minimap follows, Wren to the current goal, gold on a navy casing.
   const goal = game.gpsGoal(), route = game.planRoute(game.focus, goal);
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -378,6 +383,38 @@ function drawCityMap(ctx, game, rect, s) {
   ctx.restore();
   ctx.lineWidth = 1.2 * s; ctx.strokeStyle = 'rgba(255, 241, 214, 0.5)';
   ctx.beginPath(); ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 18 * s); ctx.stroke();
+}
+
+// The landmarks from above at their true places and sizes (metres, buildLandmarks' boxes); strokes
+// never thinner than 2 px.
+function drawLandmarkGlyphs(ctx, roads, k, s) {
+  const thin = (m) => Math.max(m, (2 * s) / k);
+  // Sundial Tower: navy podium, the white needle's base, the gold fin over it, the needle's tip.
+  const t = LANDMARKS.sundial;
+  ctx.fillStyle = '#123a5e'; ctx.fillRect(t.x - 17, t.z - 15, 34, 30);
+  ctx.fillStyle = '#f7f4ee'; ctx.beginPath(); ctx.arc(t.x, t.z, 12, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#e0a92e'; ctx.fillRect(t.x + 6 - 11.75, t.z - 13, 23.5, 26);
+  ctx.lineWidth = thin(1); ctx.strokeStyle = NAVY; ctx.strokeRect(t.x + 6 - 11.75, t.z - 13, 23.5, 26);
+  ctx.fillStyle = '#f7f4ee'; ctx.beginPath(); ctx.arc(t.x, t.z, Math.max(3.5, (3 * s) / k), 0, Math.PI * 2); ctx.fill();
+  // Hotel Meridiana: the white slab with its teal balcony rim.
+  const m = LANDMARKS.meridiana;
+  ctx.fillStyle = '#f7f4ee'; ctx.fillRect(m.x - 15, m.z - 18, 30, 36);
+  ctx.lineWidth = thin(1.5); ctx.strokeStyle = '#1d9c94'; ctx.strokeRect(m.x - 15, m.z - 18, 30, 36);
+  // Quist Auto's dark lot.
+  const q = LANDMARKS.quist;
+  ctx.fillStyle = '#2b3240'; ctx.fillRect(q.x - 13, q.z - 16, 26, 16);
+  // Saltworks cranes on the quay: the 8 m leg square, the cab and the 52 m boom out over the water.
+  ctx.fillStyle = ctx.strokeStyle = '#d9483b';
+  for (const z of [175, 215, 255]) {
+    const x = roads.coastX(z) + 14;
+    ctx.lineWidth = thin(1.4); ctx.strokeRect(x - 4, z - 4, 8, 8);
+    ctx.fillRect(x - 3, z - 4.5, 6, 9);
+    const bw = thin(2.4); ctx.fillRect(x - 38, z - bw / 2, 52, bw);
+  }
+  // Lantern Point lighthouse: a red disc with a white ring, at least 5 px.
+  const l = LANDMARKS.lighthouse, r = Math.max(4, (5 * s) / k);
+  ctx.beginPath(); ctx.arc(l.x, l.z, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#d23a2f'; ctx.fill(); ctx.lineWidth = thin(1.2); ctx.strokeStyle = '#f7f4ee'; ctx.stroke();
 }
 
 // A navy plate with a gold rim naming the mission, placed nearest-first around its ring (8 directions,
