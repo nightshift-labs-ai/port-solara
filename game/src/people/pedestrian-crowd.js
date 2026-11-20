@@ -84,6 +84,7 @@ export class PedestrianCrowd {
   // Everyone within the radius runs (gunfire and crashes call this later).
   panic(x, z, radius) {
     for (const w of this.walkers) if (Math.hypot(w.x - x, w.z - z) < radius) w.flee = 3;
+    this.game.nightMarket?.panic(x, z, radius);
   }
 
   // Staging (shots and tests): put `count` walkers on the block rings closest to a spot, each at
@@ -116,4 +117,4 @@ export class PedestrianCrowd {
 }
 
 export const CROWD_SIZE = 32;
-const OUTFITS = [0xe2483a, 0x1d9c94, 0xf2b134, 0xf4f1ea, 0x3a6fb0, 0x7fc8d6, 0xb8d86b, 0x2a2d33];
+export const OUTFITS = [0xe2483a, 0x1d9c94, 0xf2b134, 0xf4f1ea, 0x3a6fb0, 0x7fc8d6, 0xb8d86b, 0x2a2d33];

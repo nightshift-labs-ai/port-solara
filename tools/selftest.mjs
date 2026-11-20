@@ -423,6 +423,25 @@ await test('night', async () => {
   return { ...on, drawCalls: p.drawCalls, triangles: p.triangles, medianMs: +p.medianMs.toFixed(1), low: { drawCalls: low.drawCalls, triangles: low.triangles, medianMs: +low.medianMs.toFixed(1) } };
 });
 
+// Feira das Lanternas at Lantern Point: shut at noon, lit and busy at 22:00, shoppers scatter at
+// gunfire and settle again, inside the perf budget.
+await test('market', async () => {
+  await call(() => { localStorage.clear(); window.portSolara.changeSetting('graphics', 'high'); window.__test.setClock(12 * 60); window.__test.teleport(-188, -283, Math.PI); window.__test.step(2); });
+  const day = await call(() => window.__test.market());
+  ok(day.stalls === 10 && !day.glows && day.open === 0, `noon: ${JSON.stringify(day)}`);
+  const night = await call(() => { window.__test.setClock(22 * 60); window.__test.step(60); return window.__test.market(); });
+  ok(night.glows && night.open >= 12 && night.inside === 0, `22:00: ${JSON.stringify(night)}`);
+  const scare = await call(() => { window.portSolara.crowd.panic(-200, -266, 30); window.__test.step(30); return window.__test.market(); });
+  ok(scare.fleeing + scare.crouched >= 4, `after panic: ${JSON.stringify(scare)}`);
+  const calm = await call(() => { window.__test.step(300); return window.__test.market(); });
+  ok(calm.fleeing + calm.crouched === 0, `5 s later: ${JSON.stringify(calm)}`);
+  const p = await call(() => window.__test.perf(30));
+  await call(() => { window.portSolara.changeSetting('graphics', 'high'); localStorage.clear(); window.__test.setClock(17 * 60 + 20); });
+  ok(p.drawCalls <= 200, `${p.drawCalls} draw calls`);
+  ok(p.medianMs <= 70, `median frame ${p.medianMs.toFixed(1)} ms`);
+  return { day, night, scare, calm, drawCalls: p.drawCalls, triangles: p.triangles, medianMs: +p.medianMs.toFixed(1) };
+});
+
 await test('clean-console', async () => { ok(problems.length === 0, problems.join(' | ')); return { problems: 0 }; });
 
 await browser.close();

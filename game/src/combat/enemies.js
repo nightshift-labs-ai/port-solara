@@ -137,6 +137,7 @@ export class EnemyCrews {
     aim.x += (this.rand() - 0.5) * sp * 2; aim.y += (this.rand() - 0.5) * sp; aim.z += (this.rand() - 0.5) * sp * 2;
     aim.normalize();
     this.shotsAtWren++;
+    game.crowd?.panic(e.x, e.z, 20);
     // Closest approach of the round to Wren's chest.
     const ox = w.x - muzzle.x, oy = 1.3 - muzzle.y, oz = w.z - muzzle.z, along = ox * aim.x + oy * aim.y + oz * aim.z;
     const miss = Math.hypot(ox - aim.x * along, oy - aim.y * along, oz - aim.z * along);

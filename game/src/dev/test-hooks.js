@@ -418,6 +418,13 @@ export function exposeTestHooks(game) {
       return { slip: +slip.toFixed(1), marksLaid: t.nextMark - marksBefore, puffsAlive: t.smoke.filter((s) => s.age < 1).length };
     },
     enterNearest() { game.input.setKey('KeyF', true); game.step(); game.input.setKey('KeyF', false); return this.snapshot(); },
+    // Feira das Lanternas: its state after a render, plus shoppers standing inside any collider.
+    market() {
+      game.render();
+      const m = game.nightMarket, boxes = game.collide.boxes;
+      const inside = m.shoppers.filter((p) => boxes.some((b) => p.x > b.minX && p.x < b.maxX && p.z > b.minZ && p.z < b.maxZ)).length;
+      return { ...m.state(), inside };
+    },
     perf(frames = 30) {
       const gl = game.renderer.getContext();
       const times = [];

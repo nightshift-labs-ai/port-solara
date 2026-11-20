@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createSeededRandom } from '../core/seeded-world-tools.js';
 import { glowDot } from './night-lights.js';
+import { OUTFITS } from '../people/pedestrian-crowd.js';
 
 // Feira das Lanternas: the Lantern Point night market on the sand west of Palmline Boulevard. Ten
 // striped stalls in an L (row A along z -262 facing the boulevard's end, row B along x -199 facing
@@ -8,7 +9,7 @@ import { glowDot } from './night-lights.js';
 // light on the sand. Shuttered by day, lit from dusk. Its own seeded stream, drawn only at build
 // time; nothing casts shadows; the whole market is hidden past LOD_RANGE from the camera.
 const CENTER = { x: -205, z: -245 };
-const LOD_RANGE = 250;
+const LOD_RANGE = 220;
 const OPEN_LEVEL = 0.35;
 const POOL_COLOR = 0xffa850, POOL_RADIUS = 2.2;
 const AWNINGS = [0xe8664a, 0x1fa59a, 0xf2b134, 0x2f5fd0, 0xe5677f]; // coral, teal, saffron, cobalt, rose
@@ -16,6 +17,7 @@ const CREAM = 0xf3e6cc, WOOD = 0x8a5a3a, POST = 0x5a3a28, IRON = 0x34343a, WIRE 
 const GOODS = [0xf2b134, 0xe2483a, 0x7fc8d6, 0xb8d86b, 0xf4f1ea, 0xe5677f, 0x1d9c94, 0xd98a3a];
 const LANTERNS = [[0.8, 0.18, 0.14], [0.8, 0.36, 0.26], [0.78, 0.28, 0.45], [0.15, 0.66, 0.6], [0.8, 0.5, 0.12]];
 const GOLD = [0.8, 0.64, 0.2], BULB = [0.8, 0.62, 0.36];
+const SCARE = 4, RUN = 4.2;
 const STALL_W = 4, STALL_D = 2.6, FRONT_Y = 2.85, BACK_Y = 3.35, OVERHANG = 0.3, POLE_H = 4.8, SAG = 0.35;
 
 export function createNightMarket(game) {
@@ -142,10 +144,97 @@ export function createNightMarket(game) {
   root.add(frames, fronts, shutters, glows, poolMesh);
   game.scene.add(root);
 
+  // Shoppers: their own instanced bodies and heads (the crowd's sizes), each at home before a
+  // counter; 13 at the five busiest stalls, one at each other. Never witnesses (not in game.crowd).
+  const homes = [0, 0, 0, 1, 1, 1, 2, 2, 2, 5, 5, 6, 6, 3, 4, 7, 8, 9];
+  const outfits = OUTFITS.filter((c) => c !== 0x2a2d33), skins = [0x8a5a3c, 0xc68e64, 0x5e3a26, 0xe0b48c];
+  const unitBox = new THREE.BoxGeometry(1, 1, 1);
+  const bodies = new THREE.InstancedMesh(unitBox, new THREE.MeshStandardMaterial({ roughness: 0.8 }), homes.length);
+  const heads = new THREE.InstancedMesh(unitBox, new THREE.MeshStandardMaterial({ roughness: 0.7 }), homes.length);
+  bodies.frustumCulled = heads.frustumCulled = false;
+  const shoppers = homes.map((si, i) => {
+    const s = stalls[si], k = homes.slice(0, i).filter((h) => h === si).length;
+    bodies.setColorAt(i, col.set(rng.pick(outfits)));
+    heads.setColorAt(i, col.set(rng.pick(skins)));
+    const p = { i, stall: si, x: 0, z: 0, hx: 0, hz: 0, tx: 0, tz: 0, state: 'shop', timer: 0, phase: i * 0.9 };
+    p.home = (stall, u) => {
+      const h = at(stalls[stall], u, -rng.range(1.0, 1.6));
+      p.stall = stall; p.hx = h.x; p.hz = h.z;
+    };
+    p.home(si, -1.3 + k * 1.3 + rng.range(-0.25, 0.25));
+    return p;
+  });
+  const shopGroup = new THREE.Group();
+  shopGroup.add(bodies, heads);
+  shopGroup.visible = false;
+  root.add(shopGroup);
+  let open = false, strollIn = 0;
+  const v3 = new THREE.Vector3(), s3 = new THREE.Vector3(), yAxis = new THREE.Vector3(0, 1, 0);
+  const rowOf = (si) => (si < 5 ? 0 : 5);
+  // Running stays on the front of its own row and clear of the other row's stalls.
+  const clampRun = (p, x, z) => (p.stall < 5 ? [Math.max(-226, Math.min(-186, x)), z] : [x, Math.max(-257.5, Math.min(-200, z))]);
+
   const market = {
-    stalls, poles,
-    state: () => ({ stalls: stalls.length, lanterns, gold, glows: root.visible && glows.visible }),
-    update() {},
+    stalls, poles, shoppers,
+    state: () => ({
+      stalls: stalls.length, lanterns, gold, glows: root.visible && glows.visible, open: open ? shoppers.length : 0,
+      fleeing: shoppers.filter((p) => p.state === 'run').length,
+      crouched: shoppers.filter((p) => p.state === 'duck' || p.state === 'crouch').length,
+    }),
+    // Shots, blasts and thefts nearby (PedestrianCrowd.panic forwards here).
+    panic(x, z, radius) {
+      if (!open) return;
+      for (const p of shoppers) {
+        if (Math.hypot(p.x - x, p.z - z) >= radius) continue;
+        p.away = Math.atan2(-(p.x - x), -(p.z - z));
+        if (p.state === 'run' || p.state === 'duck' || p.state === 'crouch') { p.timer = SCARE; continue; }
+        p.timer = SCARE;
+        if (p.i % 3 === 0) { p.state = 'duck'; continue; }
+        const s = stalls[p.stall], rx = Math.abs(s.fz), rz = Math.abs(s.fx);
+        const sign = (p.x - x) * rx + (p.z - z) * rz >= 0 ? 1 : -1, d = rng.range(8, 14);
+        [p.tx, p.tz] = clampRun(p, p.x + rx * sign * d, p.z + rz * sign * d);
+        p.state = 'run';
+      }
+    },
+    update(dt, focus) {
+      const now = game.dayNight.levelNow() >= OPEN_LEVEL && Math.hypot(focus.x - CENTER.x, focus.z - CENTER.z) < 160;
+      if (now && !open) {
+        for (const p of shoppers) { p.x = p.hx; p.z = p.hz; p.state = 'shop'; p.timer = 0; }
+        strollIn = rng.range(4, 9);
+      }
+      open = shopGroup.visible = now;
+      if (!open) return;
+      if ((strollIn -= dt) <= 0) {
+        strollIn = rng.range(4, 9);
+        const p = rng.pick(shoppers);
+        if (p.state === 'shop') {
+          const base = rowOf(p.stall), next = Math.min(base + 4, Math.max(base, p.stall + rng.int(-1, 1)));
+          p.home(next, rng.range(-1.4, 1.4));
+          p.state = 'stroll';
+        }
+      }
+      for (const p of shoppers) {
+        if ((p.state === 'run' || p.state === 'duck' || p.state === 'crouch') && (p.timer -= dt) <= 0) p.state = 'home';
+        let speed = 0, tx = p.hx, tz = p.hz;
+        if (p.state === 'run') { speed = RUN; tx = p.tx; tz = p.tz; } else if (p.state === 'stroll') speed = 1; else if (p.state === 'home') speed = 1.3;
+        let heading = p.face ?? 0;
+        if (speed > 0) {
+          const dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz), stepLen = Math.min(d, speed * dt);
+          if (d > 1e-4) { p.x += dx / d * stepLen; p.z += dz / d * stepLen; heading = Math.atan2(-dx, -dz); }
+          if (d <= speed * dt) p.state = p.state === 'run' ? 'crouch' : 'shop';
+        }
+        const s = stalls[p.stall];
+        if (p.state === 'shop') heading = Math.atan2(s.fx, s.fz) + Math.sin(game.time * 0.8 + p.phase) * 0.25;
+        if (p.state === 'duck' || p.state === 'crouch') heading = p.away ?? heading;
+        p.face = heading;
+        const h = p.state === 'duck' || p.state === 'crouch' ? 0.6 : 1;
+        const bob = p.state === 'run' ? Math.abs(Math.sin(game.time * 14 + p.phase)) * 0.06 : 0;
+        q.setFromAxisAngle(yAxis, heading);
+        bodies.setMatrixAt(p.i, m.compose(v3.set(p.x, 0.95 * h + bob, p.z), q, s3.set(0.5, 1.1 * h, 0.3)));
+        heads.setMatrixAt(p.i, m.compose(v3.set(p.x, 1.68 * h + bob, p.z), q, s3.set(0.26, 0.28, 0.26)));
+      }
+      bodies.instanceMatrix.needsUpdate = heads.instanceMatrix.needsUpdate = true;
+    },
     render(level) {
       const cam = game.camera.position;
       root.visible = Math.hypot(cam.x - CENTER.x, cam.z - CENTER.z) < LOD_RANGE;
