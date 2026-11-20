@@ -43,8 +43,10 @@ function writeShotSave(game) {
 // v2: the player's own HIGH car view (C in play), down Rua 5 through the Old Mercado toward the
 // Palmline front, the beach and the low sun at the end of the street; cruisers beside the coupe.
 const FRAME = { start: -22, flank: [[1, -3.7], [5.5, 3.7]], heliX: 0.06, heliY: 0.66, heliUp: 13, speed: 40 };
-// Where Wren stands for the Mercado fight (south of the van, facing the Clock Arch).
-const STREET = { x: 153.2, z: 75.5 };
+// Where Wren stands for the Lantern Point stand, from game.anchors.lantern (on the boulevard, 16 m
+// toward the point, about 16 m from the first gunman), and the way she first faces (south-west, up
+// the shore; aimAt then turns the camera onto the gunman). The sun sits just off the right edge.
+const SEAFRONT = { dx: -2, dz: -16, yaw: 2.12 };
 
 // Turns the shoulder camera until its crosshair ray runs through a world point (a few passes,
 // because the arm's height moves with the pitch).
@@ -122,34 +124,32 @@ export const SCENES = {
     pol.placeHelicopter(cam.position.x + ray.x * t, cam.position.z + ray.z * t, FRAME.heliUp);
     game.step();
   },
-  // The Mercado fight (mission 3, stage 2/6, the cover's save state one step earlier): Wren on the
-  // left third in the shoulder aim with the Wasp, two Tidewater gunmen behind their Dockhand van
-  // under the Clock Arch, walkers scattering from the gunfire, Mara on the radio and the Albacore
-  // parked within reach. The last shot is fired two ticks before the frame: flash, tracer, sparks
-  // and the hit marker are all live.
-  street(game, hold) {
+  // The Lantern Point stand (mission 4, "Hold Lantern Point against the Aurum SUVs", its spot
+  // game.anchors.lantern): the shared save plus The Harbor Run done, the defend step started
+  // directly (so Ilse's hand-over of the Hornet is skipped and the gun is given here), and the
+  // first Gilded Hand wave in place behind the Aurum SUV. Wren hip-fires the Hornet from the
+  // boulevard's beach side, looking up the shore with the low sun off to the left: sand, sea,
+  // palms and the point ahead. The last burst is fired two ticks before the frame.
+  seafront(game, hold) {
     hold([], 300);
-    game.crowd.gatherNear(152, 70, 10, 16);
     game.startPlay();
     seedShotSave(game);
-    game.player.x = STREET.x; game.player.z = STREET.z; game.player.facing = 0.05; game.chase.yaw = 0.05;
-    // The curbside Pipit by the arch moves on, so the parked coupe is the car within reach.
-    const pipit = game.cars.find((c) => c.name === 'PIPIT' && Math.hypot(c.x - 156.5, c.z - 73) < 1);
-    if (pipit) { pipit.x = pipit.z = 1e5; pipit.model.visible = false; pipit.sync(); }
-    hold([], 200); // the district card has come and gone
-    game.missions.start(game.story[2], 1);
-    game.arms.select(1);
+    game.missions.completed.add('harbor');
+    const a = game.anchors.lantern;
+    game.player.x = a.x + SEAFRONT.dx; game.player.z = a.z + SEAFRONT.dz;
+    game.player.facing = game.chase.yaw = SEAFRONT.yaw;
+    hold([], 200); // the LANTERN POINT card has come and gone
+    game.missions.start(game.story[3], 2);
+    game.arms.give('hornet');
+    hold([], 75); // the first wave lands at 1 s
     const [first] = game.enemies.active;
     const aim = () => aimAt(game, first.x, first.height * 0.62, first.z);
-    game.input.setKey('Mouse2', true);
-    aim();
-    hold([], 40);
+    aim(); hold([], 30);
     for (let i = 0; i < 2; i++) {
-      aim(); hold(['Mouse0'], 1); aim(); hold([], 60);
+      aim(); hold(['Mouse0'], 3); aim(); hold([], 40);
     }
-    // Keep the gunmen in the fight for the frame: all three step out past the van's ends to shoot.
     game.enemies.active.forEach((e) => { e.health = Math.max(e.health, 60); e.state = 'peek'; e.timer = 9; });
-    hold([], 50);
+    hold([], 40);
     aim(); hold(['Mouse0'], 1); hold([], 2);
   },
   // The Tab map on the shared save: story 3/5 with The Harbor Run current, Races 1/4,
