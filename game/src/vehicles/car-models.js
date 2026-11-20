@@ -6,7 +6,7 @@ export function buildCarModel(kind, paint) {
   const color = new THREE.Color(paint ?? spec.paint);
   const boxes = spec.boxes(color);
   const group = new THREE.Group();
-  const body = new THREE.Mesh(mergeBoxes(boxes.filter((b) => !b.glow)), BODY_MATERIAL);
+  const body = new THREE.Mesh(mergeBoxes(boxes.filter((b) => !b.glow)), spec.finish === 'satin' ? SATIN_PAINT : BODY_MATERIAL);
   const lights = new THREE.Mesh(mergeBoxes(boxes.filter((b) => b.glow)), LIGHT_MATERIAL);
   body.castShadow = true;
   group.add(body, lights);
@@ -49,6 +49,9 @@ export function createTailGlow(game) {
 }
 
 const BODY_MATERIAL = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0.15 });
+// The coupe wears a satin coat: on gloss paint the low golden-hour sun (and the bounce light opposite)
+// glares off its roof, hood and deck and washes the coral to cream.
+const SATIN_PAINT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0.15 });
 const LIGHT_MATERIAL = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
 
 const GLASS = new THREE.Color(0x1d2b3a), TYRE = new THREE.Color(0x1b1c1f), RIM = new THREE.Color(0xc9ccd2);
@@ -76,7 +79,7 @@ function lightsFor(w, len, y) {
 // Cars face -z. Sizes in metres.
 export const CAR_SPECS = {
   albacore: {
-    name: 'ALBACORE GT', paint: 0xe2483a, topSpeed: 62, accel: 13, grip: 7.5, length: 4.5, width: 1.95,
+    name: 'ALBACORE GT', paint: 0xe2483a, finish: 'satin', topSpeed: 62, accel: 13, grip: 7.5, length: 4.5, width: 1.95,
     boxes: (c) => [
       { w: 1.95, h: 0.55, d: 4.5, x: 0, y: 0.55, z: 0, c },
       { w: 1.9, h: 0.22, d: 1.6, x: 0, y: 0.92, z: -1.3, c },
