@@ -1,5 +1,51 @@
 # PORT SOLARA build notes
 
+## M10 arsenal: BREAKER shotgun + GANNET rifle done, explosive dropped (run of 2026-11-20 06:59-07:38 EET)
+- (1) Two guns at the END of WEAPONS (saves store ammo by index): BREAKER SHOTGUN (slot 4: 6
+  pellets per pull, spread 0.065, 16 per pellet, reach 15 m counted from Wren rather than the
+  camera, 0.95 s pump, clip 6 + 30, reload 2.4 s) and GANNET RIFLE (slot 5: 75 damage, 130 m,
+  spread 0.0008, 1.15 s bolt, clip 5 + 25, reload 2.8 s). Pellet spread comes from the weapon
+  module's own seed, never the world stream; the Wasp and Hornet keep their three rand() calls
+  per pull in the same order. One round, one `shots++` and at most one hit counted per pull
+  (accuracy can't pass 100%). Every row has a `flash` size (Wasp 0.8, Hornet 0.62, Breaker
+  1.08, Gannet 1.0); enemy shots map their flag to 0.62 / 0.8, as before. Gunfire still panics
+  walkers and raises WANTED when seen (same path). `cycle(dir)` steps over locked slots and
+  wraps, so Q / wheel no longer stall on a locked slot (the old Wasp -> locked Hornet stall is
+  fixed too); Digit1-9 select. Two-handed pose and a longer gun for both; Wasp and Hornet poses
+  unchanged. CONTROLS: the MOUSE row lists LMB fire, RMB aim and 1-5 / Q / wheel (no new row).
+- (2) Brass & Barrel offers the first locked gun in WEAPONS order: Hornet $2,500 at REP 3,
+  Breaker $3,800 at REP 4, Gannet $6,500 at REP 5 (`weaponUnlocked(id)`, ranks never go down
+  in that order; the prompt reads its rank from the unlocks table). The Hornet career count runs
+  only for the Hornet; no count or STATS row for the new guns. Saves carry `weapons.ids`;
+  applyState locks any gun the save never knew (old saves: Breaker and Gannet stay locked).
+  VERSION stays 1. `DEFAULT_LOCKED` exported and used by PlayerWeapons. The guns are not in
+  COMPLETION_WEIGHTS and have no MAP-column row (weights must sum to 100, the column has no
+  room, shot 3 shows it), so 3-map.jpg and 4-title.jpg stay byte-identical.
+- (3) HUD strip: tile width from the slot count (264 units, 4 apart: 49.6 at five), pictogram
+  scale min(1, (w - 14) / 44) = 0.81, slot number 12 units at y+13 so it never touches the
+  pictogram, clip only in the tile (17 units, red when low), padlock where the ammo would be,
+  the reserve in the held line under the strip, always left-aligned ("HORNET 27/150",
+  "BREAKER · RELOADING", 15 units, shrunk if it would pass 248 units, never reaching the REP
+  column). New pictograms: pump gun with grooved pump, scoped rifle. Checked at 768x480 (probe
+  frames, kept in out/: hud-768-*.png).
+- (4) Shots: only 1-chase and 2-seafront re-shot (staging and shot save untouched; the new guns
+  show locked there, as the shot save owns neither). A/B in out/ab/before_m10/, pairs
+  out/ab/m10-chase-*, m10-seafront-*, m10-sheet-*: kept. Only the bottom-left panel changes; the
+  sheet's cover now shows five slots with two padlocks. Judge sheet rebuilt.
+- Self-test (SwiftShader, 1280x800): SELFTEST PASS 27/27 (new: arsenal, right after enemy: Q from
+  the Hornet with both new guns locked lands on FISTS; one Breaker pull at a gunman 7 m ahead
+  does damage, spends one shell and counts one hit; one Gannet round at a gunman 40 m ahead at
+  camera pitch 0 does damage and spends one round). The save check now compares the locked
+  set before and after. Perf: HIGH 172 draw calls / median 3.0 ms; LOW 112 / 1.6 ms.
+- Originality PASS (34 files). main.ts run twice without ulimit: 42 files byte-identical (sha256
+  lists compared), dossier 1,117,630 bytes; the text cut still falls inside enemies.js, after
+  weapons-and-damage.js (shown whole, 268 lines).
+- Shots: 1-chase.jpg 176.6 KiB, 2-seafront.jpg 162.5 KiB, 3-map.jpg 177.4 KiB, 4-title.jpg
+  179.1 KiB.
+- Dropped: the thrown explosive (it needs a `blastAt(x, z)` split out of explode(car) that keeps
+  blown++ / countCarBlownUp in explode only, and a sixth slot would shrink the pictograms to
+  0.61 at 768x480). Next: that split, then the explosive on its own slot (never on C).
+
 ## M9 on-foot WIDE view: done; seafront reframe tried and not kept (run of 2026-11-20 06:12-06:35 EET)
 - (1) C on foot toggles SHOULDER / WIDE (`ChaseCamera.footView`, default 'shoulder', never in
   `view`, not saved in settings); `cycleView` branches on mode, and C in a car still cycles NEAR /
