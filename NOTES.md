@@ -1,5 +1,80 @@
 # PORT SOLARA build notes
 
+## M14 Lantern Point night market: done, nothing dropped (run of 2026-11-20 10:26-11:05 EET)
+- Baseline: out/ab/before_m14/ (four shots, judge sheet, sha256.txt, outline.txt; four fresh shoots
+  from the untouched tree, sha256 equal to the committed shots). Start sha 42e8733.
+- (1) Feira das Lanternas (world/night-market.js, `createNightMarket(game)`; main.js imports it after
+  night-lights, builds it after game.crowd, updates it after the crowd, renders it after the night
+  lights). Ten stalls 4 x 2.6 m in an L on the sand: row A x -197..-221 (6 m apart) on z -262, fronts
+  to -z (the stand); row B z -254..-230 on x -199, fronts to +x (the boulevard). Each: 1 m counter,
+  four posts, back cloth, a sloping awning (front 2.85 m, back 3.35 m) in six stripes of its colour
+  (coral, teal, saffron, cobalt, rose) and cream, a 0.38 m striped valance, a warm underside, goods
+  as colour blocks. One merged vertex-coloured MeshStandardMaterial mesh (frames, awnings, 12 poles
+  4.8 m, wires as 0.03 m boxes; receiveShadow only), one MeshBasicMaterial lit mesh (goods, cloths,
+  lantern bodies, valances, undersides; colour 0.55 by day to 0.9 at night by level). Poles every 8 m:
+  x -192.6 for z -262..-206 (eight, a line receding up the boulevard) and z -267.6 for x -197..-221
+  (four); catenary strings (sag 0.35 m) pole to pole and from each awning's front corners to the
+  nearest pole, a lantern a metre: 173 lanterns (36 gold), colours <= 0.8. One additive
+  Points (glowDot, now exported; vertex colours, toneMapped off, size 1.0 with a per-point aSize, 1.6
+  for the ten bulbs under the awnings). 22 light pools (InstancedMesh, radius 2.2 m, #ffa850, y 0.06,
+  additive, no depth write, opacity 0.35 x level). Glows and pools hidden at level <= 0.02; day
+  shutters (one merged mesh in faded awning colours) while level < 0.35. One collider per stall
+  (footprint, h 2.6). Seed `(game.seed ^ 0x4c414e54) >>> 0`, drawn only at build time and while open.
+  Distance LOD: the whole market is hidden past 220 m from the camera (the perf view is 247 m away,
+  the title drone about 440 m), so day perf is unchanged.
+- (2) 18 shoppers (own instanced bodies and heads, the crowd's sizes, OUTFITS exported, never
+  0x2a2d33): 3, 3, 3 at row A x -197/-203/-209, 2, 2 at row B z -254/-248, one at each other stall,
+  1.0-1.6 m before the counter, facing it, swaying. Every 4-9 s one strolls at 1 m/s to the same or the
+  next stall of its row. Open only while levelNow() >= 0.35 and the focus is within 160 m of
+  (-205, -245); on opening all start at home. Panic: PedestrianCrowd.panic forwards (shots 30 m,
+  blasts 40 m, thefts 14 m) and EnemyCrews.shoot now calls game.crowd?.panic(e.x, e.z, 20) (the
+  walkers run from crew fire too). A calm shopper in the radius: index % 3 === 0 ducks (0.6 height,
+  facing away), the rest run 4.2 m/s 8-14 m along their row (clamped clear of the other row), then
+  crouch; a repeat panic restarts the 4 s timer; then home at 1.3 m/s. By design nobody at Lantern
+  Point calls the SPD on the Gilded Hand: shoppers are never witnesses (countWitnesses reads
+  game.crowd only).
+- (3) Effects: FLASHES = 4 sprites (round robin, own life 0.06 s, #fffbe8), crew flash 1.0 SMG /
+  1.2 (were 0.62 / 0.8), tracers 0.1 m, #fff0c8, 0.12 s (were 0.045 m, #ffd27a, 0.09 s). Mission 4's
+  first wave is three Gilded Hand guards (new: dx -16, dz -8, cover 0; six with wave two = POOL):
+  a difficulty change.
+- Shot 2 staging: setClock 21:38, shot save, story[3] step 2, Hornet as before; Wren at anchor +
+  (-6.5, -11.5) = (-186.5, -281.5) (2.1 m from the planned (-188, -283), 26.2 m from the ring
+  corner; from the planned stand every aim gave yaw about 2.80, try 1), footView 'wide'. Real fire
+  at guard 0 in 5-tick bursts, re-aimed each burst, never while it is in cover, until it is down;
+  R if the clip is under 10 (not needed); M7's pose line for the standing guards only; the last aim
+  is the standing guard or chest-height point between two that leaves the yaw nearest 2.6; Mouse0
+  held until Wren's and a guard's flash show at once with the downed guard 0.4-2.8 s down.
+  Probe (out/m14/probe.mjs, 1024x640, try 2): yaw 2.594, FRI 21:45, WANTED 0, health 94; standing
+  guards 56.3 and 55.7 px, one down 0.42 s (box 50 x 40 px); flashes guard 31.4 px, Wren 37.0 px;
+  Wren's tracer 3.99 px; nearest lantern glow 67.1 px from the guard flash; 7 unoccluded stall fronts
+  >= 30 px spanning 411.6 px; 8 shoppers >= 22 px outside the HUD, 3 running, 7 crouched; Wren's box
+  (100 x 153 px) clear of the centre. HUD panels are canvas-drawn, so the probe uses their measured
+  rects (x 0.8) including the DOWN toast.
+- (4) A/B (out/ab/m14-seafront-1024-before/after.jpg, m14-cell-before/after.jpg, m14-cell-pair.jpg):
+  YAVG frame 56.0 -> 68.0, cell 55.6 -> 67.7. Kept: in both views the lit stall row and lantern lines
+  cross the frame, shoppers at the counters, Wren firing with tracers, the guards at the SUV with a
+  flash and one down; same HUD and look. Shots: 2-seafront 170.9 KiB at q88 (psnr inf vs try 2);
+  1-chase 180.7 (q76), 3-map 186.1 (q88), 4-title 183.2 (q80) KiB, sha256 equal to before_m14.
+- Gates: SELFTEST PASS 30/30 (out/m14/selftest-4.log; new 'market' after 'night': noon 10 stalls,
+  glows off, 0 open; 22:00 after 60 steps glows on, 18 open, 0 inside a collider; panic(-200, -266,
+  30) + 30 steps 10 fleeing, 6 crouched; 300 steps later 0; facing the market at shot 2's stand 196
+  draw calls, 67,583 triangles, median 3.1 ms; north view 234 calls / 69,553 triangles, 228 /
+  62,405 without the market: +6 calls, +7,148 triangles). Perf 17:22 HIGH 172 / 2.4 ms, LOW 112 /
+  2.4 ms; 22:00 HIGH 173 / 3.4 ms, LOW 113 / 3.7 ms (unchanged counts: the market is LOD-hidden
+  there). Earlier runs: selftest-1/2/3 failed 'market' (236 calls facing north; then the slowdown
+  below). Originality PASS (37 files). main.ts twice: 45 files byte-identical, dossier 1,152,255
+  bytes. Outline: the same numbered rows, 19 files left out (night-market.js added); the cut still
+  falls inside weapons-and-damage.js, now before the constants line (showEffect shown,
+  buildShotEffects not); growth before the cut about 323 bytes (main.js +202, pedestrian-crowd.js
+  +55, story-missions.js +47, weapons top about +19).
+- Weak spots: at the stand at 22:00, repeated perf calls slow from about 3 ms to about 250 ms after
+  some 60 frames whether or not the market is drawn (out/m14/perf.mjs: market shown 3.9 / hidden
+  2.9 ms fresh, hidden 244 ms later; not traced, not checked on the M13 tree), so the 'market' test
+  times the market view first; the market adds 6 draw calls in view and about 1 ms. Facing north up
+  the boulevard from the stand the city alone is over 200 calls (the 'market' test reports it).
+  The new module is about 15 KB, over the 8 KB plan. Guards and the SUV are still dark against the
+  lit stalls; crew fire now also panics the walkers (wider than before); the shoppers are boxes like
+  the walkers; shutters are flat panels.
 ## M13 HUD parity: done, round minimap tried and not kept (run of 2026-11-20 09:33-10:06 EET)
 - Baseline: out/ab/before_m13/ (four shots, judge sheet, sha256.txt, outline.txt; chase-fresh.jpg
   q76 and seafront-fresh.jpg q92 shot from the untouched tree, byte-identical to the committed

@@ -158,9 +158,9 @@ export const SCENES = {
   // The Lantern Point stand (mission 4, "Hold Lantern Point against the Aurum SUVs", its spot
   // game.anchors.lantern): the shared save plus The Harbor Run done, the defend step started
   // directly (so Ilse's hand-over of the Hornet is skipped and the gun is given here), and the
-  // first Gilded Hand wave in place behind the Aurum SUV. Wren hip-fires the Hornet from the
-  // boulevard's beach side, looking up the shore with the low sun off to the left: sand, sea,
-  // palms and the point ahead. The last burst is fired two ticks before the frame.
+  // first Gilded Hand wave (three guards) at the Aurum SUV. At night, in the WIDE view, Wren
+  // hip-fires the Hornet until one guard is down, then fires on with Feira das Lanternas lit beyond
+  // the SUV; the frame lands when her flash and a guard's show together.
   seafront(game, hold) {
     hold([], 300);
     game.startPlay();

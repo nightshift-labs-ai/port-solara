@@ -435,17 +435,19 @@ await test('market', async () => {
   ok(scare.fleeing + scare.crouched >= 4, `after panic: ${JSON.stringify(scare)}`);
   const calm = await call(() => { window.__test.step(300); return window.__test.market(); });
   ok(calm.fleeing + calm.crouched === 0, `5 s later: ${JSON.stringify(calm)}`);
-  // Facing up the boulevard (Math.PI) the whole city is in view: the market's share is that view
-  // with and without it. The budget is checked facing the market (shot 2's yaw).
-  const north = await call(() => window.__test.perf(30));
+  // The budget is checked facing the market (shot 2's stand and yaw), first: repeated perf calls at
+  // this spot slow down after about 60 frames with or without the market drawn. Facing up the
+  // boulevard (Math.PI) the whole city is in view: the market's share is that view with and without it.
+  const p = await call(() => { window.__test.teleport(-186.5, -281.5, 2.6); window.__test.step(2); return window.__test.perf(30); });
+  await call(() => { window.__test.teleport(-188, -283, Math.PI); window.__test.step(2); });
+  const north = await call(() => window.__test.perf(15));
   const city = await call(() => {
     const m = window.portSolara.nightMarket, render = m.render;
     m.render = (n) => { render(n); m.root.visible = false; };
-    const q = window.__test.perf(30);
+    const q = window.__test.perf(15);
     m.render = render;
     return q;
   });
-  const p = await call(() => { window.__test.teleport(-186.5, -281.5, 2.6); window.__test.step(2); return window.__test.perf(30); });
   await call(() => { window.portSolara.changeSetting('graphics', 'high'); localStorage.clear(); window.__test.setClock(17 * 60 + 20); });
   ok(north.drawCalls - city.drawCalls <= 6, `market share ${north.drawCalls - city.drawCalls} draw calls`);
   ok(p.drawCalls <= 200, `${p.drawCalls} draw calls`);
