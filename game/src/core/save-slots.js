@@ -2,7 +2,7 @@
 // mission; slots 2 and 3 take turns for saves made at Calloway Salvage or from the pause menu.
 // A save holds the story step, cash, REP, weapons and ammo, owned cars, side activity counts,
 // the sim time and where Wren stood.
-import { zeroStats } from '../story/career-stats.js';
+import { zeroStats, careerFromSave } from '../story/career-stats.js';
 
 export const SAVE_SLOTS = 3;
 export const AUTOSAVE_SLOT = 1;
@@ -44,7 +44,7 @@ export function applyState(game, s) {
   game.progress.races = s.stats?.races || 0;
   game.progress.courier = s.stats?.courier || 0;
   game.progress.bestLaps = { ...(s.stats?.bestLaps || {}) };
-  game.stats = { ...zeroStats(), ...(s.career || {}) }; // saves from before M8 load with zeros
+  game.stats = careerFromSave(s.career); // saves from before M8 load with zeros
   if (s.savedAt) game.progress.savedAt = { clock: clockOf(s.savedAt), place: s.place };
   if (s.settings) { applySettings(game, s.settings); writeSettings(game.settings); }
   if (game.vehicle) game.enterOrExit();

@@ -22,6 +22,12 @@ export function zeroStats() {
   };
 }
 
+// The career numbers a save record carries, over zeros (older saves have none). Loads, NEW GAME
+// and the shot scenes all go through this.
+export function careerFromSave(career) {
+  return { ...zeroStats(), ...(career || {}) };
+}
+
 function bump(game, key, by = 1) {
   if (!game.stats) game.stats = zeroStats();
   game.stats[key] = (game.stats[key] || 0) + by;
