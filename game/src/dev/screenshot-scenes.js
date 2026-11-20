@@ -1,5 +1,7 @@
 // Stages a shot from the seeded start, plays the real simulation forward a fixed number of
 // ticks with scripted input, hides the cursor, then flags window.__shotReady.
+import { careerFromSave } from '../story/career-stats.js';
+
 export function stageScreenshotScene(game, name) {
   document.body.classList.add('shot-mode');
   const hold = (codes, ticks) => {
@@ -17,6 +19,15 @@ export function stageScreenshotScene(game, name) {
 // WHEELMAN), $18,450, North Ring won, three courier drops, the Hornet still locked, saved at
 // Calloway Salvage at 14:32 (UTC, the headless clock). The title's CONTINUE line reads it back.
 export const SHOT_SAVE = { story: ['ferry', 'market'], rep: 640, cash: 18450, races: 1, bestLaps: { race1: 52.4 }, courier: 3, savedAt: Date.UTC(2026, 10, 20, 14, 32), place: 'Calloway Salvage' };
+// The career record that save would carry, kept possible for it: Market Day's ambush is the only
+// fight so far (3 gang members), one race won (North Ring), three courier drops, the Hornet not
+// bought, nothing sold or resprayed; about an hour of play. Applied through careerFromSave, the
+// same path a save load uses; the completion % is always computed, never stored.
+export const SHOT_CAREER = {
+  carsStolen: 9, policeEscapes: 2, highestWanted: 3, metresDriven: 11400, metresOnFoot: 1900,
+  gangDowned: 3, carsBlownUp: 1, racesWon: 1, courierDone: 3, timesBooked: 1, clinicVisits: 0,
+  carsSold: 0, hornetBought: 0, resprays: 0, secondsPlayed: 3480,
+};
 
 function seedShotSave(game) {
   for (const id of SHOT_SAVE.story) game.missions.completed.add(id);
@@ -162,6 +173,7 @@ export const SCENES = {
     const n = game.roads.nodes.reduce((b, p) => (Math.hypot(p.x + 90, p.z - 20) < Math.hypot(b.x + 90, b.z - 20) ? p : b));
     game.player.x = n.x; game.player.z = n.z; game.player.facing = 0.6;
     hold([], 60);
+    game.stats = careerFromSave(SHOT_CAREER); // after the play hold, so no tick adds to it
     game.openPause('map');
   },
   // The title over a drone orbit of the live city, with CONTINUE read back from the shared save
