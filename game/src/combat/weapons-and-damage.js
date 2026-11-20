@@ -26,7 +26,8 @@ export function fireWeapon(game, from, dir, range, ignore = null) {
   return { x: from.x + dir.x * range, y: from.y + dir.y * range, z: from.z + dir.z * range, kind: 'air', dist: range };
 }
 
-// Fists, the Wasp pistol, the Hornet SMG and the Breaker pump shotgun. Ammo is clip + reserve.
+// Fists, the Wasp pistol, the Hornet SMG, the Breaker pump shotgun and the Gannet long rifle (one
+// heavy, near-exact round, slow bolt). Ammo is clip + reserve.
 // Saves store ammo by index, so a new gun goes at the END. `flash` is the muzzle flash size;
 // the Breaker throws `pellets` rays per pull, each with its own spread, and its range counts from Wren.
 export const WEAPONS = [
@@ -34,9 +35,11 @@ export const WEAPONS = [
   { id: 'wasp', name: 'WASP PISTOL', short: 'WASP', damage: 24, range: 70, rate: 0.26, auto: false, clip: 12, reserve: 60, reload: 1.2, spread: 0.008, flash: 0.8 },
   { id: 'hornet', name: 'HORNET SMG', short: 'HORNET', damage: 11, range: 50, rate: 0.085, auto: true, clip: 30, reserve: 150, reload: 1.6, spread: 0.03, flash: 0.62 },
   { id: 'breaker', name: 'BREAKER SHOTGUN', short: 'BREAKER', damage: 16, range: 15, rate: 0.95, auto: false, clip: 6, reserve: 30, reload: 2.4, spread: 0.065, flash: 1.08, pellets: 6 },
+  { id: 'gannet', name: 'GANNET RIFLE', short: 'GANNET', damage: 75, range: 130, rate: 1.15, auto: false, clip: 5, reserve: 25, reload: 2.8, spread: 0.0008, flash: 1 },
 ];
-// Locked on a new game: the Hornet (REP 3 at Brass & Barrel, or Ilse in mission 4), the Breaker (REP 4).
-export const DEFAULT_LOCKED = ['hornet', 'breaker'];
+// Locked on a new game: the Hornet (REP 3 at Brass & Barrel, or Ilse in mission 4), the Breaker
+// (REP 4) and the Gannet (REP 5).
+export const DEFAULT_LOCKED = ['hornet', 'breaker', 'gannet'];
 
 // Wren's arms: slots, ammo, RMB shoulder aim, LMB fire, and the shot effects (one flash sprite, a
 // pool of tracers, one Points cloud of sparks). Gunfire panics walkers and, seen, raises WANTED.

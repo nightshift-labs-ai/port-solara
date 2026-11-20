@@ -190,6 +190,10 @@ await test('arsenal', async () => {
   ok(s.damage > 0, 'one Breaker pull at a gunman 7 m ahead did no damage');
   ok(s.clipAfter === s.clipBefore - 1 && s.shots === 1, `clip ${s.clipBefore} -> ${s.clipAfter}, shots ${s.shots}`);
   ok(s.hits === 1, `one pull counted ${s.hits} hits`);
+  const r = s.rifle;
+  ok(r.weapon === 'gannet' && r.dist >= 35, `rifle check held ${r.weapon} at ${r.dist} m`);
+  ok(r.damage > 0, `one Gannet round at a gunman ${r.dist} m ahead did no damage`);
+  ok(r.clipAfter === r.clipBefore - 1, `Gannet clip ${r.clipBefore} -> ${r.clipAfter}`);
   return s;
 });
 

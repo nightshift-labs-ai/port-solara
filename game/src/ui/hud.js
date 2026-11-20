@@ -323,11 +323,11 @@ function drawWeaponTile(ctx, wd, ammo, i, held, locked, tw, x, y, s) {
   ctx.lineWidth = (held ? 2.4 : 1.2) * s;
   ctx.stroke();
   // Slot number, top-left.
-  ctx.font = font(14 * s); ctx.fillStyle = held ? GOLD : 'rgba(255,248,236,0.8)';
-  ctx.fillText(`${i + 1}`, x + 7 * s, y + 16 * s);
-  // The pictogram right of the slot number, shrunk to the tile when the strip holds many slots.
+  ctx.font = font(12 * s); ctx.fillStyle = held ? GOLD : 'rgba(255,248,236,0.8)';
+  ctx.fillText(`${i + 1}`, x + 6 * s, y + 13 * s);
+  // The pictogram under and right of the slot number, shrunk to the tile when the strip holds many slots.
   const k = Math.min(1, (tw - 14) / 44);
-  drawWeaponPictogram(ctx, wd.id, x + w / 2 + 3 * s, y + 24 * s, s * k, held ? GOLD : WHITE);
+  drawWeaponPictogram(ctx, wd.id, x + w / 2 + 3 * s, y + 25 * s, s * k, held ? GOLD : WHITE);
   ctx.textAlign = 'center';
   if (locked) {
     // No ammo on a locked slot; the padlock goes on at full strength after the dimmed tile.
@@ -343,8 +343,9 @@ function drawWeaponTile(ctx, wd, ammo, i, held, locked, tw, x, y, s) {
   if (locked) drawLockMark(ctx, x + w / 2, y + 43 * s, s);
 }
 
-// Our own flat pictograms in a 44 x 24 unit box round (cx, cy): a side-on fist, the Wasp pistol
-// and the compact Hornet SMG, both facing right. Dark seams pick out fingers and parts.
+// Our own flat pictograms in a 44 x 24 unit box round (cx, cy): a side-on fist, the Wasp pistol,
+// the compact Hornet SMG, the Breaker pump gun and the scoped Gannet rifle, all facing right.
+// Dark seams pick out fingers and parts.
 function drawWeaponPictogram(ctx, id, cx, cy, s, color) {
   ctx.save();
   ctx.translate(cx, cy); ctx.scale(s, s);
@@ -389,6 +390,18 @@ function drawWeaponPictogram(ctx, id, cx, cy, s, color) {
     ctx.beginPath();
     for (const gx of [7, 10]) { ctx.moveTo(gx, -3); ctx.lineTo(gx, 1); } // pump grooves
     ctx.moveTo(-10, -3); ctx.lineTo(-2, -3); // ejection port
+    ctx.stroke();
+  } else if (id === 'gannet') {
+    // A long rifle: thumbhole stock, slim receiver, a scope on top and the thin barrel to the edge.
+    ctx.moveTo(-23, -3); ctx.lineTo(-10, -3); ctx.lineTo(-8, 3); ctx.lineTo(-13, 3); ctx.lineTo(-23, 6); ctx.closePath(); // stock
+    ctx.rect(-10, -3, 16, 5); // receiver and fore-end
+    ctx.rect(6, -2, 17, 2); // barrel
+    ctx.roundRect(-8, -9, 13, 4, 2); // scope
+    ctx.rect(-5, -6, 2, 3); ctx.rect(1, -6, 2, 3); // scope mounts
+    ctx.rect(-4, 2, 4, 5); // box magazine
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-8, 1); ctx.lineTo(5, 1); // stock seam
     ctx.stroke();
   }
   ctx.restore();

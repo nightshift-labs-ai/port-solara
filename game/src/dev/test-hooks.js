@@ -198,7 +198,7 @@ export function exposeTestHooks(game) {
       if (game.vehicle) this.enterNearest();
       game.enemies.clear(); game.wantedLevel.clear(); game.police.reset();
       const arms = game.arms, locked0 = [...arms.locked];
-      arms.give('hornet'); arms.locked.add('breaker');
+      arms.give('hornet'); arms.locked.add('breaker'); arms.locked.add('gannet');
       for (let i = 0; i < 2; i++) game.step();
       game.input.setKey('KeyQ', true); game.step(); game.input.setKey('KeyQ', false);
       const cycled = { from: 'hornet', to: arms.weapon.id };
@@ -213,6 +213,26 @@ export function exposeTestHooks(game) {
       const h0 = e.health, clip0 = arms.clip.clip, shots0 = arms.shots, hits0 = arms.hits;
       game.input.setKey('Mouse0', true); game.step(); game.input.setKey('Mouse0', false);
       const out = { cycled, weapon: arms.weapon.id, damage: h0 - e.health, clipBefore: clip0, clipAfter: arms.clip.clip, shots: arms.shots - shots0, hits: arms.hits - hits0 };
+      game.input.setKey('Mouse2', false);
+      for (let i = 0; i < 5; i++) game.step();
+      // The Gannet: a gunman 40 m up the line at camera pitch 0 (at 0.18 the ray meets the ground
+      // short of him), traffic near the lane sent back to the pool, one round.
+      game.enemies.clear();
+      this.teleport(-168.6, 22, 0);
+      game.chase.yaw = 0; game.chase.pitch = 0;
+      for (const d of game.traffic.drivers) if (d.car && Math.abs(d.car.x + 168.6) < 8 && d.car.z < 26 && d.car.z > -22) game.traffic.despawn(d);
+      const [r] = game.enemies.spawnSquad([{ crew: 'tidewater', x: -168.6 + 0.9, z: -18 }], 'test');
+      r.state = 'peek'; r.timer = 99;
+      arms.give('gannet');
+      game.input.setKey('Mouse2', true);
+      for (let i = 0; i < 70; i++) game.step(); // past the Breaker's pump cooldown too
+      r.timer = 99;
+      // He may have stepped while we waited: back on the crosshair line.
+      r.x = -168.6 + 0.9; r.z = -18;
+      r.timer = 99;
+      const r0 = r.health, rc0 = arms.clip.clip;
+      game.input.setKey('Mouse0', true); game.step(); game.input.setKey('Mouse0', false);
+      out.rifle = { weapon: arms.weapon.id, damage: r0 - r.health, clipBefore: rc0, clipAfter: arms.clip.clip, dist: Math.round(Math.hypot(r.x - game.player.x, r.z - game.player.z)) };
       game.input.setKey('Mouse2', false);
       for (let i = 0; i < 5; i++) game.step();
       game.enemies.clear(); game.wantedLevel.clear(); game.police.reset(); game.player.health = 100; game.chase.pitch = 0.18; arms.select(0);

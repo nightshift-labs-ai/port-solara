@@ -50,9 +50,9 @@ export class PlayerOnFoot {
     m.userData.armL.rotation.x = -swing * 0.8;
     m.userData.armR.rotation.x = swing * 0.8;
     // Aiming: the gun arm straight out at shoulder height (both arms for the long guns), gun in hand.
-    const u = m.userData, pose = this.weaponPose, twoHands = pose === 'hornet' || pose === 'breaker';
+    const u = m.userData, pose = this.weaponPose, twoHands = pose === 'hornet' || pose === 'breaker' || pose === 'gannet';
     u.gun.visible = !!pose && pose !== 'fists';
-    u.gun.scale.y = pose === 'breaker' ? 2.4 : pose === 'hornet' ? 1.7 : 1;
+    u.gun.scale.y = pose === 'gannet' ? 2.8 : pose === 'breaker' ? 2.4 : pose === 'hornet' ? 1.7 : 1;
     if (u.gun.visible) {
       u.armR.rotation.set(Math.PI / 2, 0, 0);
       if (twoHands) u.armL.rotation.set(Math.PI / 2, 0, -0.5);

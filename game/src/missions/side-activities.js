@@ -21,7 +21,7 @@ export const SIDE_ACTIVITIES = {
   courier: { pay: 600, rep: 25, seconds: 80, minDistance: 120, maxDistance: 260 },
   // Quist Auto pays by kind; police and gang cars are not for sale.
   carSales: { albacore: 9000, saltrunner: 2200, dockhand: 1800, promenade: 1600, citrine: 1300, pipit: 1100 },
-  gunShop: { ammo: 200, hornet: 2500, breaker: 3800 },
+  gunShop: { ammo: 200, hornet: 2500, breaker: 3800, gannet: 6500 },
   respray: { cost: 500 },
   // REP rank -> what it opens (shown on the gun shop and Quist Auto prompts). Gun ranks never go
   // down in WEAPONS order: the shop offers the first locked gun.
@@ -29,6 +29,7 @@ export const SIDE_ACTIVITIES = {
     { rank: 3, weapon: 'hornet', note: 'HORNET SMG AT BRASS & BARREL' },
     { rank: 4, salesBonus: 0.25, note: 'QUIST AUTO PAYS +25%' },
     { rank: 4, weapon: 'breaker', note: 'BREAKER SHOTGUN AT BRASS & BARREL' },
+    { rank: 5, weapon: 'gannet', note: 'GANNET RIFLE AT BRASS & BARREL' },
   ],
   useRange: 7,
 };
