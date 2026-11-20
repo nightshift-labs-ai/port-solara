@@ -205,6 +205,21 @@ await test('blast', async () => {
   return s;
 });
 
+// A car under 22 burns: flames, a flickering glow and ground light, a plume above 4 m, at most 3
+// draw calls of its own and a usable frame from 4 m; at 30 it only smokes; hidden, nothing is left.
+await test('burn', async () => {
+  const s = await call(() => window.__test.burn());
+  const f = s.burning, m = s.smoking, g = s.gone;
+  ok(f.flames >= 8 && f.glow && f.pool, `burning: ${JSON.stringify(f)}`);
+  ok(f.scale !== f.scaleBefore, `glow scale did not flicker (${f.scale})`);
+  ok(f.plume, 'no smoke puff above 4 m over the flames');
+  ok(f.share <= 3, `burning car draws ${f.share} extra calls`);
+  ok(f.nearMs <= 70, `median frame ${f.nearMs} ms 4 m from the fire`);
+  ok(m.flames === 0 && !m.glow && !m.pool && m.smoke, `at 30 health: ${JSON.stringify(m)}`);
+  ok(g.flames === 0 && !g.glow && !g.pool && !g.smoke, `hidden car: ${JSON.stringify(g)}`);
+  return s;
+});
+
 await test('career', async () => {
   const s = await call(() => window.__test.career());
   ok(s.jacked && s.carsStolen === 1, `a jack counted ${s.carsStolen} cars stolen`);

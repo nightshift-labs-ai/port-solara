@@ -265,6 +265,48 @@ export function exposeTestHooks(game) {
       game.wantedLevel.clear(); pol.reset(); game.player.health = 100;
       return out;
     },
+    // A burning car: flames, a flickering glow and ground light, a plume over the flames; their
+    // draw-call share and frame time from 4 m; a car at 30 only smokes; a hidden car leaves nothing.
+    // Other damaged cars (the 'drive' wall hit leaves the Albacore burning) wait at 100 meanwhile.
+    burn() {
+      if (game.vehicle) this.enterNearest();
+      this.teleport(-168.6, 30, 0);
+      game.wantedLevel.clear(); game.police.reset();
+      const b = game.blasts, kept = [];
+      for (const c of game.cars) if (c.model.visible && c.health !== undefined && c.health < 45) { kept.push([c, c.health]); c.health = 100; }
+      for (let i = 0; i < 120; i++) game.step(); // anything already alight dies down
+      const car = game.placeProp('van', -168.6, 14, Math.PI / 2);
+      const state = () => ({
+        flames: b.flameLife.filter((l) => l > 0).length,
+        glow: b.glows[0].visible, pool: b.pools[0].visible, scale: +b.glows[0].scale.x.toFixed(3),
+        smoke: b.life.some((l) => l > 0),
+        plume: b.life.some((l, k) => l > 0 && b.puffs.geometry.attributes.position.array[k * 3 + 1] > 4),
+      });
+      car.health = 18;
+      for (let i = 0; i < 59; i++) game.step();
+      const s1 = state(); game.step();
+      const burning = { ...state(), scaleBefore: s1.scale };
+      const fire = [b.flames, ...b.glows, ...b.pools], seen = fire.map((o) => o.visible);
+      const all = this.perf(5);
+      fire.forEach((o) => { o.visible = false; });
+      const without = this.perf(5);
+      fire.forEach((o, i) => { o.visible = seen[i]; });
+      burning.share = all.drawCalls - without.drawCalls;
+      this.teleport(-168.6, 18, 0); game.step();
+      const near = this.perf(5);
+      burning.nearMs = +near.medianMs.toFixed(1); burning.nearCalls = near.drawCalls;
+      this.teleport(-168.6, 30, 0);
+      car.health = 30;
+      for (let i = 0; i < 60; i++) game.step();
+      const smoking = state();
+      car.model.visible = false;
+      for (let i = 0; i < 120; i++) game.step();
+      const gone = state();
+      car.x = car.z = 1e5; car.sync();
+      for (const [c, h] of kept) c.health = h;
+      game.wantedLevel.clear(); game.police.reset(); game.player.health = 100;
+      return { burning, smoking, gone, kept: kept.length };
+    },
     // Career numbers move at their event sites: jack a traffic car, down a gunman, blow a parked
     // van, then lose a 1-pip tag by the escape timer. A clear() (custody, respray, loads) must not
     // count as an escape.
