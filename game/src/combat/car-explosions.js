@@ -196,7 +196,7 @@ const SMOKE_COLOR = [0.32, 0.31, 0.3], PUFF_Y = 1.2, PLUME_Y = 4.4;
 // the middle forward), half-width across, and a wreck's half-spread around its middle.
 export const FLAMES = 48;
 const FLAME_SIZE = 3.2, FLAME_Y = 1.15, FLAME_RISE = [3.8, 4.6], FLAME_LIFE = 0.85;
-const FLAME_COLOR = [0.8, 0.36, 0.07], FLAME_COOL = [0.975, 0.95, 0.9];
+const FLAME_COLOR = [0.8, 0.36, 0.07], FLAME_COOL = [0.985, 0.96, 0.9];
 const FLAME_FRONT = [0.05, 0.45], FLAME_ACROSS = 0.5, FLAME_WRECK = 1.2;
 // Glow over the hood and light on the ground: per burning car, flickering by FLICKER.
 export const GLOWS = 2;

@@ -77,7 +77,7 @@ const FRAME = { start: -22, flank: [[1, -3.7], [5.5, 3.7]], heliX: 0.06, heliY: 
 // Where Wren stands for the Lantern Point stand, from game.anchors.lantern (on the boulevard's sand
 // side, 28 m from the nearest walkers' ring corner), the yaw the frame is held near (the SUV, the
 // guards and Feira das Lanternas in the WIDE view) and which first-wave guard goes down.
-const SEAFRONT = { dx: -6.5, dz: -11.5, yaw: 2.6, down: 0 };
+const SEAFRONT = { dx: -6.5, dz: -11.5, yaw: 2.6, down: 0, suv: 32 };
 
 // Turns the shoulder camera until its crosshair ray runs through a world point (a few passes,
 // because the arm's height moves with the pitch).
@@ -174,6 +174,9 @@ export const SCENES = {
     game.chase.footView = 'wide'; // C on foot: the stand, the SUV and the market in one view
     hold([], 200); // the LANTERN POINT card has come and gone
     game.missions.start(game.story[3], 2);
+    // aurumA arrives shot up (it smokes); Wren's stray Hornet rounds at the guards behind it set it
+    // burning about 1.6 s before the frame.
+    game.missions.props[0].health = SEAFRONT.suv;
     game.arms.give('hornet');
     hold([], 75); // the first wave (three guards) lands at 1 s
     // Real fire at one guard until it is down (never while it is behind the SUV).
