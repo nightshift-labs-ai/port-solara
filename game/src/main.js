@@ -17,6 +17,7 @@ import { PlayerWeapons } from './combat/weapons-and-damage.js';
 import { EnemyCrews } from './combat/enemies.js';
 import { CarExplosions } from './combat/car-explosions.js';
 import { createNightLights } from './world/night-lights.js';
+import { createNightMarket } from './world/night-market.js';
 import { MissionRunner } from './missions/mission-runner.js';
 import { SideActivities } from './missions/side-activities.js';
 import { ChaseCamera } from './camera/chase-camera.js';
@@ -93,6 +94,7 @@ export function bootPortSolara() {
   game.traffic.spawnAround(game.player);
   game.nightLights = createNightLights(game);
   game.crowd = new PedestrianCrowd(game);
+  game.nightMarket = createNightMarket(game);
   game.walkersNear = (x, z) => game.crowd.near(x, z);
   game.tyres = new SkidMarksAndSmoke(scene);
   game.wantedLevel = new WantedLevel();
@@ -183,6 +185,7 @@ export function bootPortSolara() {
     game.roads.signals.update(game.time);
     game.traffic.update(dt, game.focus);
     game.crowd.update(dt, game.focus);
+    game.nightMarket.update(dt, game.focus);
     if (game.mode !== 'play') { game.input.takePresses(); return; }
     countPlayTime(game, dt);
     const inCustody = game.police.updateCustody(dt);
@@ -247,6 +250,7 @@ export function bootPortSolara() {
     const hudCtx = hudCanvas.getContext('2d');
     game.dayNight.update(); // the light follows the clock (golden hour on the title)
     game.nightLights.update(game.dayNight.level);
+    game.nightMarket.render(game.dayNight.level);
     if (game.mode === 'title') {
       // A slow drone swing 250 m east of the Sundial Tower, looking west over the city to the
       // low sun and the bay; the needle stays out past the right edge, clear of the wordmark.

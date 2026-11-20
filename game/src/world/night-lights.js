@@ -61,7 +61,7 @@ export function createNightLights(game) {
   };
 }
 
-function glowDot() {
+export function glowDot() {
   const c = document.createElement('canvas');
   c.width = c.height = 64;
   const g = c.getContext('2d'), grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
