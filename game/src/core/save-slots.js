@@ -3,6 +3,7 @@
 // A save holds the story step, cash, REP, weapons and ammo, owned cars, side activity counts,
 // the sim time and where Wren stood.
 import { zeroStats, careerFromSave } from '../story/career-stats.js';
+import { WEAPONS, DEFAULT_LOCKED } from '../combat/weapons-and-damage.js';
 
 export const SAVE_SLOTS = 3;
 export const AUTOSAVE_SLOT = 1;
@@ -18,7 +19,7 @@ export function captureState(game, place) {
     storyOf: game.story.length,
     cash: game.cash,
     rep: game.missions.rep,
-    weapons: { slot: game.arms.slot, ammo: game.arms.ammo.map((a) => ({ clip: a.clip, reserve: a.reserve })), locked: [...game.arms.locked] },
+    weapons: { slot: game.arms.slot, ammo: game.arms.ammo.map((a) => ({ clip: a.clip, reserve: a.reserve })), locked: [...game.arms.locked], ids: WEAPONS.map((w) => w.id) },
     cars: game.cars.filter((c) => c.owned && !c.ai).map((c) => c.name),
     stats: { races: game.progress.races, courier: game.progress.courier, bestLaps: { ...(game.progress.bestLaps || {}) } },
     career: { ...(game.stats || zeroStats()) }, // career numbers (story/career-stats.js)
@@ -37,7 +38,9 @@ export function applyState(game, s) {
   game.cash = s.cash;
   if (s.weapons) {
     s.weapons.ammo.forEach((a, i) => { if (game.arms.ammo[i]) { game.arms.ammo[i].clip = a.clip; game.arms.ammo[i].reserve = a.reserve; } });
-    game.arms.locked = new Set(s.weapons.locked || ['hornet']);
+    // A gun the save never knew about (added after it was written) stays locked.
+    const known = s.weapons.ids || ['fists', 'wasp', 'hornet'];
+    game.arms.locked = new Set([...(s.weapons.locked || ['hornet']), ...DEFAULT_LOCKED.filter((id) => !known.includes(id))]);
     game.arms.slot = s.weapons.slot || 0;
   }
   for (const c of game.cars) if (!c.ai && s.cars?.includes(c.name)) c.owned = true;

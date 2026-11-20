@@ -183,6 +183,16 @@ await test('enemy', async () => {
   return s;
 });
 
+await test('arsenal', async () => {
+  const s = await call(() => window.__test.arsenal());
+  ok(s.cycled.to === 'fists', `Q from the Hornet with the Breaker locked went to ${s.cycled.to}`);
+  ok(s.weapon === 'breaker', `holding ${s.weapon}, not the Breaker`);
+  ok(s.damage > 0, 'one Breaker pull at a gunman 7 m ahead did no damage');
+  ok(s.clipAfter === s.clipBefore - 1 && s.shots === 1, `clip ${s.clipBefore} -> ${s.clipAfter}, shots ${s.shots}`);
+  ok(s.hits === 1, `one pull counted ${s.hits} hits`);
+  return s;
+});
+
 await test('blast', async () => {
   const s = await call(() => window.__test.blast());
   ok(s.smoking, 'a car at 30 health does not smoke');
@@ -272,7 +282,7 @@ await test('save', async () => {
     return { carsStolen: g.stats.carsStolen, cash: g.cash, rep: g.missions.rep, story: [...g.missions.completed].sort(), races: g.progress.races, courier: g.progress.courier, best: g.progress.bestLaps.race1, slot: g.arms.slot, locked: [...g.arms.locked], x: g.player.x, z: g.player.z, place: g.progress.savedAt && g.progress.savedAt.place };
   })()`);
   for (const k of ['carsStolen', 'cash', 'rep', 'races', 'courier', 'best', 'slot']) ok(after[k] === before[k], `${k}: ${before[k]} -> ${after[k]}`);
-  ok(JSON.stringify(after.story) === JSON.stringify(before.story) && after.locked.length === 0, 'story or weapons differ');
+  ok(JSON.stringify(after.story) === JSON.stringify(before.story) && JSON.stringify(after.locked.sort()) === JSON.stringify(before.locked.sort()), 'story or weapons differ');
   ok(Math.hypot(after.x - before.x, after.z - before.z) < 0.2 && after.place === 'Calloway Salvage', 'Wren is not back at the safehouse');
   return { label, ...after };
 });

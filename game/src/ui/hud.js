@@ -291,30 +291,30 @@ function drawLabelledBar(ctx, label, value, x, y, barH, color, s) {
   ctx.textAlign = 'left';
 }
 
-// One tile per slot (84 x 56 units, 6 apart): a drawn pictogram, the slot number in the corner and
-// the ammo under it; the held tile is gold-rimmed with the weapon's short name (and RELOADING)
-// under it. A locked slot is dimmed with a padlock and shows no ammo.
-const TILE = { w: 84, h: 56, gap: 6 };
+// One tile per slot, 4 apart, the strip 264 units wide whatever the slot count (tile width from
+// it): a drawn pictogram, the slot number in the corner and the clip under it; the held tile is
+// gold-rimmed. The held line under the strip, always left-aligned: "HORNET 30/150" or
+// "BREAKER · RELOADING". A locked slot is dimmed with a padlock where its ammo would be.
+const TILE = { h: 56, gap: 4, strip: 264 };
 function drawWeaponStrip(ctx, arms, x, y, s) {
+  const n = arms.slots.length, tw = (TILE.strip - TILE.gap * (n - 1)) / n;
   arms.slots.forEach((wd, i) => {
-    const tx = x + i * (TILE.w + TILE.gap) * s;
-    drawWeaponTile(ctx, wd, arms.ammo[i], i, i === arms.slot, arms.locked.has(wd.id), arms, tx, y, s);
+    const tx = x + i * (tw + TILE.gap) * s;
+    drawWeaponTile(ctx, wd, arms.ammo[i], i, i === arms.slot, arms.locked.has(wd.id), tw, tx, y, s);
   });
-  const held = arms.weapon, i = arms.slot;
+  const held = arms.weapon, a = arms.clip;
   const reloading = held.clip && arms.reloading > 0;
-  const label = reloading ? `${held.short} · RELOADING` : held.short;
-  const tx = x + i * (TILE.w + TILE.gap) * s;
-  // Left-aligned under the first tile, centred under the middle one, right-aligned under the last,
-  // so the line never runs out of the strip.
-  const align = i === 0 ? 'left' : i === arms.slots.length - 1 ? 'right' : 'center';
-  const ax = align === 'left' ? tx : align === 'right' ? tx + TILE.w * s : tx + TILE.w * s / 2;
-  ctx.font = font(15 * s); ctx.textAlign = align; ctx.fillStyle = reloading ? GOLD : WHITE;
-  ctx.fillText(label, ax, y + (TILE.h + 17) * s);
-  ctx.textAlign = 'left';
+  const label = reloading ? `${held.short} · RELOADING` : held.clip ? `${held.short} ${a.clip}/${a.reserve}` : held.short;
+  ctx.font = font(15 * s);
+  // Shrink a long line rather than let it reach the REP column (it ends before 248 units).
+  const k = Math.min(1, 248 * s / ctx.measureText(label).width);
+  if (k < 1) ctx.font = font(15 * s * k);
+  ctx.fillStyle = reloading ? GOLD : WHITE;
+  ctx.fillText(label, x, y + (TILE.h + 17) * s);
 }
 
-function drawWeaponTile(ctx, wd, ammo, i, held, locked, arms, x, y, s) {
-  const w = TILE.w * s, h = TILE.h * s;
+function drawWeaponTile(ctx, wd, ammo, i, held, locked, tw, x, y, s) {
+  const w = tw * s, h = TILE.h * s;
   ctx.save();
   if (locked) ctx.globalAlpha = 0.42;
   ctx.fillStyle = held ? 'rgba(255,201,60,0.2)' : 'rgba(255,248,236,0.09)';
@@ -325,7 +325,9 @@ function drawWeaponTile(ctx, wd, ammo, i, held, locked, arms, x, y, s) {
   // Slot number, top-left.
   ctx.font = font(14 * s); ctx.fillStyle = held ? GOLD : 'rgba(255,248,236,0.8)';
   ctx.fillText(`${i + 1}`, x + 7 * s, y + 16 * s);
-  drawWeaponPictogram(ctx, wd.id, x + w / 2 + 4 * s, y + 21 * s, s, held ? GOLD : WHITE);
+  // The pictogram right of the slot number, shrunk to the tile when the strip holds many slots.
+  const k = Math.min(1, (tw - 14) / 44);
+  drawWeaponPictogram(ctx, wd.id, x + w / 2 + 3 * s, y + 24 * s, s * k, held ? GOLD : WHITE);
   ctx.textAlign = 'center';
   if (locked) {
     // No ammo on a locked slot; the padlock goes on at full strength after the dimmed tile.
@@ -333,20 +335,12 @@ function drawWeaponTile(ctx, wd, ammo, i, held, locked, arms, x, y, s) {
     ctx.font = font(22 * s); ctx.fillStyle = WHITE;
     ctx.fillText('∞', x + w / 2, y + 51 * s);
   } else {
-    const low = ammo.clip <= 3;
-    const clipText = `${ammo.clip}`, restText = `/${ammo.reserve}`;
-    ctx.font = font(17 * s); const cw = ctx.measureText(clipText).width;
-    ctx.font = font(15 * s, 700); const rw = ctx.measureText(restText).width;
-    const left = x + (w - cw - rw) / 2;
-    ctx.textAlign = 'left';
-    ctx.font = font(17 * s); ctx.fillStyle = low ? LOW_AMMO : WHITE;
-    ctx.fillText(clipText, left, y + 50 * s);
-    ctx.font = font(15 * s, 700); ctx.fillStyle = low ? LOW_AMMO : 'rgba(255,248,236,0.7)';
-    ctx.fillText(restText, left + cw, y + 50 * s);
+    ctx.font = font(17 * s); ctx.fillStyle = ammo.clip <= Math.min(3, wd.clip / 3) ? LOW_AMMO : WHITE;
+    ctx.fillText(`${ammo.clip}`, x + w / 2, y + 50 * s);
   }
   ctx.restore();
   ctx.textAlign = 'left';
-  if (locked) drawLockMark(ctx, x + w - 13 * s, y + 13 * s, s);
+  if (locked) drawLockMark(ctx, x + w / 2, y + 43 * s, s);
 }
 
 // Our own flat pictograms in a 44 x 24 unit box round (cx, cy): a side-on fist, the Wasp pistol
@@ -373,7 +367,7 @@ function drawWeaponPictogram(ctx, id, cx, cy, s, color) {
     ctx.moveTo(-5, -1); ctx.quadraticCurveTo(-4, 6, 4, -1); // trigger guard
     ctx.moveTo(-12, -7); ctx.lineTo(10, -7); // slide line
     ctx.stroke();
-  } else {
+  } else if (id === 'hornet') {
     ctx.rect(-14, -8, 30, 9); // receiver
     ctx.rect(16, -6, 7, 4); // barrel
     ctx.rect(-22, -7, 8, 5); // folded stock
@@ -382,6 +376,19 @@ function drawWeaponPictogram(ctx, id, cx, cy, s, color) {
     ctx.fill();
     ctx.beginPath();
     ctx.moveTo(-10, -4); ctx.lineTo(12, -4); // receiver seam
+    ctx.stroke();
+  } else if (id === 'breaker') {
+    // A long pump gun: sloped stock, short receiver, long barrel over the tube, the grooved pump.
+    ctx.moveTo(-23, -2); ctx.lineTo(-12, -6); ctx.lineTo(-12, 1); ctx.lineTo(-22, 6); ctx.closePath(); // stock
+    ctx.rect(-12, -7, 12, 8); // receiver
+    ctx.rect(0, -6, 23, 3); // barrel
+    ctx.rect(0, -3, 19, 3); // tube
+    ctx.roundRect(4, -4, 10, 6, 2); // pump
+    ctx.moveTo(-9, 1); ctx.lineTo(-4, 1); ctx.lineTo(-6, 8); ctx.lineTo(-11, 8); ctx.closePath(); // grip
+    ctx.fill();
+    ctx.beginPath();
+    for (const gx of [7, 10]) { ctx.moveTo(gx, -3); ctx.lineTo(gx, 1); } // pump grooves
+    ctx.moveTo(-10, -3); ctx.lineTo(-2, -3); // ejection port
     ctx.stroke();
   }
   ctx.restore();

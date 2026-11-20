@@ -26,12 +26,17 @@ export function fireWeapon(game, from, dir, range, ignore = null) {
   return { x: from.x + dir.x * range, y: from.y + dir.y * range, z: from.z + dir.z * range, kind: 'air', dist: range };
 }
 
-// Fists, the Wasp pistol and the Hornet SMG (the Breaker shotgun comes later). Ammo is clip + reserve.
+// Fists, the Wasp pistol, the Hornet SMG and the Breaker pump shotgun. Ammo is clip + reserve.
+// Saves store ammo by index, so a new gun goes at the END. `flash` is the muzzle flash size;
+// the Breaker throws `pellets` rays per pull, each with its own spread, and its range counts from Wren.
 export const WEAPONS = [
   { id: 'fists', name: 'FISTS', short: 'FISTS', damage: 15, range: 1.9, rate: 0.42, auto: false, clip: 0, spread: 0 },
-  { id: 'wasp', name: 'WASP PISTOL', short: 'WASP', damage: 24, range: 70, rate: 0.26, auto: false, clip: 12, reserve: 60, reload: 1.2, spread: 0.008 },
-  { id: 'hornet', name: 'HORNET SMG', short: 'HORNET', damage: 11, range: 50, rate: 0.085, auto: true, clip: 30, reserve: 150, reload: 1.6, spread: 0.03 },
+  { id: 'wasp', name: 'WASP PISTOL', short: 'WASP', damage: 24, range: 70, rate: 0.26, auto: false, clip: 12, reserve: 60, reload: 1.2, spread: 0.008, flash: 0.8 },
+  { id: 'hornet', name: 'HORNET SMG', short: 'HORNET', damage: 11, range: 50, rate: 0.085, auto: true, clip: 30, reserve: 150, reload: 1.6, spread: 0.03, flash: 0.62 },
+  { id: 'breaker', name: 'BREAKER SHOTGUN', short: 'BREAKER', damage: 16, range: 15, rate: 0.95, auto: false, clip: 6, reserve: 30, reload: 2.4, spread: 0.065, flash: 1.08, pellets: 6 },
 ];
+// Locked on a new game: the Hornet (REP 3 at Brass & Barrel, or Ilse in mission 4), the Breaker (REP 4).
+export const DEFAULT_LOCKED = ['hornet', 'breaker'];
 
 // Wren's arms: slots, ammo, RMB shoulder aim, LMB fire, and the shot effects (one flash sprite, a
 // pool of tracers, one Points cloud of sparks). Gunfire panics walkers and, seen, raises WANTED.
@@ -43,8 +48,7 @@ export class PlayerWeapons {
     this.cooldown = 0; this.reloading = 0; this.heatCooldown = 0;
     this.aiming = false; this.firing = 0;
     this.hitMarker = 0; this.shots = 0; this.hits = 0;
-    // The Hornet waits for REP rank 3 at Brass & Barrel (or Ilse's hand-out in mission 4).
-    this.locked = new Set(['hornet']);
+    this.locked = new Set(DEFAULT_LOCKED);
     this.seed = 0x2f6e2b1;
     this.fx = buildShotEffects(game.scene);
   }
@@ -56,6 +60,15 @@ export class PlayerWeapons {
   select(i) {
     if (i < 0 || i >= WEAPONS.length || i === this.slot || this.locked.has(WEAPONS[i].id)) return;
     this.slot = i; this.reloading = 0; this.cooldown = Math.max(this.cooldown, 0.2);
+  }
+
+  // Q / the wheel: step past locked slots (wrapping) to the next one Wren owns.
+  cycle(dir) {
+    const n = WEAPONS.length;
+    for (let k = 1, i = this.slot; k <= n; k++) {
+      i = (i + dir + n) % n;
+      if (!this.locked.has(WEAPONS[i].id)) return this.select(i);
+    }
   }
 
   // A mission hands Wren a gun: a full clip, at least half the reserve, and it goes in her hand.
@@ -80,9 +93,9 @@ export class PlayerWeapons {
     this.hitMarker = Math.max(0, this.hitMarker - dt);
     this.firing = Math.max(0, this.firing - dt);
     for (const code of presses) {
-      if (code === 'Digit1' || code === 'Digit2' || code === 'Digit3') this.select(Number(code.slice(5)) - 1);
-      if (code === 'KeyQ' || code === 'WheelDown') this.select((this.slot + 1) % WEAPONS.length);
-      if (code === 'WheelUp') this.select((this.slot + WEAPONS.length - 1) % WEAPONS.length);
+      if (/^Digit[1-9]$/.test(code)) this.select(Number(code.slice(5)) - 1);
+      if (code === 'KeyQ' || code === 'WheelDown') this.cycle(1);
+      if (code === 'WheelUp') this.cycle(-1);
       if (code === 'KeyR' && onFoot) this.reload();
     }
     if (this.reloading > 0) {
@@ -113,13 +126,23 @@ export class PlayerWeapons {
     a.clip--;
     this.shots++;
     // The crosshair ray from the camera, with the weapon's spread, then the tracer from the muzzle.
-    const cam = game.camera, d = cam.getWorldDirection(new THREE.Vector3());
-    d.x += (this.rand() - 0.5) * w.spread * 2; d.y += (this.rand() - 0.5) * w.spread * 2; d.z += (this.rand() - 0.5) * w.spread * 2;
-    d.normalize();
-    const hit = fireWeapon(game, cam.position, d, w.range + 4);
+    // One ray, or the Breaker's pellets (each drawn from this module's own seed), whose short reach
+    // counts from Wren rather than the camera behind her. A pull counts at most one hit.
+    const cam = game.camera, aim = cam.getWorldDirection(new THREE.Vector3());
     const muzzle = { x: pl.x + fx * 0.78 + rx * 0.33, y: 1.62, z: pl.z + fz * 0.78 + rz * 0.33 };
-    showShot(this.fx, muzzle, hit, w.id === 'hornet');
-    this.resolveHit(hit, w.damage);
+    const n = w.pellets || 1, reach = n > 1 ? w.range + Math.hypot(cam.position.x - pl.x, cam.position.z - pl.z) : w.range + 4;
+    const hits0 = this.hits;
+    let hit = null;
+    for (let k = 0; k < n; k++) {
+      const d = aim.clone();
+      d.x += (this.rand() - 0.5) * w.spread * 2; d.y += (this.rand() - 0.5) * w.spread * 2; d.z += (this.rand() - 0.5) * w.spread * 2;
+      d.normalize();
+      const h = fireWeapon(game, cam.position, d, reach);
+      showShot(this.fx, muzzle, h, w.flash);
+      this.resolveHit(h, w.damage);
+      if (!hit || h.kind === 'target') hit = h;
+    }
+    this.hits = Math.min(this.hits, hits0 + 1);
     game.crowd?.panic(pl.x, pl.z, 30);
     if (this.heatCooldown <= 0 && (countWitnesses(game, pl.x, pl.z) > 0 || game.copsSee?.())) {
       game.wantedLevel.commit('gunfire', pl.x, pl.z);
@@ -144,7 +167,7 @@ export class PlayerWeapons {
   }
 
   // A shot effect for anyone (the enemy crews share Wren's flash, tracer and spark pools).
-  showEffect(muzzle, hit, smg) { showShot(this.fx, muzzle, hit, smg); }
+  showEffect(muzzle, hit, smg) { showShot(this.fx, muzzle, hit, smg ? 0.62 : 0.8); }
 
   rand() { this.seed = (this.seed * 1664525 + 1013904223) >>> 0; return this.seed / 4294967296; }
 }
@@ -180,9 +203,9 @@ function buildShotEffects(scene) {
   return { flash, flashLife: 0, tracers, next: 0, sparks, vel: new Float32Array(SPARKS * 3), life: new Float32Array(SPARKS), nextSpark: 0 };
 }
 
-function showShot(fx, muzzle, hit, smg) {
+function showShot(fx, muzzle, hit, size) {
   fx.flash.position.set(muzzle.x, muzzle.y, muzzle.z);
-  fx.flash.scale.setScalar(smg ? 0.62 : 0.8);
+  fx.flash.scale.setScalar(size);
   fx.flash.material.rotation = (fx.next * 1.7) % 6.28;
   fx.flash.visible = true; fx.flashLife = 0.06;
   const t = fx.tracers[fx.next++ % TRACERS];

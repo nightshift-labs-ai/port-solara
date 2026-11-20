@@ -1,6 +1,7 @@
 import { buildMarker } from './mission-runner.js';
 import { nearestNode } from '../police/police-ai.js';
 import { countRaceWon, countCourierJob, countCarSold, countHornetBought, countRespray } from '../story/career-stats.js';
+import { WEAPONS } from '../combat/weapons-and-damage.js';
 
 // Side activities between story jobs, all started with [E] at a place on the Tab map:
 // ring-road races (from the race flags, in a car), courier drops for Mara (Quist Auto, on foot),
@@ -20,12 +21,14 @@ export const SIDE_ACTIVITIES = {
   courier: { pay: 600, rep: 25, seconds: 80, minDistance: 120, maxDistance: 260 },
   // Quist Auto pays by kind; police and gang cars are not for sale.
   carSales: { albacore: 9000, saltrunner: 2200, dockhand: 1800, promenade: 1600, citrine: 1300, pipit: 1100 },
-  gunShop: { ammo: 200, hornet: 2500 },
+  gunShop: { ammo: 200, hornet: 2500, breaker: 3800 },
   respray: { cost: 500 },
-  // REP rank -> what it opens (shown on the gun shop and Quist Auto prompts).
+  // REP rank -> what it opens (shown on the gun shop and Quist Auto prompts). Gun ranks never go
+  // down in WEAPONS order: the shop offers the first locked gun.
   unlocks: [
     { rank: 3, weapon: 'hornet', note: 'HORNET SMG AT BRASS & BARREL' },
     { rank: 4, salesBonus: 0.25, note: 'QUIST AUTO PAYS +25%' },
+    { rank: 4, weapon: 'breaker', note: 'BREAKER SHOTGUN AT BRASS & BARREL' },
   ],
   useRange: 7,
 };
@@ -57,6 +60,13 @@ export class SideActivities {
 
   get rank() { return this.game.rankFor(this.game.missions.rep).rank; }
   unlocked(key) { return SIDE_ACTIVITIES.unlocks.some((u) => u[key] && this.rank >= u.rank); }
+  weaponUnlocked(id) { return SIDE_ACTIVITIES.unlocks.some((u) => u.weapon === id && this.rank >= u.rank); }
+  // The first locked gun Brass & Barrel sells (WEAPONS order), and the rank it opens at.
+  nextGun() {
+    const w = WEAPONS.find((x) => this.game.arms.locked.has(x.id) && SIDE_ACTIVITIES.gunShop[x.id]);
+    const row = w && SIDE_ACTIVITIES.unlocks.find((u) => u.weapon === w.id);
+    return w && row ? { w, rank: row.rank, price: SIDE_ACTIVITIES.gunShop[w.id] } : null;
+  }
 
   // The place Wren is at (within reach), or null.
   spotHere() {
@@ -77,9 +87,9 @@ export class SideActivities {
     }
     if (p.id === 'guns') {
       if (car) return 'BRASS & BARREL · ON FOOT';
-      const hornetLocked = g.arms.locked.has('hornet');
-      if (hornetLocked) return this.unlocked('weapon') ? `[E] BUY HORNET SMG ${money(SIDE_ACTIVITIES.gunShop.hornet)}` : `[E] AMMO ${money(SIDE_ACTIVITIES.gunShop.ammo)} · HORNET AT RANK 3`;
-      return `[E] AMMO ${money(SIDE_ACTIVITIES.gunShop.ammo)}`;
+      const next = this.nextGun(), ammo = `[E] AMMO ${money(SIDE_ACTIVITIES.gunShop.ammo)}`;
+      if (!next) return ammo;
+      return this.rank >= next.rank ? `[E] BUY ${next.w.name} ${money(next.price)}` : `${ammo} · ${next.w.short} AT RANK ${next.rank}`;
     }
     if (p.id === 'respray') return car ? `[E] RESPRAY ${money(SIDE_ACTIVITIES.respray.cost)}` : 'PELICAN FUEL · RESPRAY IN A CAR';
     return null;
@@ -139,12 +149,13 @@ export class SideActivities {
 
   buy() {
     const g = this.game, shop = SIDE_ACTIVITIES.gunShop;
-    if (g.arms.locked.has('hornet') && this.unlocked('weapon')) {
-      if (g.cash < shop.hornet) return 'NOT ENOUGH CASH';
-      g.cash -= shop.hornet;
-      g.arms.give('hornet');
-      countHornetBought(g);
-      return `HORNET SMG -${money(shop.hornet)}`;
+    const next = this.nextGun();
+    if (next && this.weaponUnlocked(next.w.id)) {
+      if (g.cash < next.price) return 'NOT ENOUGH CASH';
+      g.cash -= next.price;
+      g.arms.give(next.w.id);
+      if (next.w.id === 'hornet') countHornetBought(g);
+      return `${next.w.name} -${money(next.price)}`;
     }
     const w = g.arms.weapon;
     if (!w.clip) return 'HOLD A GUN TO BUY ITS AMMO';

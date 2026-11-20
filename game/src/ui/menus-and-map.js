@@ -711,7 +711,7 @@ export function showTitleScreen(game, onNewGame) {
 
 export const CONTROLS = [
   ['W A S D', 'walk / drive'],
-  ['MOUSE', 'look (click to lock)'],
+  ['MOUSE', 'look (click to lock) · LMB fire · RMB aim · 1-4 / Q / wheel: weapon'],
   ['SHIFT', 'run'],
   ['SPACE', 'handbrake'],
   ['F', 'enter / leave a car'],

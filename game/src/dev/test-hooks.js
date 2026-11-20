@@ -192,6 +192,33 @@ export function exposeTestHooks(game) {
       game.player.health = 100; game.wantedLevel.clear(); game.police.reset();
       return out;
     },
+    // The arsenal: Q from the Hornet with the Breaker locked wraps to FISTS; then a gunman 7 m up the
+    // crosshair line takes one Breaker pull (pellets, one round, at most one hit counted).
+    arsenal() {
+      if (game.vehicle) this.enterNearest();
+      game.enemies.clear(); game.wantedLevel.clear(); game.police.reset();
+      const arms = game.arms, locked0 = [...arms.locked];
+      arms.give('hornet'); arms.locked.add('breaker');
+      for (let i = 0; i < 2; i++) game.step();
+      game.input.setKey('KeyQ', true); game.step(); game.input.setKey('KeyQ', false);
+      const cycled = { from: 'hornet', to: arms.weapon.id };
+      this.teleport(-168.6, 22, 0);
+      game.chase.yaw = 0; game.chase.pitch = 0.18;
+      const [e] = game.enemies.spawnSquad([{ crew: 'tidewater', x: -168.6 + 0.9, z: 15 }], 'test');
+      e.state = 'peek'; e.timer = 99;
+      arms.give('breaker');
+      game.input.setKey('Mouse2', true);
+      for (let i = 0; i < 30; i++) game.step();
+      e.timer = 99;
+      const h0 = e.health, clip0 = arms.clip.clip, shots0 = arms.shots, hits0 = arms.hits;
+      game.input.setKey('Mouse0', true); game.step(); game.input.setKey('Mouse0', false);
+      const out = { cycled, weapon: arms.weapon.id, damage: h0 - e.health, clipBefore: clip0, clipAfter: arms.clip.clip, shots: arms.shots - shots0, hits: arms.hits - hits0 };
+      game.input.setKey('Mouse2', false);
+      for (let i = 0; i < 5; i++) game.step();
+      game.enemies.clear(); game.wantedLevel.clear(); game.police.reset(); game.player.health = 100; game.chase.pitch = 0.18; arms.select(0);
+      arms.locked = new Set(locked0);
+      return out;
+    },
     // Blow a parked car with damage: smoke under 45, a blast at 0 with debris and a shake, and an
     // SPD Beacon blown the same way adds +2 WANTED.
     blast() {

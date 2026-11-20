@@ -49,13 +49,13 @@ export class PlayerOnFoot {
     m.userData.legR.rotation.x = -swing;
     m.userData.armL.rotation.x = -swing * 0.8;
     m.userData.armR.rotation.x = swing * 0.8;
-    // Aiming: the gun arm straight out at shoulder height (both arms for the Hornet), gun in hand.
-    const u = m.userData;
-    u.gun.visible = this.weaponPose === 'wasp' || this.weaponPose === 'hornet';
-    u.gun.scale.y = this.weaponPose === 'hornet' ? 1.7 : 1;
+    // Aiming: the gun arm straight out at shoulder height (both arms for the long guns), gun in hand.
+    const u = m.userData, pose = this.weaponPose, twoHands = pose === 'hornet' || pose === 'breaker';
+    u.gun.visible = !!pose && pose !== 'fists';
+    u.gun.scale.y = pose === 'breaker' ? 2.4 : pose === 'hornet' ? 1.7 : 1;
     if (u.gun.visible) {
       u.armR.rotation.set(Math.PI / 2, 0, 0);
-      if (this.weaponPose === 'hornet') u.armL.rotation.set(Math.PI / 2, 0, -0.5);
+      if (twoHands) u.armL.rotation.set(Math.PI / 2, 0, -0.5);
     } else { u.armR.rotation.y = u.armR.rotation.z = 0; u.armL.rotation.y = u.armL.rotation.z = 0; }
   }
 
