@@ -1,5 +1,46 @@
 # PORT SOLARA build notes
 
+## M7 seafront shot + weapon strip: done (run of 2026-11-20 05:04-05:31 EET)
+- (1) Weapon strip (ui/hud.js, the play HUD, not only shots): the bottom-left panel is now 420 x
+  144 units (`VITALS_HEIGHT`; its top is 17 px higher at 1280x800, and the cover's left cruiser,
+  down to about y 630, stays clear of it at y 646). `drawVitalsPanel` draws HEALTH and ARMOUR rows (`drawLabelledBar`:
+  label, bar, value, all 14-15 units), then `drawWeaponStrip`: one 84x56 tile per slot
+  (`drawWeaponTile`) with our own canvas pictogram (`drawWeaponPictogram`: side-on fist, Wasp
+  pistol, compact Hornet SMG), the slot number in the corner and the ammo (FISTS ∞, clip/reserve
+  at 17/15 units, red when the clip is 3 or less). The held tile is gold-rimmed with a gold
+  pictogram; its short name sits under it (with "· RELOADING" in gold while reloading). The locked
+  Hornet is dimmed with a padlock (`drawLockMark`) and no ammo. REP moved to its own right column
+  (`drawRepColumn`, x 290-404: "REP 4", the rank name shrunk to fit 114 units, its bar). Subtitle
+  gap unchanged (panel still 420 wide, gap at mx + 434*s).
+- (2) Shot 2 is now **2-seafront.jpg** (`?shot=seafront`; the street scene, its STREET spot and
+  2-street.jpg are gone). Mission 4's real defend step: shared save plus 'harbor' done,
+  `missions.start(story[3], 2)` (skips Ilse's hand-over) and `arms.give('hornet')`, 75 ticks to
+  the first Gilded Hand wave behind the Aurum SUV, then hip fire (no RMB: the 4.2 m arm and fov 62
+  keep Wren to about a tenth of the frame width, left of centre) with aimAt + Mouse0 two ticks before
+  the frame. Wren stands at anchor (-2, -16) on the boulevard, looking south-west up the shore;
+  the sun is just off the right edge, so the gunmen are side-lit, not silhouettes. In frame: palm
+  boulevard, beach palms, sand, the bridge, the sea line, AUGUSTIN PELL on the radio. No palms
+  added, no spots moved, SHOT_SAVE unchanged. Tries: facing north-west (lighthouse, sun and sea
+  in frame) made the gunmen black silhouettes against the sun; the lighthouse sits only about 14
+  degrees from the sun from the point, so it is left out.
+  **Weak spot:** the sea reads only as a thin teal line at the horizon. The wave spawns about 80 m
+  from the water and the on-foot camera is under 2 m up, so a wide sea band would need Wren within
+  about 20 m of the shore, and then the gunmen would be tiny.
+- (3) A/B (out/ab/before_m7/ vs now; pairs in out/ab/m7-chase-*.jpg and m7-seafront-*.jpg):
+  weapon strip **kept** (pictograms, labelled bars and the dimmed Hornet read even in the sheet's
+  cover cell); 1-chase is identical outside the bottom-left panel (same file size, 176.0 KiB at
+  q76). Seafront **kept**: the set now shows a second place (sunset beachfront with palms) instead
+  of a second orange Mercado block; the gunmen are smaller in the sheet cell than the street
+  shot's van fight. Judge sheet rebuilt.
+- Self-test (SwiftShader, 1280x800): SELFTEST PASS 23/23. Perf: HIGH 172 draw calls / 61,563 tris
+  / median 1.4 ms / heap 45 MB; LOW 112 / 45,291 / 1.6 ms (HUD is 2D canvas, no 3D cost).
+- Originality PASS (32 files). main.ts run twice without ulimit: 40 files byte-identical (sha256
+  lists compared), dossier 1,103,041 bytes.
+- Shots: 1-chase.jpg 176.0 KiB, 2-seafront.jpg 162.1 KiB, 3-map.jpg 167.7 KiB, 4-title.jpg
+  179.1 KiB.
+- Next: a wider sea band in the seafront shot (a defend spot nearer the water would need a
+  mission change); Wren further to one side; searchlight on the cover coupe's roof.
+
 ## M6 cover v2: done (run of 2026-11-19 18:31-19:04 EET)
 - (1) Street fronts (world/city-builder.js, whole game): stucco tints are now limestone, coral,
   teal, saffron, peach and sky-blue plaster (was pale cream/blush). `dressStreetFronts` adds, on
