@@ -1,5 +1,50 @@
 # PORT SOLARA build notes
 
+## M17 title over the bay: done, nothing dropped (run of 2026-11-20 13:03-13:30 EET)
+- Baseline: out/ab/before_m17/ (four shots, judge sheet, sha256.txt, outline.txt, *-fresh.jpg; a
+  fresh shoot of the untouched tree listed no changed shot). Start sha 20f1f95.
+- Pose (main.js title branch only): s = 12 sin((game.tick - 420) / 1200); eye (-210, 50, 40 + s),
+  look (-210, 39.5, s - 59.5), follow (-207.8, s - 110) with camera.position. A drone 50 m over the
+  sand looking north up the beach (yaw about -90 degrees, pitch -6): the bay at left, the palm
+  boulevard to Lantern Point, Hotel Meridiana, the glass towers and the Sundial needle at right; the
+  sun stays 90 degrees left, out of frame. In the shot tick is 420, so s = 0 exactly; live, the drone
+  drifts +/- 12 m along the shore (0.05 rad/s). main.js +80 bytes.
+- Why the drafted poses failed: T1 (eye (-300, 32, -40), pitch -3) put the needle between PORT and
+  SOLARA and the towers behind SALT & GOLD, the sea under the menu; T2 (eye (-140, 60, 60) looking
+  south-west) put the sun disc on PORT and the bridge tower on the emblem, the city behind the camera.
+- Probe (out/m17/probe.mjs, 1280x800 read out at 1024x640; ID classes by nearest palette colour so
+  antialiased frond edges count), before -> after (pose A; B probed too):
+  (a) teal sea clear of panels 0.00 -> 10.94% of the frame, 0.00 -> 10.80% of the cell;
+  (b) crowns clear 10 (0 >= 16 px) -> 30 (24), beach row 1 (0) -> 8 (6);
+  (c) needle+fin 0 -> 11,188 px (box x 906-1013, y 0-281), Hotel Meridiana 3,789 -> 7,020 px (box
+  from y 326; sign (868.1, 329.7) clear); (d) wordmark over world 0.0 -> 0.0%, sun disc 42 px from
+  the wordmark -> out of frame; perf 286 calls / 66,455 triangles -> 145 / 60,209, median 2.1 ->
+  1.7 ms (A read 1.0-6.4 over runs); camera (201.12, 85, -84.69) -> (-210, 50, 40); tick 420.
+  B (eye (-210, 50, 0)): sea 10.38 / 10.48%, crowns 32 (32), beach 9 (9), YAVG 108.3, 114 calls,
+  but (c) fails: needle 1,169 px, the hotel sign projects off frame (x 1180).
+- A/B (out/ab/m17-title-1024-before/after.jpg, m17-title-cell-before/after.jpg,
+  m17-sheet-cell-before/after.jpg, m17-sheet-cell-pair.jpg): YAVG 108.8 -> 106.2 at 1024, 108.8 ->
+  106.2 in the cell (sheet cell 108.4 -> 105.9; gate 104.8). Before: red roofs fading into orange
+  haze under a sun disc. After: a teal bay, the sand and the palm boulevard to Lantern Point, Hotel
+  Meridiana and the gold-finned needle under the sunset sky; wordmark, CONTINUE, cards and strip as
+  before. 4-title is an aerial over the beach; 1-chase stays the street-level chase in Old Mercado.
+  Kept: every check (a)-(h) passes.
+- Shots: 1-chase 180.7 (q76), 2-seafront 172.5 (q88), 3-map 186.1 (q88), 4-title 187.0 (q88, was
+  183.2 at q80) KiB; 1-3 sha256 equal to before_m17 after the four-shot shoot and in out/screenshots.
+- Gates: SELFTEST PASS 31/31 (out/m17/selftest-2.log; M17 adds and changes no test; 'save' reads
+  the same CONTINUE label and cards). selftest.log failed only 'night' on timing (LOW 6.1 vs HIGH
+  2.0 ms) while main.ts and the outline ran beside it; the rerun alone passed. Perf 17:22 HIGH 172 /
+  2.5 ms, LOW 112 / 1.5 ms; 22:00 173 / 113 (3.2 / 1.3 ms); market view 196 calls, 67,583
+  triangles, 3.6 ms (counts unchanged: play views never use the title camera).
+  ORIGINALITY PASS (37 files). main.ts twice: 45 entries byte-identical, dossier 1,159,585 bytes.
+  Outline: the same rows, 19 files left out (228,565 bytes); the cut still falls inside
+  weapons-and-damage.js; only main.js's counts (369 lines, 19,262 bytes) and the totals moved.
+- Weak spots: the sea renders deep teal, not turquoise (its material is shared with shots 1-2); the
+  needle's tip touches the top edge; a bridge cable is a thin red line in the left sky; the title
+  shows the beach and Lantern Point that 2-seafront shows at night (here at sunset, from the air);
+  the new pose reads darker than the old title (-2.6 YAVG) and the old sun disc is gone; LOW (fog
+  260) fades the needle; any later beach, palm or skyline edit changes 4-title.
+
 ## M16 burning Aurum: done, nothing dropped (run of 2026-11-20 12:42-13:19 EET)
 - Baseline: out/ab/before_m16/ (four shots, judge sheet, sha256.txt, outline.txt; a fresh shoot of
   the untouched tree listed no changed shot). Start sha 39615d2 (M15 left every shot as M14's).
