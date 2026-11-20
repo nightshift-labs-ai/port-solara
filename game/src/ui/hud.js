@@ -1,6 +1,7 @@
 // Draws the HUD frame on the overlay canvas: objective banner (top-left), minimap with WANTED
 // shields and cash (top-right), health/armour/weapon (bottom-left), speed arc (bottom-right) and
 // the action prompt over its target. Sizes are given at 1280 px wide and scale with the window.
+import { DISTRICT_TINT } from './menus-and-map.js';
 export function drawHud(ctx, game, drawMinimap) {
   const w = ctx.canvas.width, h = ctx.canvas.height;
   // Slim HUD: type and padding run about 15% under the 1280 sizes so more street shows.
@@ -40,10 +41,14 @@ export function drawHud(ctx, game, drawMinimap) {
     ctx.globalAlpha = 1;
   }
 
-  // Event toasts (police events) under the WANTED panel on the right, newest on top.
+  // Event toasts (police events) under the WANTED panel on the right, newest on top. In a car only
+  // those ending 8 units above the radio chip (or the speed panel) show.
   const toasts = (game.police ? game.police.events : []).filter((e) => game.time - e.at < TOAST_SECONDS).slice(-2).reverse();
-  const toastY = my + 230 * s + 12 * s + 136 * s + 30 * s + 12 * s;
+  const toastY = my + 230 * s + 50 * s + 136 * s + 30 * s + 12 * s;
+  const radio = game.radioNow?.();
+  const toastEnd = game.vehicle ? h - my - (SPEED_H + (radio ? 64 : 0) + 8) * s : Infinity;
   toasts.forEach((e, i) => {
+    if (toastY + (i * 52 + 44) * s > toastEnd) return;
     const age = game.time - e.at;
     ctx.globalAlpha = Math.min(1, age / 0.25, (TOAST_SECONDS - age) / 0.5);
     ctx.font = font(21 * s);
@@ -90,7 +95,17 @@ export function drawHud(ctx, game, drawMinimap) {
   const size = 230 * s;
   const mapX = w - mx - size, mapY = my;
   drawMinimap(ctx, game, mapX, mapY, size);
-  const pipY = mapY + size + 12 * s;
+  // District plate: a chip in the district's colour and its name, shrunk to fit beside the chip.
+  const plateY = mapY + size + 8 * s, did = game.districtAt(game.focus.x, game.focus.z);
+  panel(ctx, mapX, plateY, size, 34 * s);
+  ctx.fillStyle = DISTRICT_TINT[did] || '#c9c2b4'; ctx.strokeStyle = 'rgba(255,248,236,0.85)'; ctx.lineWidth = Math.max(1, 1.5 * s);
+  ctx.beginPath(); ctx.roundRect(mapX + 14 * s, plateY + 11 * s, 12 * s, 12 * s, 3 * s); ctx.fill(); ctx.stroke();
+  const dname = game.lore.districts[did] || '';
+  let dpx = 21;
+  ctx.font = font(dpx * s);
+  while (dpx > 11 && ctx.measureText(dname).width > 184 * s) ctx.font = font(--dpx * s);
+  ctx.fillStyle = WHITE; ctx.fillText(dname, mapX + 34 * s, plateY + 24 * s);
+  const pipY = plateY + (34 + 8) * s;
   const tagRow = 30 * s; // always kept, so the clock has its own row with or without heat
   panel(ctx, mapX, pipY, size, 136 * s + tagRow);
   ctx.fillStyle = WHITE; ctx.font = font(21 * s);
@@ -137,12 +152,11 @@ export function drawHud(ctx, game, drawMinimap) {
   }
 
   // Radio chip over the speed panel: an animated level meter, the station, song and artist.
-  const radio = game.radioNow?.();
   if (radio) {
     ctx.font = font(17 * s, 700);
     const line = `${radio.song} — ${radio.artist}`;
     const rw = Math.max(ctx.measureText(line).width, (ctx.font = font(15 * s), ctx.measureText(radio.station).width)) + 64 * s;
-    const rx = w - mx - rw, ry = h - my - (game.vehicle ? 150 : 0) * s - 12 * s - 52 * s;
+    const rx = w - mx - rw, ry = h - my - (game.vehicle ? SPEED_H : 0) * s - 12 * s - 52 * s;
     panel(ctx, rx, ry, rw, 52 * s);
     ctx.fillStyle = radio.heat ? '#ff6b5b' : GOLD;
     for (let i = 0; i < 4; i++) {
@@ -181,7 +195,7 @@ export function drawHud(ctx, game, drawMinimap) {
   const car = game.vehicle;
   if (car) {
     const cx = w - mx - 110 * s, cy = h - my - 70 * s, r = 86 * s;
-    panel(ctx, w - mx - 230 * s, h - my - 150 * s, 230 * s, 150 * s);
+    panel(ctx, w - mx - 230 * s, h - my - SPEED_H * s, 230 * s, SPEED_H * s);
     const kmh = Math.round(Math.abs(car.speed) * 3.6);
     const frac = Math.min(1, kmh / 240);
     ctx.lineCap = 'round';
@@ -206,7 +220,7 @@ export function drawHud(ctx, game, drawMinimap) {
     const py = Math.max(my, p.y - 50 * s);
     // Never over the minimap / WANTED column: slide left beside it instead.
     const colLeft = w - mx - 240 * s;
-    if (py < 450 * s && px + tw > colLeft) px = Math.max(mx, colLeft - tw - 8 * s);
+    if (py < 488 * s && px + tw > colLeft) px = Math.max(mx, colLeft - tw - 8 * s);
     panel(ctx, px, py, tw, 42 * s);
     ctx.fillStyle = WHITE; ctx.fillText(p.text, px + 15 * s, py + 30 * s);
   }
@@ -243,6 +257,7 @@ export const WHITE = '#fff8ec';
 export const NAVY_GLASS = 'rgba(10, 20, 44, 0.8)';
 export const OUTLINE = 'rgba(255, 241, 214, 0.38)';
 export const HUD_SCALE = 0.85;
+const SPEED_H = 150; // speed panel height in units, its bottom on the HUD margin
 
 export function font(px, weight = 800) { return `${weight} ${Math.round(px)}px "DejaVu Sans", Verdana, sans-serif`; }
 

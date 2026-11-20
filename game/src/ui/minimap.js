@@ -1,5 +1,7 @@
 // Draws the rounded-square minimap: it turns with the camera heading, shows sea, blocks and
 // roads from the city data, a thick gold GPS line to the objective, and blips.
+import { DISTRICT_TINT } from './menus-and-map.js';
+const DEEPEN = 'rgba(20,48,79,0.15)';
 export function drawMinimap(ctx, game, x, y, size) {
   const s = ctx.canvas.width / 1280;
   const scale = size / 300; // pixels per metre: about 300 m across
@@ -23,8 +25,12 @@ export function drawMinimap(ctx, game, x, y, size) {
   ctx.moveTo(roads.coastX(-360), -360);
   for (let z = -360; z <= 360; z += 20) ctx.lineTo(roads.coastX(z), z);
   ctx.lineTo(500, 360); ctx.lineTo(500, -360); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#c9c2b4';
-  for (const b of roads.blocks) ctx.fillRect(b.minX, b.minZ, b.maxX - b.minX, b.maxZ - b.minZ);
+  // Blocks in their district's colour (the pause map's table), deepened so roads and blips stand out.
+  for (const b of roads.blocks) {
+    const tint = DISTRICT_TINT[game.districtAt(b.cx, b.cz)], bw = b.maxX - b.minX, bh = b.maxZ - b.minZ;
+    ctx.fillStyle = tint || '#c9c2b4'; ctx.fillRect(b.minX, b.minZ, bw, bh);
+    if (tint) { ctx.fillStyle = DEEPEN; ctx.fillRect(b.minX, b.minZ, bw, bh); }
+  }
   ctx.strokeStyle = '#ffffff';
   for (const r of roads.roads) {
     ctx.lineWidth = r.width * 0.9;
