@@ -258,6 +258,7 @@ export function exposeTestHooks(game) {
       key('KeyQ'); key('KeyQ'); seen.push(p.view);
       key('Escape'); seen.push(p.view);
       key('KeyQ'); seen.push(p.view);
+      key('Enter'); const saveNote = p.note; // SAVE NOW
       key('Escape');
       const canvas = document.querySelector('.pause-canvas'), box = canvas.getBoundingClientRect();
       const click = (x, y) => canvas.dispatchEvent(new MouseEvent('click', { clientX: box.left + x, clientY: box.top + y, bubbles: true }));
@@ -268,7 +269,7 @@ export function exposeTestHooks(game) {
       key('Escape'); seen.push(p.view);
       key('Escape');
       game.input.takePresses(); game.input.held.clear(); // the synthetic keys never reach play
-      return { seen, tabs: p.tabRects.length, stillPaused, resumed: game.mode === 'play' };
+      return { seen, saveNote, tabs: p.tabRects.length, stillPaused, resumed: game.mode === 'play' };
     },
     // The completion percentage from the shared shot save's progress: story 2/5, races 1/4,
     // courier 3/10 give 24 + 4 + 3 points.

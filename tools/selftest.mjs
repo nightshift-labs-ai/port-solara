@@ -204,9 +204,10 @@ await test('career', async () => {
 
 await test('pause-tabs', async () => {
   const s = await call(() => window.__test.pauseTabs());
-  const want = ['menu', 'map', 'story', 'settings', 'menu', 'settings', 'stats', 'menu'];
+  const want = ['menu', 'map', 'story', 'save', 'menu', 'save', 'stats', 'menu'];
   ok(JSON.stringify(s.seen) === JSON.stringify(want), `views ${s.seen.join(' > ')}`);
-  ok(s.tabs === 5, `${s.tabs} tabs`);
+  ok(s.tabs === 6, `${s.tabs} tabs`);
+  ok(/^Saved to slot|^Lose the SPD|^No saving/.test(s.saveNote), `SAVE NOW gave "${s.saveNote}"`);
   ok(s.stillPaused && s.resumed, 'a click in STATS ran a menu item, or Esc did not resume');
   return s;
 });

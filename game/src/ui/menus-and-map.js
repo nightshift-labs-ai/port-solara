@@ -1,6 +1,6 @@
 import { districtAt, LANDMARKS } from '../world/city-builder.js';
 import { nearestNode } from '../police/police-ai.js';
-import { latestSave, continueLabel } from '../core/save-slots.js';
+import { latestSave, continueLabel, readAllSlots, clockOf } from '../core/save-slots.js';
 import { completionOf } from '../story/completion-percentage.js';
 import { kmOf, playClock } from '../story/career-stats.js';
 
@@ -14,6 +14,7 @@ export const PAUSE_TABS = [
   { view: 'stats', label: 'STATS' },
   { view: 'controls', label: 'CONTROLS' },
   { view: 'settings', label: 'SETTINGS' },
+  { view: 'save', label: 'SAVE' },
 ];
 
 // The places on the Tab map besides the story rings, snapped to the nearest road crossing so a
@@ -62,9 +63,10 @@ export function installPauseAndMap(game) {
   game.pause = pause;
   const showView = (view) => {
     pause.view = view;
-    if (view === 'settings') { pause.row = 0; pause.note = ''; }
+    if (view === 'settings' || view === 'save') { pause.row = 0; pause.note = ''; }
     draw();
   };
+  const saveNow = () => { pause.note = game.saveGame ? game.saveGame('Pause menu') : 'Saving is not ready yet'; draw(); };
   // Q / E step left / right through the tabs; from the PAUSED list E opens MAP and Q the last tab.
   const stepTab = (dir) => {
     const n = PAUSE_TABS.length, i = PAUSE_TABS.findIndex((t) => t.view === pause.view);
@@ -115,6 +117,7 @@ export function installPauseAndMap(game) {
       draw();
       return;
     }
+    if (pause.view === 'save') { if (e.code === 'Enter' || e.code === 'Space') saveNow(); return; }
     if (pause.view !== 'menu') return;
     if (e.code === 'ArrowDown' || e.code === 'KeyS') { pause.active = (pause.active + 1) % items.length; draw(); }
     if (e.code === 'ArrowUp' || e.code === 'KeyW') { pause.active = (pause.active + items.length - 1) % items.length; draw(); }
@@ -139,8 +142,10 @@ export function installPauseAndMap(game) {
       draw();
       return;
     }
-    // Only the PAUSED list runs items; MAP, STORY, STATS and CONTROLS have nothing to click.
-    if (pause.view === 'menu') { pause.active = hit; items[hit].run(); }
+    // The SAVE tab's one hit box is SAVE NOW; only the PAUSED list runs items; MAP, STORY, STATS
+    // and CONTROLS have nothing to click.
+    if (pause.view === 'save') saveNow();
+    else if (pause.view === 'menu') { pause.active = hit; items[hit].run(); }
   });
   addEventListener('resize', () => { if (game.mode === 'paused') draw(); });
 }
@@ -211,6 +216,7 @@ export function drawPauseScreen(ctx, game, pause, items) {
   if (pause.view === 'story') return drawStoryTab(ctx, game, info, full, s);
   if (pause.view === 'stats') return drawStatsTab(ctx, game, info, full, s);
   if (pause.view === 'controls') return drawControlsTab(ctx, full, s);
+  if (pause.view === 'save') return drawSaveTab(ctx, pause, full, s);
   const area = { x: pad, y: top, w: W - colW - pad * 3, h: bodyH };
   const legendH = Math.round(40 * s), gap = Math.round(8 * s);
   const mapRect = { x: area.x, y: area.y, w: area.w, h: area.h - legendH - gap };
@@ -588,6 +594,34 @@ function drawStatsTab(ctx, game, info, r, s) {
     } else textAt(ctx, String(v ?? 0), cright, ry + 27 * s, 21, s, CREAM, 900, 'right');
   });
   textAt(ctx, 'Q / E TABS · ESC BACK · TAB MAP', x, r.y + r.h - 22 * s, 18, s, 'rgba(255, 248, 236, 0.8)', 700);
+}
+
+// SAVE: the three slots as the slot reader sees them, then SAVE NOW (the pause menu's save) and
+// the note it returns.
+function drawSaveTab(ctx, pause, r, s) {
+  drawPanel(ctx, r, s);
+  const x = r.x + 40 * s, right = r.x + r.w - 40 * s;
+  textAt(ctx, 'SAVE', x, r.y + 56 * s, 40, s, CREAM, 900);
+  textAt(ctx, 'SLOT 1 IS THE AUTOSAVE AFTER EACH MISSION · SLOTS 2 AND 3 TAKE TURNS', right, r.y + 54 * s, 16, s, 'rgba(255, 248, 236, 0.7)', 800, 'right');
+  readAllSlots().forEach((rec, i) => {
+    const y = r.y + 86 * s + i * 108 * s, h = 94 * s;
+    ctx.fillStyle = rec ? 'rgba(20, 48, 79, 0.85)' : 'rgba(20, 48, 79, 0.45)';
+    ctx.beginPath(); ctx.roundRect(x, y, right - x, h, 12 * s); ctx.fill();
+    ctx.lineWidth = 1.2 * s; ctx.strokeStyle = 'rgba(255, 248, 236, 0.3)'; ctx.stroke();
+    textAt(ctx, `SLOT ${i + 1}${i === 0 ? ' · AUTOSAVE' : ''}`, x + 24 * s, y + 38 * s, 24, s, GOLD, 900);
+    if (!rec) { textAt(ctx, 'EMPTY', x + 24 * s, y + 72 * s, 18, s, 'rgba(255, 248, 236, 0.55)', 800); return; }
+    const c = rec.career || {};
+    textAt(ctx, `STORY ${rec.storyStep}/${rec.storyOf} · ${money(rec.cash)} · ${String(rec.place || '').toUpperCase()}`, x + 24 * s, y + 72 * s, 18, s, CREAM, 800);
+    textAt(ctx, `SAVED ${clockOf(rec.savedAt)}`, right - 24 * s, y + 38 * s, 20, s, CREAM, 900, 'right');
+    textAt(ctx, `${c.carsStolen || 0} CARS STOLEN · ${playClock(c.secondsPlayed || 0)} PLAYED`, right - 24 * s, y + 72 * s, 16, s, 'rgba(255, 248, 236, 0.7)', 800, 'right');
+  });
+  const by = r.y + 86 * s + 3 * 108 * s + 10 * s, bw = 300 * s, bh = 58 * s;
+  ctx.fillStyle = 'rgba(255, 201, 60, 0.18)'; ctx.fillRect(x, by, bw, bh);
+  ctx.lineWidth = 3 * s; ctx.strokeStyle = GOLD; ctx.strokeRect(x, by, bw, bh);
+  textAt(ctx, 'SAVE NOW', x + bw / 2, by + 39 * s, 28, s, GOLD, 900, 'center');
+  pause.rects.push({ x, y: by, w: bw, h: bh });
+  if (pause.note) textAt(ctx, pause.note, x + bw + 30 * s, by + 37 * s, 20, s, GOLD, 700);
+  textAt(ctx, 'ENTER SAVE NOW · Q / E TABS · ESC BACK', x, r.y + r.h - 22 * s, 18, s, 'rgba(255, 248, 236, 0.8)', 700);
 }
 
 // CONTROLS: the same list the title screen shows.
