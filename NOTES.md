@@ -1,5 +1,55 @@
 # PORT SOLARA build notes
 
+## M11 time of day + night seafront: done (run of 2026-11-20 08:09-08:48 EET)
+- Baseline: the four committed shots re-shot from the untouched tree were byte-identical
+  (sha256 lists in out/ab/before_m11/ and out/ab/rebase_m11/), so before_m11 is the reference.
+- (1) Clock: `game.clockMinutes()` = 17:20 + game.time + `game.clockOffset` (minutes since the
+  first Friday's 00:00; one game minute per sim second, still while paused, runs on the title and
+  in play). game.time is never written. `game.setClock(m)` is the only setter (save loading, NEW
+  GAME, `__test.setClock`). HUD `clockText(game)` (ui/hud.js) rolls the weekday at midnight
+  (lore clock `week`). NEW GAME's run() sets FRI 17:20 unconditionally (never startPlay/onNewGame).
+  Saves: new top-level key `clock` (VERSION stays 1, CONTINUE label unchanged); a record without
+  it loads at FRI 17:20 + its `time` (what its HUD showed). The boot `fresh` record carries 17:20.
+- Light: world/day-night-cycle.js (`createDayNightCycle`, imported right after sunlight-and-sea,
+  5.4 KB, imports only three), called in game.render before light.follow. Level 0 from 07:00 to
+  18:20 (the plateau writes nothing; re-entry copies the stored boot values back), dusk
+  smoothstep 18:20-19:45, night, dawn 05:30-07:00 (no sun path). The title is always level 0.
+  Sky dome: the same colour attribute, blended toward a night array built from the day's height
+  bands (#3f7fa6 / #2e5d93 / #1f3d73 / #14285a), darkening from the top down. Fog and background to
+  #24456e. The sun light fades to 0 at the dusk midpoint and comes back as the moon (same light,
+  still casting shadows): #a8c0ff at 1.45 from (-0.64, 0.29, 0.71), about 40 degrees west of south,
+  17 up; the disc becomes a smaller cool-white moon (hidden through the switch), the glow plane is
+  hidden at night. Hemi 0.7 (#5a78b8 / #5a5060), bounce kept east as a warm city glow #ffb27a 0.95,
+  exposure 1.12 -> 1.05, body class `night-grade` (saturate 1.12, contrast 1.0; before the LOW rule).
+- (2) Night lights: (a) lit windows in the ONE shared facade program (same onBeforeCompile text
+  for all three materials, so no program split; day shots byte-identical): the tiled vMapUv and a
+  per-building, per-face seed hashed in the vertex shader; amber (1.0, 0.5, 0.15) x 1.7 in each
+  facade's window rectangle (stucco 0.34-0.66 x 0.29-0.76, glass 0.08-0.46 x 0.08-0.9, roofs at
+  0.03 outside), lit share stucco 0.5, glass 0.38, sheds 0; one shared uniform `game.nightWindows`.
+  (b) Gull Bridge deck lamps every 20 m on both edges (62 sprites, one Points, fog off, size 7).
+  (c) Head (white) and tail (red) lamps of traffic within 150 m and the player's car (one new
+  Points, frustumCulled off, off at LOW; createTailGlow untouched). Both in world/night-lights.js,
+  imported after combat (past the outline cut). Not built: police lamps, (d) sea roughness,
+  (e) lamp halos and pools, (f) lighthouse beam, billboard emissive.
+  Draw calls: day (17:22 perf view) HIGH 172 / LOW 112 as before; 22:00 HIGH 173 / LOW 113.
+- (3) Shot 2: the Lantern Point stand at night through the same camera; the scene only adds
+  `game.setClock(21 * 60 + 38)` after the shot save and 'harbor', the HUD reads FRI 21:45.
+  Full YAVG 56.1 / YLOW 16 / YHIGH 106 / SATAVG 20.9; cell (256x160) 56.3 / 17 / 105 / 19.8; sky
+  patch 57.7 / UAVG 163.4 / VAVG 106.6; shirt 47.8 (VAVG 160.3) vs road 33.8; sand 105.1; bright
+  share 3.61% left fronts, 1.48% bridge deck. 184.1 KiB at quality 92. A/B (out/ab/m11-seafront-*,
+  m11-sheet-*): kept. The cell reads night (navy sky, moon, amber windows, bridge lamp row),
+  gunfight (banner, Wren firing, SUV) and seafront; light colours amber, white, red and green.
+  Judge sheet rebuilt (local, gitignored).
+- (4) SELFTEST PASS 29/29 (new: clock after save, night after perf; perf HIGH 172 / median 2.7 ms,
+  LOW 112 / 2.2 ms; night HIGH 173 / 3.8 ms, LOW 113 / 1.9 ms; city build 54 ms). Originality PASS
+  (36 files). main.ts twice: 44 files byte-identical, dossier 1,147,077 bytes. Shots 176.6 / 184.1
+  / 177.4 / 179.1 KiB (1-chase, 3-map, 4-title byte-identical). Outline: day-night-cycle.js shows
+  at #6; the cut now falls inside weapons-and-damage.js (188 of 268 lines shown, WEAPONS table
+  whole); enemies.js is past the cut.
+- Weak spots: the road and the gunmen are dark at night (the SUV reads as a silhouette on the
+  sand); no lamp halos, so street lamps add no light; the 19:00 dusk keeps the day's lavender
+  mid band; dawn is a plain fade back.
+
 ## M10 arsenal: BREAKER shotgun + GANNET rifle done, explosive dropped (run of 2026-11-20 06:59-07:38 EET)
 - (1) Two guns at the END of WEAPONS (saves store ammo by index): BREAKER SHOTGUN (slot 4: 6
   pellets per pull, spread 0.065, 16 per pellet, reach 15 m counted from Wren rather than the

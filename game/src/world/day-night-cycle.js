@@ -1,9 +1,7 @@
 import * as THREE from 'three';
 
-// Time of day from the game clock. Today's golden hour holds from 07:00 to 18:20; dusk runs to
-// 19:45 into a navy night under a low moon, and a short dawn (05:30-07:00) brings the day back.
-// The title always shows golden hour (the brand). In the day plateau nothing is written; coming
-// back into it puts the stored boot values back, never a recomputed blend.
+// Time of day from the clock: golden hour 07:00-18:20 (nothing written; re-entry restores the boot
+// copies), dusk to 19:45, a navy night under a low moon, dawn 05:30-07:00. The title stays golden.
 export function createDayNightCycle(game) {
   const { light, renderer, scene } = game;
   const { sun, hemi, bounce, sky, sunDisc, glow, sunDir } = light;
@@ -15,14 +13,13 @@ export function createDayNightCycle(game) {
     hemi: [hemi.color.clone(), hemi.groundColor.clone(), hemi.intensity],
     bounce: [bounce.color.clone(), bounce.intensity], disc: sunDisc.material.color.clone(), glow: glow.material.opacity,
   };
-  // Night: an ultramarine dome over a cobalt-teal glow, a cool moon (40 degrees west of south,
-  // 17 up), a blue-grey sky fill and the city's warm glow kept on the east bounce.
+  // Night: cool moon 40 degrees west of south, 17 up; the city's warm glow on the east bounce.
   const night = {
     fog: C(0x24456e), sun: [C(0xa8c0ff), 1.45], hemi: [C(0x5a78b8), C(0x5a5060), 0.7],
     bounce: [C(0xffb27a), 0.95], disc: C(0xe4ecff), exposure: 1.05,
   };
   const moonDir = new THREE.Vector3(-0.64, 0.29, 0.71).normalize();
-  // The night dome from the same height bands as the day one.
+  // Night dome from the day's height bands: ultramarine overhead, a cobalt-teal glow low down.
   const bands = [[0, C(0x3f7fa6)], [0.09, C(0x2e5d93)], [0.3, C(0x1f3d73)], [0.75, C(0x14285a)]];
   const nightSky = new Float32Array(cols.array.length), up = new Float32Array(pos.count), c = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
