@@ -47,6 +47,7 @@ export function createDayNightCycle(game) {
     sunDisc.material.color.copy(day.disc); sunDisc.visible = true; sunDisc.scale.setScalar(light.skyScale);
     glow.visible = true; glow.material.opacity = day.glow;
     document.body.classList.remove('night-grade');
+    game.nightWindows.value = 0;
   }
 
   const cycle = {
@@ -83,6 +84,7 @@ export function createDayNightCycle(game) {
       sunDisc.scale.setScalar(light.skyScale * Math.min(1, w * 3) * (moon ? 0.55 : 1));
       glow.visible = !moon; glow.material.opacity = day.glow * w;
       document.body.classList.toggle('night-grade', n > 0.5);
+      game.nightWindows.value = smooth(0.25, 0.8, n); // windows light up through dusk
     },
     // Everything the cycle writes, for the self-test's plateau check.
     readout() {

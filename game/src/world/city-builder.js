@@ -48,9 +48,10 @@ export function buildCityDistricts(game) {
   }
 
   const facades = makeFacadeTextures();
-  scene.add(instancedBoxes(lots.stucco, facades.stucco, 3.5, 5, true));
-  scene.add(instancedBoxes(lots.glass, facades.glass, 4, 4, true));
-  scene.add(instancedBoxes(lots.shed, facades.shed, 6, 8, true));
+  scene.add(instancedBoxes(lots.stucco, facades.stucco, 3.5, 5, true, WINDOWS.stucco));
+  scene.add(instancedBoxes(lots.glass, facades.glass, 4, 4, true, WINDOWS.glass));
+  scene.add(instancedBoxes(lots.shed, facades.shed, 6, 8, true, WINDOWS.shed));
+  game.nightWindows = NIGHT_WINDOWS;
   scene.add(roofCaps(lots.roof));
   scene.add(plainBoxes(lots.clutter.map((c) => ({ x: c.x, y: c.y + c.s / 2, z: c.z, w: c.s, h: c.s, d: c.s * 0.8 })), 0xd9d4ca));
   scene.add(plainBoxes(lots.slab.map((b) => ({ x: b.cx, y: 0.09, z: b.cz, w: b.maxX - b.minX + 6, h: 0.18, d: b.maxZ - b.minZ + 6 })), 0xe4ddd0, false));
@@ -179,7 +180,12 @@ function isLandmarkBlock(b) {
   return Object.values(LANDMARKS).some((l) => Math.abs(l.x - b.cx) < 12 && Math.abs(l.z - b.cz) < 12);
 }
 
-function instancedBoxes(list, tex, floor, bay, shadows) {
+// Lit windows at night: the shared night level (the day-night cycle sets it, 0 by day), and per
+// facade the window rectangle in tile UV (from makeFacadeTextures) and the share of lit cells.
+const NIGHT_WINDOWS = { value: 0 };
+const WINDOWS = { stucco: [0.34, 0.29, 0.66, 0.76, 0.45], glass: [0.08, 0.08, 0.46, 0.9, 0.38], shed: [0, 0, 0, 0, 0] };
+
+function instancedBoxes(list, tex, floor, bay, shadows, win) {
   const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.82 });
   mat.onBeforeCompile = (shader) => {
     // Tile the facade by the instance's own size, so every building keeps square windows.
@@ -187,6 +193,24 @@ function instancedBoxes(list, tex, floor, bay, shadows) {
       vec3 bScale = vec3(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz), length(instanceMatrix[2].xyz));
       float faceW = abs(normal.x) > 0.5 ? bScale.z : bScale.x;
       vMapUv = abs(normal.y) > 0.5 ? vec2(0.03, 0.03) : vMapUv * vec2(floor(faceW / ${bay.toFixed(1)}) + 1.0, bScale.y / ${floor.toFixed(1)});`);
+    // Night: the tiled cell and a small per-building, per-face seed (hashed here, so it is flat).
+    shader.uniforms.uNightWindows = NIGHT_WINDOWS;
+    shader.uniforms.uWinRect = { value: new THREE.Vector4(win[0], win[1], win[2], win[3]) };
+    shader.uniforms.uWinLit = { value: win[4] };
+    const vary = '#include <common>\nvarying vec2 vWinUv;\nvarying float vWinSeed;';
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', vary).replace('#include <fog_vertex>', `#include <fog_vertex>
+      vWinUv = vMapUv;
+      vWinSeed = fract(sin(dot(floor(instanceMatrix[3].xz * 4.0 + 0.5) * 0.013 + normal.xz * 0.37, vec2(1.0, 1.31))) * 43758.5453);`);
+    shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `${vary}
+      uniform float uNightWindows;
+      uniform vec4 uWinRect;
+      uniform float uWinLit;`).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      if (uNightWindows > 0.0) {
+        vec2 cell = floor(vWinUv), f = fract(vWinUv);
+        float lit = step(fract(sin(dot(cell + vWinSeed * 9.0, vec2(1.713, 2.377))) * 43758.5453), uWinLit);
+        float inside = step(uWinRect.x, f.x) * step(f.x, uWinRect.z) * step(uWinRect.y, f.y) * step(f.y, uWinRect.w);
+        totalEmissiveRadiance += vec3(1.0, 0.5, 0.15) * (1.7 * uNightWindows * lit * inside);
+      }`);
   };
   const geo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
   const mesh = new THREE.InstancedMesh(geo, mat, Math.max(1, list.length));

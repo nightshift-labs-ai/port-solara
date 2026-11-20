@@ -400,6 +400,23 @@ await test('perf', async () => {
   return { drawCalls: p.drawCalls, triangles: p.triangles, medianMs: +p.medianMs.toFixed(1), heapMB: p.heapMB && Math.round(p.heapMB), low: { drawCalls: low.drawCalls, triangles: low.triangles, medianMs: +low.medianMs.toFixed(1) } };
 });
 
+// The perf view at 22:00: lit windows, bridge lamps and car lamps on, inside the same budget.
+await test('night', async () => {
+  await call(() => { localStorage.clear(); window.portSolara.changeSetting('graphics', 'high'); window.__test.setClock(22 * 60); });
+  await call(() => window.__test.teleport(-174.6, 0, 0));
+  const p = await call(() => window.__test.perf(30));
+  const on = await call(() => { const g = window.portSolara; g.render(); return { level: g.dayNight.level, windows: g.nightWindows.value, ...g.nightLights.state(), grade: document.body.classList.contains('night-grade') }; });
+  ok(on.level === 1 && on.windows === 1 && on.bridge && on.cars && on.grade, `night pieces: ${JSON.stringify(on)}`);
+  ok(p.drawCalls <= 200, `${p.drawCalls} draw calls`);
+  ok(p.triangles <= 300000, `${p.triangles} triangles`);
+  ok(p.medianMs <= 70, `median frame ${p.medianMs.toFixed(1)} ms`);
+  await call(() => window.portSolara.changeSetting('graphics', 'low'));
+  const low = await call(() => window.__test.perf(30));
+  await call(() => { const g = window.portSolara; g.changeSetting('graphics', 'high'); localStorage.clear(); window.__test.setClock(17 * 60 + 20); });
+  ok(low.medianMs <= p.medianMs * 1.5 + 2, `LOW is slower than HIGH (${low.medianMs} vs ${p.medianMs})`);
+  return { ...on, drawCalls: p.drawCalls, triangles: p.triangles, medianMs: +p.medianMs.toFixed(1), low: { drawCalls: low.drawCalls, triangles: low.triangles, medianMs: +low.medianMs.toFixed(1) } };
+});
+
 await test('clean-console', async () => { ok(problems.length === 0, problems.join(' | ')); return { problems: 0 }; });
 
 await browser.close();
