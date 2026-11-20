@@ -1,8 +1,20 @@
 import { districtAt, LANDMARKS } from '../world/city-builder.js';
 import { nearestNode } from '../police/police-ai.js';
 import { latestSave, continueLabel } from '../core/save-slots.js';
+import { completionOf } from '../story/completion-percentage.js';
+import { kmOf, playClock } from '../story/career-stats.js';
 
 const FONT = '"DejaVu Sans", Verdana, sans-serif';
+const GOLD = '#ffc93c', CREAM = '#fff8ec', NAVY = '#14304f';
+
+// The pause tabs, left to right. The PAUSED list (Esc from play) sits under them with no tab lit.
+export const PAUSE_TABS = [
+  { view: 'map', label: 'MAP' },
+  { view: 'story', label: 'STORY' },
+  { view: 'stats', label: 'STATS' },
+  { view: 'controls', label: 'CONTROLS' },
+  { view: 'settings', label: 'SETTINGS' },
+];
 
 // The places on the Tab map besides the story rings, snapped to the nearest road crossing so a
 // marker always sits on a street Wren can reach.
@@ -40,13 +52,24 @@ export function installPauseAndMap(game) {
   root.replaceChildren(canvas);
   const items = [
     { label: 'RESUME', run: () => close() },
-    { label: 'MAP', run: () => { pause.view = 'map'; draw(); } },
-    { label: 'SETTINGS', run: () => { pause.view = 'settings'; pause.row = 0; pause.note = ''; draw(); } },
+    { label: 'MAP', run: () => showView('map') },
+    { label: 'SETTINGS', run: () => showView('settings') },
     { label: 'SAVE', run: () => { pause.note = game.saveGame ? game.saveGame('Pause menu') : 'Saving is not ready yet'; draw(); } },
     { label: 'QUIT TO TITLE', run: () => { close(false); game.quitToTitle?.(); } },
   ];
-  const pause = { view: 'menu', active: 0, note: '', rects: [], relock: false };
+  // rects: hit boxes of the current view only (PAUSED list or SETTINGS rows); tabRects: the tab row.
+  const pause = { view: 'menu', active: 0, note: '', rects: [], tabRects: [], relock: false };
   game.pause = pause;
+  const showView = (view) => {
+    pause.view = view;
+    if (view === 'settings') { pause.row = 0; pause.note = ''; }
+    draw();
+  };
+  // Q / E step left / right through the tabs; from the PAUSED list E opens MAP and Q the last tab.
+  const stepTab = (dir) => {
+    const n = PAUSE_TABS.length, i = PAUSE_TABS.findIndex((t) => t.view === pause.view);
+    showView(PAUSE_TABS[i < 0 ? (dir > 0 ? 0 : n - 1) : (i + dir + n) % n].view);
+  };
 
   const open = (view) => {
     if (game.mode !== 'play') return;
@@ -81,6 +104,7 @@ export function installPauseAndMap(game) {
     if (game.mode !== 'paused') return;
     if (e.code === 'Escape' || e.code === 'KeyP') { if (pause.view !== 'menu') { pause.view = 'menu'; draw(); } else close(); return; }
     if (e.code === 'Tab' || e.code === 'KeyM') { if (pause.view === 'map') close(); else { pause.view = 'map'; draw(); } return; }
+    if (e.code === 'KeyQ' || e.code === 'KeyE') { stepTab(e.code === 'KeyE' ? 1 : -1); return; } // main.js drops presses while paused
     if (pause.view === 'settings') {
       const n = SETTING_ROWS.length + 1;
       if (e.code === 'ArrowDown' || e.code === 'KeyS') pause.row = (pause.row + 1) % n;
@@ -101,7 +125,10 @@ export function installPauseAndMap(game) {
     if (!document.pointerLockElement && game.mode === 'play') open('menu');
   });
   canvas.addEventListener('click', (e) => {
-    const hit = pause.rects.findIndex((r) => e.offsetX >= r.x && e.offsetX <= r.x + r.w && e.offsetY >= r.y && e.offsetY <= r.y + r.h);
+    const inside = (r) => e.offsetX >= r.x && e.offsetX <= r.x + r.w && e.offsetY >= r.y && e.offsetY <= r.y + r.h;
+    const tab = pause.tabRects.findIndex(inside);
+    if (tab >= 0) { showView(PAUSE_TABS[tab].view); return; }
+    const hit = pause.rects.findIndex(inside);
     if (hit < 0) return;
     if (pause.view === 'settings') {
       // A click on a row's left half lowers it, on the right half raises it; BACK returns.
@@ -112,7 +139,8 @@ export function installPauseAndMap(game) {
       draw();
       return;
     }
-    pause.active = hit; items[hit].run();
+    // Only the PAUSED list runs items; MAP, STORY, STATS and CONTROLS have nothing to click.
+    if (pause.view === 'menu') { pause.active = hit; items[hit].run(); }
   });
   addEventListener('resize', () => { if (game.mode === 'paused') draw(); });
 }
@@ -166,25 +194,37 @@ function drawSettings(ctx, game, pause, rect, s) {
   ctx.fillText('ARROWS CHANGE · ESC BACK · SAVED WITH YOUR GAME', rect.x + 44 * s, rect.y + rect.h - 28 * s);
 }
 
-// The overlay: in MAP view the city map fills the left and the side panel the right; in MENU view
-// the map dims behind the pause list.
+// The overlay: the tab row across the top; under it MAP (city map, place legend and the career
+// column), STORY, STATS or CONTROLS; SETTINGS and the PAUSED list dim the map behind them.
 export function drawPauseScreen(ctx, game, pause, items) {
   const W = ctx.canvas.width, H = ctx.canvas.height, s = H / 800;
-  const panelW = Math.round(360 * s), pad = Math.round(22 * s);
+  const pad = Math.round(22 * s), tabRow = Math.round(56 * s);
+  const colW = Math.round(Math.max(360 * s, W * 0.38));
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = 'rgba(10, 26, 44, 0.86)';
   ctx.fillRect(0, 0, W, H);
-  const mapRect = { x: pad, y: pad, w: W - panelW - pad * 3, h: H - pad * 2 };
+  pause.rects = []; pause.tabRects = [];
+  drawPauseTabs(ctx, pause, { x: pad, y: pad, w: W - pad * 2, h: Math.round(44 * s) }, s);
+  const top = pad + tabRow, bodyH = H - top - pad;
+  const info = completionOf(game);
+  const full = { x: pad, y: top, w: W - pad * 2, h: bodyH };
+  if (pause.view === 'story') return drawStoryTab(ctx, game, info, full, s);
+  if (pause.view === 'stats') return drawStatsTab(ctx, game, info, full, s);
+  if (pause.view === 'controls') return drawControlsTab(ctx, full, s);
+  const area = { x: pad, y: top, w: W - colW - pad * 3, h: bodyH };
+  const legendH = Math.round(40 * s), gap = Math.round(8 * s);
+  const mapRect = { x: area.x, y: area.y, w: area.w, h: area.h - legendH - gap };
   drawCityMap(ctx, game, mapRect, s);
-  drawSidePanel(ctx, game, { x: W - panelW - pad, y: pad, w: panelW, h: H - pad * 2 }, s);
-  pause.rects = [];
+  drawPlaceLegend(ctx, { x: area.x, y: mapRect.y + mapRect.h + gap, w: area.w, h: legendH }, s);
+  drawCareerColumn(ctx, game, info, { x: W - colW - pad, y: top, w: colW, h: bodyH }, s);
   if (pause.view === 'settings') {
     ctx.fillStyle = 'rgba(10, 26, 44, 0.8)';
-    ctx.fillRect(mapRect.x, mapRect.y, mapRect.w, mapRect.h);
-    drawSettings(ctx, game, pause, mapRect, s);
+    ctx.fillRect(area.x, area.y, area.w, area.h);
+    drawSettings(ctx, game, pause, area, s);
   } else if (pause.view === 'menu') {
+    // Same list, same places as before the tabs; the dim covers map and legend, the hint sits on the map.
     ctx.fillStyle = 'rgba(10, 26, 44, 0.72)';
-    ctx.fillRect(mapRect.x, mapRect.y, mapRect.w, mapRect.h);
+    ctx.fillRect(area.x, area.y, area.w, area.h);
     ctx.fillStyle = '#fff8ec';
     ctx.font = `900 ${Math.round(56 * s)}px ${FONT}`;
     ctx.fillText('PAUSED', mapRect.x + 48 * s, mapRect.y + 110 * s);
@@ -207,10 +247,10 @@ export function drawPauseScreen(ctx, game, pause, items) {
     }
     ctx.font = `700 ${Math.round(18 * s)}px ${FONT}`;
     ctx.fillStyle = 'rgba(255, 248, 236, 0.8)';
-    ctx.fillText('ESC RESUME · TAB MAP · ARROWS + ENTER', mapRect.x + 44 * s, mapRect.y + mapRect.h - 28 * s);
+    ctx.fillText('ESC RESUME · TAB MAP · ARROWS + ENTER · Q / E TABS', mapRect.x + 44 * s, mapRect.y + mapRect.h - 28 * s);
   } else {
     ctx.font = `700 ${Math.round(18 * s)}px ${FONT}`;
-    const hint = 'TAB CLOSE · ESC MENU', hw = ctx.measureText(hint).width;
+    const hint = 'TAB CLOSE · ESC MENU · Q / E TABS', hw = ctx.measureText(hint).width;
     ctx.fillStyle = 'rgba(20, 48, 79, 0.88)';
     ctx.fillRect(mapRect.x + 12 * s, mapRect.y + mapRect.h - 44 * s, hw + 24 * s, 32 * s);
     ctx.fillStyle = '#fff8ec';
@@ -331,48 +371,238 @@ function badge(ctx, x, y, r, fill, mark, s) {
   ctx.textAlign = 'center'; ctx.fillText(mark, x, y + r * 0.42); ctx.textAlign = 'left';
 }
 
-// The side panel: story progress, side activity counts, REP rank, cash and the last save.
-function drawSidePanel(ctx, game, r, s) {
+function font(ctx, weight, px, s) { ctx.font = `${weight} ${Math.round(px * s)}px ${FONT}`; }
+
+function textAt(ctx, t, x, y, px, s, color = CREAM, weight = 800, align = 'left') {
+  font(ctx, weight, px, s); ctx.fillStyle = color; ctx.textAlign = align; ctx.fillText(t, x, y); ctx.textAlign = 'left';
+}
+
+// A dark rounded panel with the gold edge bar every pause panel shares.
+function drawPanel(ctx, r, s) {
   ctx.fillStyle = 'rgba(10, 20, 44, 0.9)';
   ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 18 * s); ctx.fill();
   ctx.lineWidth = 1.2 * s; ctx.strokeStyle = 'rgba(255, 241, 214, 0.5)'; ctx.stroke();
-  ctx.fillStyle = '#ffc93c';
+  ctx.fillStyle = GOLD;
   ctx.fillRect(r.x + 1, r.y + 18 * s, 4 * s, r.h - 36 * s);
-  const x = r.x + 24 * s;
-  let y = r.y + 50 * s;
-  const text = (t, size, color = '#fff8ec', weight = 800) => {
-    ctx.font = `${weight} ${Math.round(size * s)}px ${FONT}`; ctx.fillStyle = color; ctx.fillText(t, x, y);
+}
+
+function money(n) { return `$${Math.round(n).toLocaleString('en-US')}`; }
+
+// MAP · STORY · STATS · CONTROLS · SETTINGS between Q and E keycaps; the open tab is gold.
+function drawPauseTabs(ctx, pause, r, s) {
+  const keycap = (x, label) => {
+    const w = 34 * s, y = r.y + (r.h - w) / 2;
+    ctx.fillStyle = 'rgba(255, 248, 236, 0.12)';
+    ctx.beginPath(); ctx.roundRect(x, y, w, w, 7 * s); ctx.fill();
+    ctx.lineWidth = 1.5 * s; ctx.strokeStyle = 'rgba(255, 248, 236, 0.6)'; ctx.stroke();
+    textAt(ctx, label, x + w / 2, y + w * 0.7, 18, s, CREAM, 900, 'center');
+    return w;
   };
-  text('PORT SOLARA', 26, '#ffc93c', 900); y += 48 * s;
+  let x = r.x;
+  x += keycap(x, 'Q') + 10 * s;
+  font(ctx, 900, 21, s);
+  for (const t of PAUSE_TABS) {
+    const w = ctx.measureText(t.label).width + 46 * s, on = t.view === pause.view;
+    ctx.fillStyle = on ? GOLD : 'rgba(20, 48, 79, 0.92)';
+    ctx.beginPath(); ctx.roundRect(x, r.y, w, r.h, 10 * s); ctx.fill();
+    ctx.lineWidth = (on ? 2.5 : 1.2) * s; ctx.strokeStyle = on ? CREAM : 'rgba(255, 248, 236, 0.35)'; ctx.stroke();
+    textAt(ctx, t.label, x + w / 2, r.y + r.h * 0.68, 21, s, on ? NAVY : CREAM, 900, 'center');
+    pause.tabRects.push({ x, y: r.y, w, h: r.h });
+    x += w + 10 * s;
+  }
+  keycap(x, 'E');
+  textAt(ctx, 'PORT SOLARA', r.x + r.w, r.y + r.h * 0.7, 26, s, GOLD, 900, 'right');
+}
+
+// The place marks under the map, one row.
+function drawPlaceLegend(ctx, r, s) {
+  ctx.fillStyle = 'rgba(10, 20, 44, 0.9)';
+  ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 12 * s); ctx.fill();
+  const legend = [['H', '#3fae6a', 'Safehouse'], ['$', '#f2b134', 'Quist Auto'], ['G', '#c2412d', 'Gun shop'], ['P', '#3b7bff', 'SPD station'], ['R', '#e07a2f', 'Respray'], ['F', NAVY, 'Races']];
+  // Measured labels, the spare width shared out between the six entries.
+  font(ctx, 700, 15, s);
+  const widths = legend.map(([, , label]) => 28 * s + ctx.measureText(label).width);
+  const spare = (r.w - 24 * s - widths.reduce((a, b) => a + b, 0)) / (legend.length - 1);
+  let lx = r.x + 12 * s + 11 * s;
+  legend.forEach(([m, c, label], i) => {
+    const ly = r.y + r.h / 2;
+    badge(ctx, lx, ly, 11 * s, c, m, s);
+    textAt(ctx, label, lx + 17 * s, ly + 5.5 * s, 15, s, CREAM, 700);
+    lx += widths[i] + spare;
+  });
+}
+
+// The completion ring: a gold arc over a dim track, the percentage in large type inside.
+function drawCompletionRing(ctx, cx, cy, R, percent, s) {
+  ctx.lineWidth = 16 * s; ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(255, 248, 236, 0.16)';
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+  if (percent > 0) {
+    ctx.strokeStyle = GOLD;
+    ctx.beginPath(); ctx.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * percent) / 100); ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+  ctx.fillStyle = 'rgba(20, 48, 79, 0.95)';
+  ctx.beginPath(); ctx.arc(cx, cy, R - 12 * s, 0, Math.PI * 2); ctx.fill();
+  // Digits at 80 units (shrunk only if they would leave the ring), a smaller % beside them.
+  const big = 80 * (R / (96 * s)), num = String(percent);
+  font(ctx, 900, big, s);
+  const nw = ctx.measureText(num).width;
+  font(ctx, 900, big * 0.42, s);
+  const pw = ctx.measureText('%').width, k = Math.min(1, (2 * (R - 20 * s)) / (nw + pw + 4 * s));
+  const x0 = cx - ((nw + pw + 4 * s) * k) / 2, base = cy + big * 0.3 * s;
+  textAt(ctx, num, x0, base, big * k, s, CREAM, 900);
+  textAt(ctx, '%', x0 + (nw + 4 * s) * k, base - big * 0.28 * s * k, big * 0.42 * k, s, GOLD, 900);
+  textAt(ctx, 'COMPLETE', cx, cy + R * 0.6, 14 * (R / (96 * s)), s, 'rgba(255, 248, 236, 0.75)', 800, 'center');
+}
+
+// Five stars, the first n gold.
+function drawStars(ctx, x, y, n, px, s) {
+  font(ctx, 900, px, s);
+  const w = ctx.measureText('★').width;
+  for (let i = 0; i < 5; i++) { ctx.fillStyle = i < n ? GOLD : 'rgba(255, 248, 236, 0.22)'; ctx.fillText('★', x + i * w, y); }
+}
+
+// The six headline career numbers.
+function headlineCareer(game) {
+  const st = game.stats || {};
+  return [
+    { label: 'CARS STOLEN', value: String(st.carsStolen || 0) },
+    { label: 'SPD ESCAPES', value: String(st.policeEscapes || 0) },
+    { label: 'HIGHEST WANTED', stars: st.highestWanted || 0 },
+    { label: 'KM DRIVEN', value: kmOf(st.metresDriven || 0) },
+    { label: 'GANG MEMBERS DOWNED', value: String(st.gangDowned || 0) },
+    { label: 'RACES WON', value: String(st.racesWon || 0) },
+  ];
+}
+
+const SHORT_ROW = { story: 'STORY', races: 'RACES', courier: 'COURIER', hornet: 'HORNET SMG', sold: 'CAR SOLD', respray: 'RESPRAY' };
+const rowValue = (row) => (row.of === 1 ? (row.done ? '✓' : '—') : `${row.done}/${row.of}`);
+
+// The MAP tab's column: the completion ring and what it is made of, the story with payouts, the
+// six headline career numbers, then cash and REP rank.
+function drawCareerColumn(ctx, game, info, r, s) {
+  drawPanel(ctx, r, s);
+  const x = r.x + 26 * s, right = r.x + r.w - 22 * s;
+  const R = 96 * s, cx = x + R + 4 * s, cy = r.y + 22 * s + R;
+  drawCompletionRing(ctx, cx, cy, R, info.percent, s);
+  const tx = cx + R + 30 * s;
+  let y = r.y + 46 * s;
+  textAt(ctx, 'COMPLETION', tx, y, 18, s, GOLD, 900); y += 31 * s;
+  for (const row of info.rows) {
+    const full = row.done >= row.of;
+    textAt(ctx, SHORT_ROW[row.key], tx, y, 16, s, full ? '#b9c3cc' : CREAM, 700);
+    textAt(ctx, rowValue(row), right, y, 16, s, full ? GOLD : CREAM, 800, 'right');
+    y += 25 * s;
+  }
+  y = cy + R + 48 * s;
+  textAt(ctx, `STORY ${info.storyDone}/${info.missions.length}`, x, y, 25, s, CREAM, 900);
+  textAt(ctx, 'PAYOUT', right, y, 14, s, 'rgba(255, 248, 236, 0.6)', 800, 'right');
+  y += 30 * s;
   const status = storyStatus(game);
-  text(`STORY ${storyNumber(game)}/${status.length}`, 30, '#fff8ec', 900); y += 34 * s;
-  for (const st of status) {
+  status.forEach((st, i) => {
+    const m = info.missions[i], color = st.state === 'current' ? GOLD : st.state === 'done' ? '#b9c3cc' : 'rgba(255,248,236,0.5)';
     const tag = st.state === 'done' ? '✓' : st.state === 'current' ? '▶' : '·';
-    text(`${tag} ${st.mission.number}  ${st.mission.title.toUpperCase()}`, 17, st.state === 'current' ? '#ffc93c' : st.state === 'done' ? '#b9c3cc' : 'rgba(255,248,236,0.55)', 700);
-    y += 27 * s;
+    textAt(ctx, `${tag} ${m.number}  ${m.title.toUpperCase()}`, x, y, 16, s, color, st.state === 'current' ? 900 : 700);
+    textAt(ctx, st.state === 'current' ? `NEXT ${money(m.cash)}` : money(m.cash), right, y, 16, s, color, 800, 'right');
+    y += 26 * s;
+  });
+  y += 8 * s;
+  ctx.fillStyle = 'rgba(255, 248, 236, 0.18)'; ctx.fillRect(x, y, right - x, 1.5 * s);
+  y += 26 * s;
+  textAt(ctx, 'CAREER', x, y, 16, s, GOLD, 900);
+  y += 12 * s;
+  const cellW = (right - x) / 2;
+  headlineCareer(game).forEach((c, i) => {
+    const cx2 = x + (i % 2) * cellW, cy2 = y + Math.floor(i / 2) * 56 * s;
+    if (c.stars !== undefined) drawStars(ctx, cx2, cy2 + 30 * s, c.stars, 26, s);
+    else textAt(ctx, c.value, cx2, cy2 + 30 * s, 30, s, CREAM, 900);
+    textAt(ctx, c.label, cx2, cy2 + 48 * s, 13, s, 'rgba(255, 248, 236, 0.72)', 800);
+  });
+  const rank = game.rankFor(game.missions.rep), by = r.y + r.h - 24 * s;
+  textAt(ctx, money(game.cash), x, by, 34, s, '#7fe08a', 900);
+  textAt(ctx, `REP RANK ${rank.rank}`, right, by - 18 * s, 18, s, CREAM, 900, 'right');
+  textAt(ctx, rank.name, right, by + 2 * s, 15, s, GOLD, 800, 'right');
+}
+
+// STORY: every mission in full, with who gives it, its payout and where the story stands.
+function drawStoryTab(ctx, game, info, r, s) {
+  drawPanel(ctx, r, s);
+  const x = r.x + 40 * s, right = r.x + r.w - 40 * s;
+  textAt(ctx, 'STORY', x, r.y + 56 * s, 40, s, CREAM, 900);
+  textAt(ctx, `${info.storyDone}/${info.missions.length} DONE · ${money(info.paid)} OF ${money(info.payouts)} PAID`, right, r.y + 54 * s, 20, s, GOLD, 800, 'right');
+  const status = storyStatus(game), cardH = 98 * s, gapY = 12 * s;
+  status.forEach((st, i) => {
+    const m = info.missions[i], y = r.y + 86 * s + i * (cardH + gapY), on = st.state === 'current';
+    ctx.fillStyle = on ? 'rgba(255, 201, 60, 0.16)' : st.state === 'done' ? 'rgba(138, 143, 150, 0.16)' : 'rgba(20, 48, 79, 0.75)';
+    ctx.beginPath(); ctx.roundRect(x, y, right - x, cardH, 12 * s); ctx.fill();
+    ctx.lineWidth = (on ? 3 : 1.2) * s; ctx.strokeStyle = on ? GOLD : 'rgba(255, 248, 236, 0.3)'; ctx.stroke();
+    const bx = x + 52 * s, byc = y + cardH / 2;
+    ctx.beginPath(); ctx.arc(bx, byc, 30 * s, 0, Math.PI * 2);
+    ctx.fillStyle = st.state === 'done' ? '#8a8f96' : on ? '#ffc21f' : '#7a6a3a'; ctx.fill();
+    textAt(ctx, st.state === 'done' ? '✓' : String(m.number), bx, byc + 10 * s, 28, s, st.state === 'locked' ? '#e8d6ae' : NAVY, 900, 'center');
+    const dim = st.state === 'locked' ? 'rgba(255, 248, 236, 0.55)' : CREAM;
+    textAt(ctx, m.title.toUpperCase(), x + 104 * s, y + 46 * s, 30, s, on ? GOLD : dim, 900);
+    textAt(ctx, `MISSION ${m.number} · FROM ${m.giver.toUpperCase()}`, x + 104 * s, y + 78 * s, 17, s, dim, 700);
+    textAt(ctx, st.state === 'done' ? 'DONE' : on ? 'NEXT' : 'LOCKED', right - 24 * s, y + 44 * s, 24, s, on ? GOLD : st.state === 'done' ? '#b9c3cc' : dim, 900, 'right');
+    textAt(ctx, `${money(m.cash)} · +${m.rep} REP`, right - 24 * s, y + 78 * s, 19, s, st.state === 'done' ? '#7fe08a' : dim, 800, 'right');
+  });
+  textAt(ctx, 'Q / E TABS · ESC BACK · TAB MAP', x, r.y + r.h - 22 * s, 18, s, 'rgba(255, 248, 236, 0.8)', 700);
+}
+
+// STATS: the completion ring with every row it is built from, and every career number.
+function drawStatsTab(ctx, game, info, r, s) {
+  drawPanel(ctx, r, s);
+  const x = r.x + 40 * s, split = r.x + r.w * 0.45;
+  const R = 112 * s, cx = x + R + 10 * s, cy = r.y + 36 * s + R;
+  drawCompletionRing(ctx, cx, cy, R, info.percent, s);
+  textAt(ctx, 'COMPLETION', cx + R + 34 * s, cy - 10 * s, 26, s, GOLD, 900);
+  textAt(ctx, 'from what a save keeps', cx + R + 34 * s, cy + 20 * s, 15, s, 'rgba(255, 248, 236, 0.7)', 700);
+  let y = cy + R + 56 * s;
+  const barW = split - x - 40 * s;
+  for (const row of info.rows) {
+    textAt(ctx, row.label, x, y, 17, s, CREAM, 800);
+    textAt(ctx, `${rowValue(row)}  ·  ${Math.round(row.points * 10) / 10} / ${row.weight}%`, x + barW, y, 16, s, GOLD, 800, 'right');
+    ctx.fillStyle = 'rgba(255, 248, 236, 0.18)'; ctx.fillRect(x, y + 8 * s, barW, 6 * s);
+    ctx.fillStyle = GOLD; ctx.fillRect(x, y + 8 * s, barW * (row.points / row.weight), 6 * s);
+    y += 46 * s;
   }
-  y += 16 * s;
-  const p = game.progress;
-  text(`Races ${p.races}/${p.racesOf} · Courier ${p.courier}/${p.courierOf}`, 19, '#fff8ec', 700); y += 46 * s;
-  const rank = game.rankFor(game.missions.rep);
-  text(`REP RANK ${rank.rank}`, 26, '#fff8ec', 900); y += 28 * s;
-  text(rank.name, 18, '#ffc93c', 800); y += 14 * s;
-  ctx.fillStyle = 'rgba(255,248,236,0.25)'; ctx.fillRect(x, y, r.w - 48 * s, 9 * s);
-  ctx.fillStyle = '#ffc93c'; ctx.fillRect(x, y, (r.w - 48 * s) * Math.max(0, Math.min(1, rank.frac)), 9 * s);
-  y += 54 * s;
-  text(`$${game.cash.toLocaleString('en-US')}`, 36, '#7fe08a', 900); y += 44 * s;
-  const saved = p.savedAt;
-  text(saved ? `Saved ${saved.clock} -` : 'Not saved yet', 18, '#fff8ec', 700); y += 24 * s;
-  if (saved) { text(saved.place, 18, '#fff8ec', 700); y += 4 * s; }
-  y += 32 * s;
-  // A small legend for the place marks.
-  const legend = [['H', '#3fae6a', 'Safehouse'], ['$', '#f2b134', 'Quist Auto'], ['G', '#c2412d', 'Gun shop'], ['P', '#3b7bff', 'SPD station'], ['R', '#e07a2f', 'Respray'], ['F', '#14304f', 'Races']];
-  for (let i = 0; i < legend.length; i++) {
-    const [m, c, label] = legend[i], lx = x + (i % 2) * (r.w / 2 - 12 * s) + 11 * s, ly = y + Math.floor(i / 2) * 32 * s;
-    badge(ctx, lx, ly - 6 * s, 11 * s, c, m, s);
-    ctx.textAlign = 'left'; ctx.font = `700 ${Math.round(15 * s)}px ${FONT}`; ctx.fillStyle = '#fff8ec';
-    ctx.fillText(label, lx + 18 * s, ly);
-  }
+  const st = game.stats || {}, rank = game.rankFor(game.missions.rep);
+  const career = [
+    ['CARS STOLEN', st.carsStolen], ['SPD ESCAPES', st.policeEscapes], ['HIGHEST WANTED', null],
+    ['KM DRIVEN', kmOf(st.metresDriven || 0)], ['KM ON FOOT', kmOf(st.metresOnFoot || 0)],
+    ['GANG MEMBERS DOWNED', st.gangDowned], ['CARS BLOWN UP', st.carsBlownUp], ['RACES WON', st.racesWon],
+    ['COURIER JOBS', st.courierDone], ['TIMES BOOKED', st.timesBooked], ['CLINIC VISITS', st.clinicVisits],
+    ['CARS SOLD', st.carsSold], ['RESPRAYS', st.resprays], ['TIME PLAYED', playClock(st.secondsPlayed || 0)],
+    ['CASH · REP RANK', `${money(game.cash)} · ${rank.rank}`],
+  ];
+  const cx0 = split, cright = r.x + r.w - 40 * s;
+  textAt(ctx, 'CAREER', cx0, r.y + 56 * s, 32, s, CREAM, 900);
+  career.forEach(([label, v], i) => {
+    const ry = r.y + 76 * s + i * 39 * s;
+    if (i % 2 === 0) { ctx.fillStyle = 'rgba(255, 248, 236, 0.05)'; ctx.fillRect(cx0 - 12 * s, ry, cright - cx0 + 24 * s, 39 * s); }
+    textAt(ctx, label, cx0, ry + 27 * s, 18, s, 'rgba(255, 248, 236, 0.85)', 800);
+    if (v === null) {
+      font(ctx, 900, 22, s);
+      drawStars(ctx, cright - ctx.measureText('★').width * 5, ry + 28 * s, st.highestWanted || 0, 22, s);
+    } else textAt(ctx, String(v ?? 0), cright, ry + 27 * s, 21, s, CREAM, 900, 'right');
+  });
+  textAt(ctx, 'Q / E TABS · ESC BACK · TAB MAP', x, r.y + r.h - 22 * s, 18, s, 'rgba(255, 248, 236, 0.8)', 700);
+}
+
+// CONTROLS: the same list the title screen shows.
+function drawControlsTab(ctx, r, s) {
+  drawPanel(ctx, r, s);
+  const x = r.x + 40 * s;
+  textAt(ctx, 'CONTROLS', x, r.y + 56 * s, 40, s, CREAM, 900);
+  CONTROLS.forEach(([k, v], i) => {
+    const y = r.y + 84 * s + i * 50 * s;
+    ctx.fillStyle = 'rgba(255, 248, 236, 0.1)';
+    ctx.beginPath(); ctx.roundRect(x, y, 190 * s, 38 * s, 8 * s); ctx.fill();
+    textAt(ctx, k, x + 95 * s, y + 26 * s, 18, s, GOLD, 900, 'center');
+    textAt(ctx, v, x + 214 * s, y + 26 * s, 19, s, CREAM, 700);
+  });
+  textAt(ctx, 'Q / E TABS · ESC BACK · TAB MAP', x, r.y + r.h - 22 * s, 18, s, 'rgba(255, 248, 236, 0.8)', 700);
 }
 
 // The title screen over the live city: the PORT SOLARA wordmark (navy caps, sand outline, a flat

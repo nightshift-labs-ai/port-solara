@@ -202,6 +202,23 @@ await test('career', async () => {
   return s;
 });
 
+await test('pause-tabs', async () => {
+  const s = await call(() => window.__test.pauseTabs());
+  const want = ['menu', 'map', 'story', 'settings', 'menu', 'settings', 'stats', 'menu'];
+  ok(JSON.stringify(s.seen) === JSON.stringify(want), `views ${s.seen.join(' > ')}`);
+  ok(s.tabs === 5, `${s.tabs} tabs`);
+  ok(s.stillPaused && s.resumed, 'a click in STATS ran a menu item, or Esc did not resume');
+  return s;
+});
+
+await test('completion', async () => {
+  const s = await call(() => window.__test.completion());
+  ok(s.weights === 100 && s.story === 24 && s.races === 4 && s.courier === 3, `rows ${JSON.stringify(s)}`);
+  ok(s.percent === s.sum && s.percent >= 31, `completion ${s.percent}%`);
+  ok(s.paid === 8000 && s.payouts === 53500, `payouts ${s.paid} of ${s.payouts}`);
+  return s;
+});
+
 await test('autopilot', async () => {
   const s = await call(() => window.__test.autopilot(0));
   ok(s.card && s.card.title === 'JOB DONE' && s.done, `mission 1 ended without JOB DONE (${JSON.stringify(s.card)})`);

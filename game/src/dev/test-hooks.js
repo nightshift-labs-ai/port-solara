@@ -1,5 +1,6 @@
 // Exposes window.__test for tools/selftest.mjs: snapshot, step(n), simulated keys, teleport, perf.
 import { countWitnesses } from '../police/wanted-level.js';
+import { completionOf } from '../story/completion-percentage.js';
 
 export function exposeTestHooks(game) {
   window.__test = {
@@ -245,6 +246,39 @@ export function exposeTestHooks(game) {
         jacked: theft.inCar, tagged, carsStolen: d('carsStolen'), gangDowned: d('gangDowned'), carsBlownUp: d('carsBlownUp'),
         policeEscapes: d('policeEscapes'), escapesAfterClear, highestWanted: s.highestWanted, metresDriven: d('metresDriven'), secondsPlayed: d('secondsPlayed'),
       };
+    },
+    // The tabbed pause: Esc opens the PAUSED list, E / Q step the tabs (wrapping), a click on a tab
+    // opens it, a click inside STORY runs no menu item, Esc goes back to the list, Esc resumes.
+    pauseTabs() {
+      const key = (code) => dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true }));
+      const p = game.pause, seen = [];
+      key('Escape'); seen.push(p.view);
+      key('KeyE'); seen.push(p.view);
+      key('KeyE'); seen.push(p.view);
+      key('KeyQ'); key('KeyQ'); seen.push(p.view);
+      key('Escape'); seen.push(p.view);
+      key('KeyQ'); seen.push(p.view);
+      key('Escape');
+      const canvas = document.querySelector('.pause-canvas'), box = canvas.getBoundingClientRect();
+      const click = (x, y) => canvas.dispatchEvent(new MouseEvent('click', { clientX: box.left + x, clientY: box.top + y, bubbles: true }));
+      const t = p.tabRects[2];
+      click(t.x + t.w / 2, t.y + t.h / 2); seen.push(p.view);
+      for (let y = 120; y < innerHeight - 40; y += 60) click(innerWidth * 0.08, y); // where RESUME / QUIT would sit
+      const stillPaused = game.mode === 'paused';
+      key('Escape'); seen.push(p.view);
+      key('Escape');
+      game.input.takePresses(); game.input.held.clear(); // the synthetic keys never reach play
+      return { seen, tabs: p.tabRects.length, stillPaused, resumed: game.mode === 'play' };
+    },
+    // The completion percentage from the shared shot save's progress: story 2/5, races 1/4,
+    // courier 3/10 give 24 + 4 + 3 points.
+    completion() {
+      const done = new Set(game.missions.completed), pr = { races: game.progress.races, courier: game.progress.courier };
+      game.missions.completed = new Set(['ferry', 'market']);
+      Object.assign(game.progress, { races: 1, courier: 3 });
+      const c = completionOf(game), pts = Object.fromEntries(c.rows.map((r) => [r.key, r.points]));
+      game.missions.completed = done; Object.assign(game.progress, pr);
+      return { percent: c.percent, sum: Math.floor(c.rows.reduce((a, r) => a + r.points, 0)), story: pts.story, races: pts.races, courier: pts.courier, paid: c.paid, payouts: c.payouts, weights: c.rows.reduce((a, r) => a + r.weight, 0) };
     },
     // Each of the five story missions starts and shows its panel; then it is called off.
     missionList() {
