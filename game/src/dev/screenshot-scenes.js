@@ -73,7 +73,10 @@ function writeAutosaveShot(game) {
 // centre over the sea at the end of the street.
 // v2: the player's own HIGH car view (C in play), down Rua 5 through the Old Mercado toward the
 // Palmline front, the beach and the low sun at the end of the street; cruisers beside the coupe.
-const FRAME = { start: -22, flank: [[1, -3.7], [5.5, 3.7]], heliX: 0.06, heliY: 0.66, heliUp: 13, speed: 40 };
+const FRAME = { start: -22, flank: [[1, -3.7], [5.5, 3.7]], heliX: 0.06, heliY: 0.66, heliUp: 13, speed: 40,
+  // The city's parked Pipit (PARKED_SPOTS[8]) up the south kerb of Rua 5 past the Avenida, nose in:
+  // at 15 health it burns (under 22) and never blows (over 0); burning never lowers health.
+  burner: { x: -75, z: -23.8, heading: Math.PI / 2 + 0.6, health: 15 } };
 // Where Wren stands for the Lantern Point stand, from game.anchors.lantern (on the boulevard's sand
 // side, 28 m from the nearest walkers' ring corner), the yaw the frame is held near (the SUV, the
 // guards and Feira das Lanternas in the WIDE view) and which first-wave guard goes down.
@@ -108,6 +111,10 @@ export const SCENES = {
     // goes, so no card rises over the street when the chase starts.
     car.x = FRAME.start; car.z = -31; car.heading = Math.PI / 2; car.vx = car.vz = car.speed = 0; car.sync();
     game.player.x = car.x; game.player.z = car.z + 2.2;
+    // The Pipit the pursuit put into the kerb ahead (the city's own parked car), burning.
+    const pip = game.cars.find((c) => c.x === -53 && c.z === -140);
+    if (!pip) throw new Error('chase: parked Pipit not found');
+    Object.assign(pip, FRAME.burner, { speed: 0, vx: 0, vz: 0 }); pip.sync();
     hold([], 300);
     game.enterOrExit();
     // Westbound on Rua 5 (z -30) toward Palmline, the beach and the low sun over the sea.
