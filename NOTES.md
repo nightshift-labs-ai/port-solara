@@ -1,5 +1,57 @@
 # PORT SOLARA build notes
 
+## M22 police light bars that light the street: tried, old bars and shot kept (C1 failed (G1) and (G3); C2/C3 dropped for time) (run of 2026-11-20 19:08-19:28 EET)
+
+- Start 16ebf5c, tree clean. Fresh `shoot.mjs`: all four shots byte-identical to HEAD (porcelain empty).
+  Sheet, shots, sha256 and outline in out/ab/before_m22/.
+- Before probe (out/m22/before.json): tick 961, time 16.02, buffer 1280x800, ALIASED_POINT_SIZE_RANGE
+  1..1023; calls 196, triangles 65,971, points 234, programs 38. Phases as predicted: GULL 11 0 (blue
+  on), TIDE 14 0 (blue on), CORAL 7 1 (red on), MERCADO 3 1, ANCHOR 40/41 0. Sprite view depth /
+  distance: GULL 11 12.28 / 12.97 m, TIDE 14 16.69 / 17.02, CORAL 7 32.79 / 33.05; C1 diameters
+  273.7 / 201.4 / 102.5 px (cap 1023: no clipping).
+- Tried C1 (code saved in out/m22/c1.diff, not committed): the units' halves moved to their own
+  Points (buildBarGlow gained size and texture arguments with the old values as defaults, so
+  SKYLARK 1's lamps keep their exact sprite; the unit slots of the old glow stay parked at the -50
+  fill, colour 0), size 8.4, soft texture (alpha 0.7 / 0.45 / 0.15 / 0 at 0 / 0.25 / 0.55 / 1),
+  colours red (1, 0.01, 0) and blue (0, 0.06, 1) linear, OFF half x 0.06. Pools: an InstancedMesh of
+  12 flat 3.0 x 5.6 m quads at y 0.08, centred 1.1 m out on each half's side, rotated by the heading,
+  level in the linear instance colour (ON 0.32 / OFF 0.013 linear, about 0.6 / 0.12 on screen),
+  easing 60% per tick; halos and pools visible only with a unit active. A first version with
+  merged quads and DoubleSide drew 199 calls (a double-sided transparent mesh renders twice) and grew
+  police-ai.js by 3,570 bytes; the instanced one grew it by 1,580 (budget 1,600).
+- C1 probe (out/m22/c1.json/png): camera, the Albacore, units 0-5 (positions, states, phases),
+  SKYLARK 1, 24 traffic, 32 walkers, tick 961 equal to before; calls 196 -> 198, triangles 65,971 ->
+  65,995, points 234 -> 246, programs 38 -> 40 (+2, one more than expected; cause not found in time).
+- C1 measures (out/m22/c1-measure.json; computed mask per unit at 1280: GULL 11 132-590 x 323-665,
+  TIDE 14 678-993 x 301-536, CORAL 7 481-676 x 269-390, MERCADO 3 956-1056 x 252-312, ANCHOR 40
+  627-682 x 245-289, ANCHOR 41 582-638 x 245-289):
+  (G1) FAILED: ON pools' exposed px at 512 GULL 11 1,164 (mean (79.6, 62.4, 101.0), B-R 21.5, spread
+  49.2), TIDE 14 319 (B-R -2.2, spread 32.4); at 1024 GULL 11 4,780 B-R 21.3, TIDE 14 1,368 B-R -2.2;
+  at 768 2,364 / 671, B-R 21.7 / -2.5. Need B-R >= 60 and spread >= 70: the blue pool adds about +54 B
+  on GULL 11's asphalt and +24 on TIDE 14's, too little over the whole visible pool (its soft rim
+  drags the mean down).
+  (G2) mostly passed: new coloured px in the mask at 512 1,308 (GULL 11 528, TIDE 14 580, CORAL 7 220),
+  largest new red patch 421, blue 236; GULL 11 halo box blue px at 1024 685 -> 1,434 (+109%); CORAL 7
+  changed-px R-B 98.0 -> 139.0 (+41); TIDE 14 changed-px B-R -9.3 -> 8.5 (+17.8, needs +20: failed).
+  (G3) FAILED on the zebra: white px among stripe px inside pool quads 30 -> 56 (+87%, 7,237 stripe
+  px): blue light lifts the cream stripes' low blue channel past 225. Halo boxes at 1024 went the
+  right way: white GULL 11 502 -> 46, TIDE 14 966 -> 21, CORAL 7 103 -> 32; pale 985 -> 150, 1,165 ->
+  528, 175 -> 45; bar boxes kept their hue (GULL 11 red R-B 108.4, blue B-R 109.9; TIDE 14 117.4 /
+  117.0).
+  (G4) PNG: 0 px changed outside the mask (103,939 inside, 69,559 over 8); Albacore faces, flame
+  column 412-512 x 180-300 and SKYLARK 1's box 0; but 17,860 of the 46,350 cone-wedge px (the c1 frame
+  vs the same frame with the open cone hidden) changed: pools and halos lie under the translucent
+  cone. HUD: mission and minimap 0 changed; the SPD panel 4,287 changed px, mean change 0.1 per
+  channel, text/border px max change 26 (1 px over 8: the HUD panel rule fails by one pixel).
+  YAVG 99.13 -> 98.89 (1024), 99.24 -> 99.00 (768x480).
+- Verdict: per the ladder only C3 could follow a (G3) failure, and C3 is weaker than C1, so it
+  could not pass (G1); with the run's end at 19:28 it was dropped and game/ reverted to 16ebf5c
+  (no screenshot, game or test change). For a later run: a road pool that reads as blue on this
+  frame's asphalt needs about +95 B over its whole visible area (a flatter, brighter falloff), but on
+  the x -60 zebras under GULL 11 and TIDE 14 any blue light turns cream stripes white, and the
+  cone-wedge zone overlaps the units' pools; both rules would need a different frame or a looser gate
+  before more light helps.
+
 ## M21 the Albacore keeps its coral paint in the cover: kept with C1, nothing dropped (run of 2026-11-20 18:42-19:11 EET)
 - Baseline: out/ab/before_m21/ (four shots, judge sheet, sha256.txt, outline.txt, *-fresh.jpg). Start
   sha 21fd562 (game/ and shots = 7a6350c), tree clean. A fresh four-shot shoot reproduced all four
