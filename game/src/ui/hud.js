@@ -118,47 +118,9 @@ export function drawHud(ctx, game, drawMinimap) {
   ctx.fillText(`${clock.weekday} ${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, mapX + size - 14 * s, pipY + 29 * s);
   ctx.textAlign = 'left';
 
-  // Health, armour and weapon.
-  const by = h - my - 124 * s;
-  panel(ctx, mx, by, 420 * s, 124 * s);
-  const player = game.player;
-  bar(ctx, mx + 16 * s, by + 16 * s, 388 * s, 16 * s, player.health / 100, '#5ad16a');
-  bar(ctx, mx + 16 * s, by + 40 * s, 388 * s, 12 * s, player.armour / 100, '#5fb7ff');
-  // The held weapon and its ammo (clip / reserve, RELOADING while it reloads), then the slot chips.
+  // Health, armour, the weapon strip and REP (bottom-left).
   const arms = game.arms, wpn = arms?.weapon;
-  ctx.fillStyle = WHITE; ctx.font = font(24 * s);
-  ctx.fillText(wpn ? wpn.short : 'FISTS', mx + 16 * s, by + 80 * s);
-  if (wpn?.clip) {
-    const nameW = ctx.measureText(wpn.short).width;
-    ctx.font = font(arms.reloading > 0 ? 14 * s : 20 * s);
-    ctx.fillStyle = arms.reloading > 0 ? GOLD : (arms.clip.clip <= 3 ? '#ff6b5b' : WHITE);
-    ctx.fillText(arms.reloading > 0 ? 'RELOADING' : `${arms.clip.clip}`, mx + 26 * s + nameW, by + 80 * s);
-    if (!(arms.reloading > 0)) {
-      const cw = ctx.measureText(`${arms.clip.clip}`).width;
-      ctx.font = font(15 * s); ctx.fillStyle = 'rgba(255,248,236,0.7)';
-      ctx.fillText(`/ ${arms.clip.reserve}`, mx + 32 * s + nameW + cw, by + 80 * s);
-    }
-  }
-  if (arms) {
-    let sx = mx + 16 * s;
-    ctx.font = font(13 * s);
-    arms.slots.forEach((wd, i) => {
-      const label = `${i + 1} ${wd.short}`, cw = ctx.measureText(label).width + 14 * s, on = i === arms.slot;
-      ctx.fillStyle = on ? GOLD : 'rgba(255,248,236,0.14)';
-      ctx.beginPath(); ctx.roundRect(sx, by + 92 * s, cw, 20 * s, 5 * s); ctx.fill();
-      ctx.fillStyle = on ? '#14304f' : 'rgba(255,248,236,0.85)';
-      ctx.fillText(label, sx + 7 * s, by + 107 * s);
-      sx += cw + 6 * s;
-    });
-  }
-  // REP rank and progress on the right of the weapon row.
-  if (game.rankFor) {
-    const r = game.rankFor(game.missions.rep);
-    ctx.font = font(17 * s); ctx.textAlign = 'right'; ctx.fillStyle = GOLD;
-    ctx.fillText(`REP ${r.rank} · ${r.name}`, mx + 404 * s, by + 80 * s);
-    ctx.textAlign = 'left';
-    bar(ctx, mx + 318 * s, by + 99 * s, 86 * s, 7 * s, r.frac, GOLD);
-  }
+  drawVitalsPanel(ctx, game, mx, h - my, s);
   // Crosshair while aiming or firing on foot; the hit marker is four short gold ticks round it.
   if (arms && !game.vehicle && wpn.clip && (arms.aiming || arms.firing > 0)) {
     const cx = w / 2, cy = h / 2;
@@ -302,6 +264,148 @@ export function panel(ctx, x, y, w, h) {
 function bar(ctx, x, y, w, h, frac, color) {
   ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(x, y, w, h);
   ctx.fillStyle = color; ctx.fillRect(x, y, w * Math.max(0, Math.min(1, frac)), h);
+}
+
+// The bottom-left panel (420 x VITALS_HEIGHT units, its bottom on the HUD margin): HEALTH and
+// ARMOUR rows across the top, then the weapon strip on the left and the REP column on the right.
+export const VITALS_HEIGHT = 144;
+const LOW_AMMO = '#ff6b5b';
+function drawVitalsPanel(ctx, game, mx, bottom, s) {
+  const by = bottom - VITALS_HEIGHT * s;
+  panel(ctx, mx, by, 420 * s, VITALS_HEIGHT * s);
+  const player = game.player;
+  drawLabelledBar(ctx, 'HEALTH', player.health, mx, by + 15 * s, 14, '#5ad16a', s);
+  drawLabelledBar(ctx, 'ARMOUR', player.armour, mx, by + 39 * s, 12, '#5fb7ff', s);
+  if (game.arms) drawWeaponStrip(ctx, game.arms, mx + 16 * s, by + 60 * s, s);
+  if (game.rankFor) drawRepColumn(ctx, game.rankFor(game.missions.rep), mx + 290 * s, by + 60 * s, s);
+}
+
+// One vitals row: the label on the left, the bar, and the value (out of 100) right-aligned.
+function drawLabelledBar(ctx, label, value, x, y, barH, color, s) {
+  const mid = y + barH * s / 2;
+  ctx.font = font(14 * s); ctx.fillStyle = 'rgba(255,248,236,0.88)';
+  ctx.fillText(label, x + 16 * s, mid + 5 * s);
+  bar(ctx, x + 90 * s, y, 268 * s, barH * s, value / 100, color);
+  ctx.font = font(15 * s); ctx.fillStyle = WHITE; ctx.textAlign = 'right';
+  ctx.fillText(`${Math.max(0, Math.round(value))}`, x + 404 * s, mid + 5.5 * s);
+  ctx.textAlign = 'left';
+}
+
+// One tile per slot (84 x 56 units, 6 apart): a drawn pictogram, the slot number in the corner and
+// the ammo under it; the held tile is gold-rimmed with the weapon's short name (and RELOADING)
+// under it. A locked slot is dimmed with a padlock and shows no ammo.
+const TILE = { w: 84, h: 56, gap: 6 };
+function drawWeaponStrip(ctx, arms, x, y, s) {
+  arms.slots.forEach((wd, i) => {
+    const tx = x + i * (TILE.w + TILE.gap) * s;
+    drawWeaponTile(ctx, wd, arms.ammo[i], i, i === arms.slot, arms.locked.has(wd.id), arms, tx, y, s);
+  });
+  const held = arms.weapon, i = arms.slot;
+  const reloading = held.clip && arms.reloading > 0;
+  const label = reloading ? `${held.short} · RELOADING` : held.short;
+  const tx = x + i * (TILE.w + TILE.gap) * s;
+  // Left-aligned under the first tile, centred under the middle one, right-aligned under the last,
+  // so the line never runs out of the strip.
+  const align = i === 0 ? 'left' : i === arms.slots.length - 1 ? 'right' : 'center';
+  const ax = align === 'left' ? tx : align === 'right' ? tx + TILE.w * s : tx + TILE.w * s / 2;
+  ctx.font = font(15 * s); ctx.textAlign = align; ctx.fillStyle = reloading ? GOLD : WHITE;
+  ctx.fillText(label, ax, y + (TILE.h + 17) * s);
+  ctx.textAlign = 'left';
+}
+
+function drawWeaponTile(ctx, wd, ammo, i, held, locked, arms, x, y, s) {
+  const w = TILE.w * s, h = TILE.h * s;
+  ctx.save();
+  if (locked) ctx.globalAlpha = 0.42;
+  ctx.fillStyle = held ? 'rgba(255,201,60,0.2)' : 'rgba(255,248,236,0.09)';
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 6 * s); ctx.fill();
+  ctx.strokeStyle = held ? GOLD : 'rgba(255,248,236,0.28)';
+  ctx.lineWidth = (held ? 2.4 : 1.2) * s;
+  ctx.stroke();
+  // Slot number, top-left.
+  ctx.font = font(14 * s); ctx.fillStyle = held ? GOLD : 'rgba(255,248,236,0.8)';
+  ctx.fillText(`${i + 1}`, x + 7 * s, y + 16 * s);
+  drawWeaponPictogram(ctx, wd.id, x + w / 2 + 4 * s, y + 21 * s, s, held ? GOLD : WHITE);
+  ctx.textAlign = 'center';
+  if (locked) {
+    // No ammo on a locked slot; the padlock goes on at full strength after the dimmed tile.
+  } else if (!wd.clip) {
+    ctx.font = font(22 * s); ctx.fillStyle = WHITE;
+    ctx.fillText('∞', x + w / 2, y + 51 * s);
+  } else {
+    const low = ammo.clip <= 3;
+    const clipText = `${ammo.clip}`, restText = `/${ammo.reserve}`;
+    ctx.font = font(17 * s); const cw = ctx.measureText(clipText).width;
+    ctx.font = font(15 * s, 700); const rw = ctx.measureText(restText).width;
+    const left = x + (w - cw - rw) / 2;
+    ctx.textAlign = 'left';
+    ctx.font = font(17 * s); ctx.fillStyle = low ? LOW_AMMO : WHITE;
+    ctx.fillText(clipText, left, y + 50 * s);
+    ctx.font = font(15 * s, 700); ctx.fillStyle = low ? LOW_AMMO : 'rgba(255,248,236,0.7)';
+    ctx.fillText(restText, left + cw, y + 50 * s);
+  }
+  ctx.restore();
+  ctx.textAlign = 'left';
+  if (locked) drawLockMark(ctx, x + w - 13 * s, y + 13 * s, s);
+}
+
+// Our own flat pictograms in a 44 x 24 unit box round (cx, cy): a side-on fist, the Wasp pistol
+// and the compact Hornet SMG, both facing right. Dark seams pick out fingers and parts.
+function drawWeaponPictogram(ctx, id, cx, cy, s, color) {
+  ctx.save();
+  ctx.translate(cx, cy); ctx.scale(s, s);
+  ctx.fillStyle = color;
+  ctx.strokeStyle = 'rgba(10,20,44,0.85)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+  ctx.beginPath();
+  if (id === 'fists') {
+    ctx.roundRect(-19, -5, 8, 12, 2); // cuff
+    ctx.roundRect(-11, -10, 24, 19, 6); // knuckles and back of the hand
+    ctx.fill();
+    ctx.beginPath();
+    for (const fx of [-3, 3, 9]) { ctx.moveTo(fx, -9); ctx.lineTo(fx, -2); } // finger seams
+    ctx.moveTo(-9, 2); ctx.quadraticCurveTo(0, 0, 8, 3); // the thumb across the fingers
+    ctx.stroke();
+  } else if (id === 'wasp') {
+    ctx.rect(-17, -10, 36, 8); // slide
+    ctx.moveTo(-15, -2); ctx.lineTo(-5, -2); ctx.lineTo(-8, 11); ctx.lineTo(-18, 11); ctx.closePath(); // grip
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-5, -1); ctx.quadraticCurveTo(-4, 6, 4, -1); // trigger guard
+    ctx.moveTo(-12, -7); ctx.lineTo(10, -7); // slide line
+    ctx.stroke();
+  } else {
+    ctx.rect(-14, -8, 30, 9); // receiver
+    ctx.rect(16, -6, 7, 4); // barrel
+    ctx.rect(-22, -7, 8, 5); // folded stock
+    ctx.moveTo(-10, 1); ctx.lineTo(-4, 1); ctx.lineTo(-7, 10); ctx.lineTo(-13, 10); ctx.closePath(); // grip
+    ctx.rect(2, 1, 5, 11); // straight magazine
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-10, -4); ctx.lineTo(12, -4); // receiver seam
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// A small padlock (shackle and body) for a locked slot.
+function drawLockMark(ctx, cx, cy, s) {
+  ctx.save();
+  ctx.strokeStyle = WHITE; ctx.fillStyle = WHITE; ctx.lineWidth = 2 * s;
+  ctx.beginPath(); ctx.arc(cx, cy - 1 * s, 4 * s, Math.PI, 0); ctx.stroke();
+  ctx.fillRect(cx - 6 * s, cy - 1 * s, 12 * s, 9 * s);
+  ctx.restore();
+}
+
+// REP in the right column (114 units wide): "REP 4", the rank name (shrunk to fit), its bar.
+function drawRepColumn(ctx, r, x, y, s) {
+  ctx.font = font(17 * s); ctx.fillStyle = GOLD;
+  ctx.fillText(`REP ${r.rank}`, x, y + 17 * s);
+  let px = 15;
+  ctx.font = font(px * s);
+  while (px > 11 && ctx.measureText(r.name).width > 114 * s) ctx.font = font(--px * s);
+  ctx.fillStyle = WHITE;
+  ctx.fillText(r.name, x, y + 38 * s);
+  bar(ctx, x, y + 47 * s, 114 * s, 7 * s, r.frac, GOLD);
 }
 
 // The mission panel: "MISSION 3/5 · THE HARBOR RUN", the objective with live distance, a stage
