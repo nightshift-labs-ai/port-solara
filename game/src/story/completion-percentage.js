@@ -30,3 +30,13 @@ export function completionOf(game) {
   const payouts = missions.reduce((a, m) => a + m.cash, 0);
   return { percent, rows, missions, storyDone, paid, payouts };
 }
+
+// The percentage a save record would show on the MAP tab once loaded (computed, never stored).
+export function completionOfSave(game, rec) {
+  const st = rec.stats || {};
+  return completionOf({
+    story: game.story, missions: { completed: new Set(rec.story || []) }, stats: rec.career || {},
+    progress: { races: st.races || 0, racesOf: game.progress.racesOf, courier: st.courier || 0, courierOf: game.progress.courierOf },
+    arms: { locked: new Set(rec.weapons?.locked || ['hornet']) },
+  }).percent;
+}

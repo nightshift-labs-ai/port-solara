@@ -1,7 +1,7 @@
 import { districtAt, LANDMARKS } from '../world/city-builder.js';
 import { nearestNode } from '../police/police-ai.js';
 import { latestSave, continueLabel, readAllSlots, clockOf } from '../core/save-slots.js';
-import { completionOf } from '../story/completion-percentage.js';
+import { completionOf, completionOfSave } from '../story/completion-percentage.js';
 import { kmOf, playClock } from '../story/career-stats.js';
 
 const FONT = '"DejaVu Sans", Verdana, sans-serif';
@@ -678,11 +678,14 @@ export function showTitleScreen(game, onNewGame) {
   menu.className = 'title-menu';
   // CONTINUE leads when a save exists, labelled from the newest of the three slots.
   const save = latestSave();
+  const load = (s) => () => { root.hidden = true; game.loadSave?.(s); onNewGame(); };
+  const cards = saveCards(game, save, load);
+  const syncCards = () => { cards.hidden = !save || !controls.hidden || !settingsPanel.hidden; };
   const items = [
-    ...(save ? [{ label: continueLabel(save), run: () => { root.hidden = true; game.loadSave?.(save); onNewGame(); } }] : []),
+    ...(save ? [{ label: continueLabel(save), run: load(save) }] : []),
     { label: 'NEW GAME', run: () => { root.hidden = true; if (game.mode !== 'title' || game.playedOnce) game.newGameState?.(); game.setClock(game.lore.clock.startMinutes); onNewGame(); } },
-    { label: 'CONTROLS', run: () => { settingsPanel.hidden = true; controls.hidden = !controls.hidden; } },
-    { label: 'SETTINGS', run: () => { controls.hidden = true; settingsPanel.hidden = !settingsPanel.hidden; fillSettings(); } },
+    { label: 'CONTROLS', run: () => { settingsPanel.hidden = true; controls.hidden = !controls.hidden; syncCards(); } },
+    { label: 'SETTINGS', run: () => { controls.hidden = true; settingsPanel.hidden = !settingsPanel.hidden; fillSettings(); syncCards(); } },
   ];
   // The title's settings: a click on a row raises it (wrapping round), the same store as the pause.
   const settingsPanel = document.createElement('div');
@@ -716,7 +719,8 @@ export function showTitleScreen(game, onNewGame) {
   const strip = document.createElement('div');
   strip.className = 'controls-strip';
   strip.textContent = 'WASD MOVE · F STEAL · SPACE DRIFT · C CAMERA · E USE · TAB MAP · ESC PAUSE';
-  root.append(controls, menu, strip);
+  root.append(controls, menu, strip, cards);
+  syncCards();
 
   const onKey = (e) => {
     if (root.hidden) { removeEventListener('keydown', onKey); return; }
@@ -728,6 +732,44 @@ export function showTitleScreen(game, onNewGame) {
   root.onTitleKey = onKey;
   addEventListener('keydown', onKey);
   return root;
+}
+
+// The three save slots beside the title menu, each read only from its own record (text nodes only).
+function saveCards(game, next, load) {
+  const box = document.createElement('div');
+  box.className = 'save-cards';
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const row = (cls, ...parts) => { const r = el('div', cls); r.append(...parts); return r; };
+  readAllSlots().forEach((rec, i) => {
+    const card = el('div', 'save-card');
+    const head = el('span', 'gold', `SLOT ${i + 1} · `);
+    if (!rec) {
+      head.append(el('span', 'dim', 'EMPTY'));
+      card.append(row('', head), row('dim', el('span', '', i === 0 ? 'Written after each story mission' : 'E at Calloway Salvage or pause > SAVE')));
+      return box.append(card);
+    }
+    head.append(String(rec.place || '').toUpperCase());
+    const open = game.story.find((m) => !(rec.story || []).includes(m.id));
+    const district = districtAt(rec.at?.x || 0, rec.at?.z || 0), chip = el('i', 'chip');
+    chip.style.background = DISTRICT_TINT[district];
+    card.append(
+      row('', head, el('span', '', saveClockText(game.lore.clock, rec))),
+      row('big', el('span', '', open ? `${rec.storyStep}/${rec.storyOf}  ${open.title.toUpperCase()}` : 'STORY COMPLETE'), el('span', 'gold', `${completionOfSave(game, rec)}%`)),
+      row('', el('span', '', titleCase(game.lore.districts[district])), el('span', 'cash', money(rec.cash || 0))),
+    );
+    card.lastChild.firstChild.prepend(chip);
+    if (next && rec.slot === next.slot) card.classList.add('next');
+    card.addEventListener('click', load(rec));
+    box.append(card);
+  });
+  return box;
+}
+
+// "FRI 17:26": what the HUD clock shows once this record is loaded (old records: 17:20 + time).
+function saveClockText(c, rec) {
+  const total = Math.floor(Number.isFinite(rec.clock) ? rec.clock : c.startMinutes + (rec.time || 0)), m = ((total % 1440) + 1440) % 1440;
+  const day = c.week[(((c.week.indexOf(c.weekday) + Math.floor(total / 1440)) % 7) + 7) % 7];
+  return `${day} ${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
 export const CONTROLS = [

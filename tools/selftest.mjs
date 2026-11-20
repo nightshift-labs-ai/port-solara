@@ -280,15 +280,21 @@ await test('save', async () => {
   await reload();
   const label = await call(() => document.querySelector('.title-menu li')?.textContent);
   ok(label === 'CONTINUE - Story 3/5 - $18,450', `title shows "${label}"`);
-  const after = await call(`(() => {
+  // The title's slot cards, each from its own record: slot 2 holds the save, 1 and 3 are empty.
+  const cards = await call(() => [...document.querySelectorAll('#title-screen .save-cards .save-card')].map((c) => c.textContent));
+  ok(cards.length === 3 && /EMPTY/.test(cards[0]) && /EMPTY/.test(cards[2]) && !/EMPTY/.test(cards[1]), `cards: ${JSON.stringify(cards)}`);
+  ok(['THE HARBOR RUN', '$18,450', 'CALLOWAY SALVAGE'].every((t) => cards[1]?.includes(t)), `card 2: ${cards[1]}`);
+  const after = await call(`(async () => {
     const g = window.portSolara, s = (${newestSave.toString()})();
     g.loadSave(s); g.startPlay();
-    return { carsStolen: g.stats.carsStolen, cash: g.cash, rep: g.missions.rep, story: [...g.missions.completed].sort(), races: g.progress.races, courier: g.progress.courier, best: g.progress.bestLaps.race1, slot: g.arms.slot, locked: [...g.arms.locked], x: g.player.x, z: g.player.z, place: g.progress.savedAt && g.progress.savedAt.place };
+    const { completionOf } = await import('/src/story/completion-percentage.js');
+    return { percent: completionOf(g).percent, carsStolen: g.stats.carsStolen, cash: g.cash, rep: g.missions.rep, story: [...g.missions.completed].sort(), races: g.progress.races, courier: g.progress.courier, best: g.progress.bestLaps.race1, slot: g.arms.slot, locked: [...g.arms.locked], x: g.player.x, z: g.player.z, place: g.progress.savedAt && g.progress.savedAt.place };
   })()`);
   for (const k of ['carsStolen', 'cash', 'rep', 'races', 'courier', 'best', 'slot']) ok(after[k] === before[k], `${k}: ${before[k]} -> ${after[k]}`);
   ok(JSON.stringify(after.story) === JSON.stringify(before.story) && JSON.stringify(after.locked.sort()) === JSON.stringify(before.locked.sort()), 'story or weapons differ');
   ok(Math.hypot(after.x - before.x, after.z - before.z) < 0.2 && after.place === 'Calloway Salvage', 'Wren is not back at the safehouse');
-  return { label, ...after };
+  ok(after.percent === 37 && cards[1].includes(`${after.percent}%`), `card 2 vs MAP tab: ${cards[1]} / ${after.percent}%`);
+  return { label, cards, ...after };
 });
 
 // The clock: one game minute per 60 steps, still while paused, the weekday rolls at midnight, saves

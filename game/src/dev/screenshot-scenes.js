@@ -1,6 +1,8 @@
 // Stages a shot from the seeded start, plays the real simulation forward a fixed number of
 // ticks with scripted input, hides the cursor, then flags window.__shotReady.
 import { careerFromSave } from '../story/career-stats.js';
+import { writeSlot, AUTOSAVE_SLOT } from '../core/save-slots.js';
+import { SIDE_ACTIVITIES } from '../missions/side-activities.js';
 
 export function stageScreenshotScene(game, name) {
   document.body.classList.add('shot-mode');
@@ -38,13 +40,31 @@ function seedShotSave(game) {
 
 // Writes the shared save into slot 2 as a real record (as the safehouse [E] would) at the fixed time.
 function writeShotSave(game) {
-  localStorage.clear();
   const h = game.spots.find((p) => p.id === 'safehouse');
   const at = { x: game.player.x, z: game.player.z };
   game.player.x = h.x + 1; game.player.z = h.z;
   game.focus = game.player;
-  localStorage.setItem('port-solara/save-slot-2', JSON.stringify({ ...game.captureSave(SHOT_SAVE.place), slot: 2, savedAt: SHOT_SAVE.savedAt }));
+  writeSlot(2, game.captureSave(SHOT_SAVE.place), SHOT_SAVE.savedAt);
   game.player.x = at.x; game.player.z = at.z;
+}
+
+// Slot 1 as the autosave after Market Day would hold it: the shared save less the North Ring
+// first win and the three courier drops (SIDE_ACTIVITIES pay and REP), a shorter career, Wren at
+// the ambush (Market Day's last placed step), 45 minutes before slot 2. Everything is put back.
+function writeAutosaveShot(game) {
+  const market = game.story.find((m) => m.id === 'market'), spot = market.steps.filter((st) => st.at).pop().at;
+  const race = SIDE_ACTIVITIES.races.race1, job = SIDE_ACTIVITIES.courier, p = game.player;
+  const was = { x: p.x, z: p.z, facing: p.facing, focus: game.focus, done: game.missions.completed, rep: game.missions.rep, cash: game.cash, progress: { ...game.progress }, stats: game.stats };
+  game.missions.completed = new Set([...was.done, ...SHOT_SAVE.story]);
+  game.missions.rep = SHOT_SAVE.rep - race.rep - SHOT_SAVE.courier * job.rep;
+  game.cash = SHOT_SAVE.cash - race.cash - SHOT_SAVE.courier * job.pay;
+  Object.assign(game.progress, { races: 0, courier: 0, bestLaps: {} });
+  game.stats = careerFromSave({ ...SHOT_CAREER, racesWon: 0, courierDone: 0, metresDriven: 8600, metresOnFoot: 1500, secondsPlayed: 2700 });
+  p.x = spot.x; p.z = spot.z; game.focus = p;
+  writeSlot(AUTOSAVE_SLOT, game.captureSave(`After ${market.title}`), SHOT_SAVE.savedAt - 45 * 60 * 1000);
+  p.x = was.x; p.z = was.z; p.facing = was.facing; game.focus = was.focus;
+  game.missions.completed = was.done; game.missions.rep = was.rep; game.cash = was.cash;
+  Object.assign(game.progress, was.progress); game.stats = was.stats;
 }
 
 // Cover framing: the arm behind and above the Albacore (it fills about 28% of the width), the two
@@ -178,11 +198,16 @@ export const SCENES = {
     game.stats = careerFromSave(SHOT_CAREER); // after the play hold, so no tick adds to it
     game.openPause('map');
   },
-  // The title over a drone orbit of the live city, with CONTINUE read back from the shared save
-  // written into slot 2 as a real record.
+  // The title over a drone orbit of the live city: slot 1 the autosave after Market Day (written at
+  // step 120), slot 2 the shared save (CONTINUE reads it back), slot 3 empty. Storage is cleared
+  // only here, before either is written.
   title(game) {
-    for (let i = 0; i < 420; i++) game.step();
+    localStorage.clear();
+    for (let i = 0; i < 120; i++) game.step();
+    writeAutosaveShot(game);
+    for (let i = 0; i < 300; i++) game.step();
     seedShotSave(game);
+    game.stats = careerFromSave(SHOT_CAREER);
     writeShotSave(game);
     game.quitToTitle();
   },
