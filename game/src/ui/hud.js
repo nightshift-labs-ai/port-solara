@@ -195,7 +195,16 @@ export function drawHud(ctx, game, drawMinimap) {
   const car = game.vehicle;
   if (car) {
     const cx = w - mx - 110 * s, cy = h - my - 70 * s, r = 86 * s;
-    panel(ctx, w - mx - 230 * s, h - my - SPEED_H * s, 230 * s, SPEED_H * s);
+    const sx = w - mx - 230 * s, sy = h - my - SPEED_H * s;
+    panel(ctx, sx, sy, 230 * s, SPEED_H * s);
+    // CONDITION: the car's own health; amber where it smokes (under 45), red where it burns (under 22).
+    const cond = Math.max(0, Math.min(100, Math.round(car.health)));
+    ctx.font = font(14 * s); ctx.fillStyle = 'rgba(255,248,236,0.88)';
+    ctx.fillText('CONDITION', sx + 16 * s, sy + 22 * s);
+    ctx.font = font(15 * s); ctx.fillStyle = WHITE; ctx.textAlign = 'right';
+    ctx.fillText(`${cond}%`, sx + 214 * s, sy + 22 * s);
+    ctx.textAlign = 'left';
+    bar(ctx, sx + 16 * s, sy + 27 * s, 198 * s, 9 * s, cond / 100, cond >= 45 ? '#5ad16a' : cond >= 22 ? '#e0a21f' : '#ff6b5b');
     const kmh = Math.round(Math.abs(car.speed) * 3.6);
     const frac = Math.min(1, kmh / 240);
     ctx.lineCap = 'round';
@@ -257,7 +266,7 @@ export const WHITE = '#fff8ec';
 export const NAVY_GLASS = 'rgba(10, 20, 44, 0.8)';
 export const OUTLINE = 'rgba(255, 241, 214, 0.38)';
 export const HUD_SCALE = 0.85;
-const SPEED_H = 150; // speed panel height in units, its bottom on the HUD margin
+const SPEED_H = 186; // speed panel height in units (the top 36 hold CONDITION), its bottom on the HUD margin
 
 export function font(px, weight = 800) { return `${weight} ${Math.round(px)}px "DejaVu Sans", Verdana, sans-serif`; }
 
