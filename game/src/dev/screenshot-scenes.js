@@ -146,6 +146,8 @@ export const SCENES = {
     game.startPlay();
     seedShotSave(game);
     game.missions.completed.add('harbor');
+    // The stand at night: Friday 21:38 through the save-load setter (the frame lands near 21:45).
+    game.setClock(21 * 60 + 38);
     const a = game.anchors.lantern;
     game.player.x = a.x + SEAFRONT.dx; game.player.z = a.z + SEAFRONT.dz;
     game.player.facing = game.chase.yaw = SEAFRONT.yaw;

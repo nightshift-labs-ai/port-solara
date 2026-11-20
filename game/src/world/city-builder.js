@@ -183,7 +183,7 @@ function isLandmarkBlock(b) {
 // Lit windows at night: the shared night level (the day-night cycle sets it, 0 by day), and per
 // facade the window rectangle in tile UV (from makeFacadeTextures) and the share of lit cells.
 const NIGHT_WINDOWS = { value: 0 };
-const WINDOWS = { stucco: [0.34, 0.29, 0.66, 0.76, 0.45], glass: [0.08, 0.08, 0.46, 0.9, 0.38], shed: [0, 0, 0, 0, 0] };
+const WINDOWS = { stucco: [0.34, 0.29, 0.66, 0.76, 0.5], glass: [0.08, 0.08, 0.46, 0.9, 0.38], shed: [0, 0, 0, 0, 0] };
 
 function instancedBoxes(list, tex, floor, bay, shadows, win) {
   const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.82 });

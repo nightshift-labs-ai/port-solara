@@ -18,8 +18,8 @@ export function createDayNightCycle(game) {
   // Night: an ultramarine dome over a cobalt-teal glow, a cool moon (40 degrees west of south,
   // 17 up), a blue-grey sky fill and the city's warm glow kept on the east bounce.
   const night = {
-    fog: C(0x24456e), sun: [C(0xa8c0ff), 1.3], hemi: [C(0x5a78b8), C(0x5a5060), 0.7],
-    bounce: [C(0xffb27a), 0.8], disc: C(0xe4ecff), exposure: 1.05,
+    fog: C(0x24456e), sun: [C(0xa8c0ff), 1.45], hemi: [C(0x5a78b8), C(0x5a5060), 0.7],
+    bounce: [C(0xffb27a), 0.95], disc: C(0xe4ecff), exposure: 1.05,
   };
   const moonDir = new THREE.Vector3(-0.64, 0.29, 0.71).normalize();
   // The night dome from the same height bands as the day one.
