@@ -252,12 +252,13 @@ export function bootPortSolara() {
     game.nightLights.update(game.dayNight.level);
     game.nightMarket.render(game.dayNight.level);
     if (game.mode === 'title') {
-      // A slow drone swing 250 m east of the Sundial Tower, looking west over the city to the
-      // low sun and the bay; the needle stays out past the right edge, clear of the wordmark.
-      const a = 0.35 + Math.sin(game.time * 0.05) * 0.12;
-      camera.position.set(-30 + Math.cos(a) * 250, 85, -180 + Math.sin(a) * 250);
-      camera.lookAt(-47, 20, 69);
-      game.light.follow({ x: -60, z: -120 }, camera.position);
+      // A drone 50 m over the sand looking north up the beach: the bay at left, the palm boulevard
+      // to Lantern Point, Hotel Meridiana, the towers and the Sundial needle at right; the low sun
+      // stays out of frame to the left. It drifts +/- 12 m along the shore (0 in the shot).
+      const s = 12 * Math.sin((game.tick - 420) / 1200);
+      camera.position.set(-210, 50, 40 + s);
+      camera.lookAt(-210, 39.5, s - 59.5);
+      game.light.follow({ x: -207.8, z: s - 110 }, camera.position);
     } else {
       game.chase.update(0, game.focus, game.collide);
       game.light.follow(game.focus, camera.position);
