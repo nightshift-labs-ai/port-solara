@@ -67,7 +67,7 @@ export function bootPortSolara() {
   buildRoadNetwork(game);
   game.light = createSunSoakedLighting(game);
   game.tailGlow = createTailGlow(game);
-  buildCityDistricts(game);
+  game.cityLots = buildCityDistricts(game).lots;
   game.cityBuildMs = performance.now() - t0;
   game.dayNight = createDayNightCycle(game);
 

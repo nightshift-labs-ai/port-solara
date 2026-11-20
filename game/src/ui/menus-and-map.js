@@ -303,6 +303,17 @@ function drawCityMap(ctx, game, rect, s) {
     ctx.fillStyle = DISTRICT_TINT[districtAt(b.cx, b.cz)] || '#c9c2b4';
     ctx.fillRect(b.minX, b.minZ, b.maxX - b.minX, b.maxZ - b.minZ);
   }
+  // Building footprints from the city builder's own lots, in their block's tint a shade darker.
+  for (const kind of ['stucco', 'glass', 'shed']) {
+    for (const l of game.cityLots?.[kind] || []) {
+      const b = roads.blocks.find((q) => l.x > q.minX && l.x < q.maxX && l.z > q.minZ && l.z < q.maxZ);
+      if (!b) continue;
+      const x0 = Math.max(l.x - l.w / 2, b.minX), x1 = Math.min(l.x + l.w / 2, b.maxX);
+      const z0 = Math.max(l.z - l.d / 2, b.minZ), z1 = Math.min(l.z + l.d / 2, b.maxZ);
+      ctx.fillStyle = DISTRICT_TINT[districtAt(b.cx, b.cz)] || '#c9c2b4'; ctx.fillRect(x0, z0, x1 - x0, z1 - z0);
+      ctx.fillStyle = 'rgba(20, 48, 79, 0.10)'; ctx.fillRect(x0, z0, x1 - x0, z1 - z0);
+    }
+  }
   ctx.strokeStyle = '#ffffff';
   for (const r of roads.roads) {
     ctx.lineWidth = Math.max(r.width * 0.8, 3 / k);
