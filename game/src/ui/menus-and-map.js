@@ -35,6 +35,7 @@ const SPOT_PLAN = [
 const LABEL_NUDGE = { mercado: [-30, 75], coral: [0, 25], lantern: [40, 30] };
 // Map blocks and title card chips take their district's colour (Lantern Point has no blocks).
 export const DISTRICT_TINT = { palmline: '#9ed1a0', coral: '#97bfe6', mercado: '#e8a382', saltworks: '#a9b7c4', lantern: '#f1c86a' };
+const MAP_HINT = 'TAB CLOSE · ESC MENU · Q / E TABS';
 const titleCase = (t) => t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
 export function citySpots(game) {
@@ -259,7 +260,7 @@ export function drawPauseScreen(ctx, game, pause, items) {
     ctx.fillText('ESC RESUME · TAB MAP · ARROWS + ENTER · Q / E TABS', mapRect.x + 44 * s, mapRect.y + mapRect.h - 28 * s);
   } else {
     ctx.font = `700 ${Math.round(18 * s)}px ${FONT}`;
-    const hint = 'TAB CLOSE · ESC MENU · Q / E TABS', hw = ctx.measureText(hint).width;
+    const hint = MAP_HINT, hw = ctx.measureText(hint).width;
     ctx.fillStyle = 'rgba(20, 48, 79, 0.88)';
     ctx.fillRect(mapRect.x + 12 * s, mapRect.y + mapRect.h - 44 * s, hw + 24 * s, 32 * s);
     ctx.fillStyle = '#fff8ec';
@@ -305,7 +306,17 @@ function drawCityMap(ctx, game, rect, s) {
     if (r.axis === 'z') { ctx.moveTo(r.at, r.from); ctx.lineTo(r.at, r.to); } else { ctx.moveTo(r.from, r.at); ctx.lineTo(r.to, r.at); }
     ctx.stroke();
   }
+  // GPS: the same lane-graph A* the minimap follows, Wren to the current goal, gold on a navy casing.
+  const goal = game.gpsGoal(), route = game.planRoute(game.focus, goal);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath();
+  route.forEach((p, i) => (i ? ctx.lineTo(p.x, p.z) : ctx.moveTo(p.x, p.z)));
+  ctx.lineWidth = (18 * s) / k; ctx.strokeStyle = NAVY; ctx.stroke();
+  ctx.lineWidth = (12 * s) / k; ctx.strokeStyle = '#ffc21f'; ctx.stroke();
   ctx.restore();
+  // Boxes the waypoint tag must stay clear of (px): names, badges, rings, the arrow, the hint plate.
+  const avoid = [];
+  const disc = (x, y, r) => avoid.push({ x0: x - r, y0: y - r, x1: x + r, y1: y + r });
 
   // District names at the middle of their blocks, from the same districtAt the game uses.
   const sums = {};
@@ -321,17 +332,21 @@ function drawCityMap(ctx, game, rect, s) {
     ctx.font = `900 ${Math.round((small ? 17 : 30) * s)}px ${FONT}`;
     ctx.lineWidth = 6 * s; ctx.strokeStyle = 'rgba(20, 48, 79, 0.85)'; ctx.lineJoin = 'round';
     ctx.strokeText(name, px, py); ctx.fillStyle = '#fff8ec'; ctx.fillText(name, px, py);
+    const m = ctx.measureText(name);
+    avoid.push({ x0: px - m.actualBoundingBoxLeft - 3 * s, y0: py - m.actualBoundingBoxAscent - 3 * s, x1: px + m.actualBoundingBoxRight + 3 * s, y1: py + m.actualBoundingBoxDescent + 3 * s });
   }
 
   for (const sp of citySpots(game)) {
     const [px, py] = P(sp.x, sp.z);
     badge(ctx, px, py, 13 * s, sp.fill, sp.mark, s);
+    disc(px, py, 14.5 * s);
   }
   // Story rings: done ones grey with a tick, the current one gold and large, locked ones dim.
   const status = storyStatus(game);
   for (const st of status) {
     const [px, py] = P(st.mission.start.x, st.mission.start.z);
     const r = (st.state === 'current' ? 19 : 15) * s;
+    disc(px, py, r + (st.state === 'current' ? 3.5 : 1.5) * s);
     ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2);
     ctx.fillStyle = st.state === 'done' ? '#8a8f96' : st.state === 'current' ? '#ffc21f' : '#7a6a3a';
     ctx.fill(); ctx.lineWidth = 3 * s; ctx.strokeStyle = st.state === 'current' ? '#fff8ec' : '#14304f'; ctx.stroke();
@@ -351,12 +366,56 @@ function drawCityMap(ctx, game, rect, s) {
   ctx.moveTo(0, -18 * s); ctx.lineTo(13 * s, 14 * s); ctx.lineTo(0, 7 * s); ctx.lineTo(-13 * s, 14 * s); ctx.closePath();
   ctx.fill(); ctx.stroke();
   ctx.restore();
+  disc(px, py, 18 * s);
+  // Waypoint tag: the current story mission beside its ring, only while the GPS points at that ring.
+  const cur = status.find((st) => st.state === 'current');
+  ctx.font = `700 ${Math.round(18 * s)}px ${FONT}`;
+  avoid.push({ x0: rect.x + 12 * s, y0: rect.y + rect.h - 44 * s, x1: rect.x + 36 * s + ctx.measureText(MAP_HINT).width, y1: rect.y + rect.h - 12 * s });
+  if (cur && goal === cur.mission.start) drawWaypointTag(ctx, cur.mission, P(goal.x, goal.z), route.map((p) => P(p.x, p.z)), avoid, rect, s);
   ctx.font = `900 ${Math.round(20 * s)}px ${FONT}`;
   ctx.fillStyle = '#fff8ec';
   ctx.fillText('N ▲', rect.x + rect.w - 64 * s, rect.y + 34 * s);
   ctx.restore();
   ctx.lineWidth = 1.2 * s; ctx.strokeStyle = 'rgba(255, 241, 214, 0.5)';
   ctx.beginPath(); ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 18 * s); ctx.stroke();
+}
+
+// A navy plate with a gold rim naming the mission, placed nearest-first around its ring (8 directions,
+// 6-90 px out) at the first spot inside the map clear of every box and of the route's casing.
+function drawWaypointTag(ctx, mission, [rx, ry], line, avoid, rect, s) {
+  const text = `${mission.number} · ${mission.title.toUpperCase()}`;
+  ctx.font = `900 ${Math.round(20 * s)}px ${FONT}`;
+  const m = ctx.measureText(text), cap = m.actualBoundingBoxAscent;
+  const w = m.width + 20 * s, h = cap + 12 * s, R = 22.5 * s, c = Math.SQRT1_2;
+  const hits = (b) => avoid.some((a) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0);
+  const nearRoute = (b) => line.some((p, i) => {
+    if (!i) return false;
+    const [ax, ay] = line[i - 1], n = Math.max(1, Math.ceil(Math.hypot(p[0] - ax, p[1] - ay) / (2 * s)));
+    for (let j = 0; j <= n; j++) {
+      const x = ax + ((p[0] - ax) * j) / n, y = ay + ((p[1] - ay) * j) / n;
+      if (Math.hypot(Math.max(b.x0 - x, 0, x - b.x1), Math.max(b.y0 - y, 0, y - b.y1)) < 9 * s) return true;
+    }
+    return false;
+  });
+  const m8 = 8 * s;
+  for (let d = 6 * s; d <= 90 * s; d += 2 * s) {
+    const e = R + d;
+    // N, NE, E, SE, S, SW, W, NW: top-left corner of the plate.
+    const spots = [[rx - w / 2, ry - e - h], [rx + e * c, ry - e * c - h], [rx + e, ry - h / 2], [rx + e * c, ry + e * c],
+      [rx - w / 2, ry + e], [rx - e * c - w, ry + e * c], [rx - e - w, ry - h / 2], [rx - e * c - w, ry - e * c - h]];
+    for (const [x, y] of spots) {
+      const b = { x0: x, y0: y, x1: x + w, y1: y + h };
+      if (b.x0 < rect.x + m8 || b.y0 < rect.y + m8 || b.x1 > rect.x + rect.w - m8 || b.y1 > rect.y + rect.h - m8) continue;
+      if (hits(b) || nearRoute(b)) continue;
+      ctx.fillStyle = 'rgba(20, 48, 79, 0.92)';
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, 7 * s); ctx.fill();
+      ctx.lineWidth = 1.5 * s; ctx.strokeStyle = GOLD; ctx.stroke();
+      ctx.fillStyle = CREAM; ctx.textAlign = 'left';
+      ctx.fillText(text, x + 10 * s, y + 6 * s + cap);
+      return b;
+    }
+  }
+  return null;
 }
 
 // Story order: done, then the first open one is current, the rest locked.
@@ -437,15 +496,29 @@ function drawPlaceLegend(ctx, r, s, game) {
   const keyW = key.map(([, name]) => 21 * s + ctx.measureText(name).width);
   const keySpare = (r.w - 24 * s - keyW.reduce((a, b) => a + b, 0)) / (key.length - 1);
   const two = keySpare >= 28 * s, row1 = two ? r.y + r.h * 0.29 : r.y + r.h / 2;
+  // The map's gold GPS line joins the key when the row still has 28 units to spare with it.
+  const gpsW = 30 * s + ctx.measureText('GPS').width;
+  const gpsSpare = (r.w - 24 * s - gpsW - keyW.reduce((a, b) => a + b, 0)) / key.length;
+  if (two && gpsSpare >= 28 * s) { key.push(['gps', 'GPS']); keyW.push(gpsW); }
+  const kSpare = key.length > 4 ? gpsSpare : keySpare;
   if (two) {
     let kx = r.x + 12 * s;
     key.forEach(([id, name], i) => {
       const ky = r.y + r.h * 0.72;
+      if (id === 'gps') {
+        ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(kx + 5 * s, ky); ctx.lineTo(kx + 20 * s, ky);
+        ctx.lineWidth = 10 * s; ctx.strokeStyle = NAVY; ctx.stroke();
+        ctx.lineWidth = 6 * s; ctx.strokeStyle = '#ffc21f'; ctx.stroke();
+        ctx.lineCap = 'butt';
+        textAt(ctx, name, kx + 30 * s, ky + 5.5 * s, 15, s, CREAM, 700);
+        return;
+      }
       ctx.fillStyle = DISTRICT_TINT[id];
       ctx.beginPath(); ctx.roundRect(kx, ky - 7 * s, 14 * s, 14 * s, 3.5 * s); ctx.fill();
       ctx.lineWidth = 1.5 * s; ctx.strokeStyle = NAVY; ctx.stroke();
       textAt(ctx, name, kx + 21 * s, ky + 5.5 * s, 15, s, CREAM, 700);
-      kx += keyW[i] + keySpare;
+      kx += keyW[i] + kSpare;
     });
   }
   const widths = legend.map(([, , label]) => 28 * s + ctx.measureText(label).width);
