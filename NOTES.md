@@ -1,5 +1,57 @@
 # PORT SOLARA build notes
 
+## M19 burning Pipit in the chase: kept with W2, nothing dropped (run of 2026-11-20 16:13-16:42 EET)
+- Baseline: out/ab/before_m19/ (four shots, judge sheet, sha256.txt, outline.txt, *-fresh.jpg). Start
+  sha 8d518e3. A fresh four-shot shoot reproduced all four committed sha256 (no drift). Only
+  screenshot-scenes.js changed (FRAME.burner and four lines in SCENES.chase, +567 bytes).
+- Staging: the city's own parked Pipit (PARKED_SPOTS[8], found in game.cars by x -53, z -140; the
+  scene throws if it is missing) is re-parked right after the Albacore's kerb placement, before
+  hold 300: FRAME.burner (-75, -23.8), heading PI/2 + 0.6 (nose west and well into the south kerb of
+  Rua 5, past the Avenida crossing), health 15, speed and velocity 0, sync(). Under 22 it burns,
+  over 0 it never blows (not car.wrecked), and burning never lowers health, so it burns about 6 s
+  before the frame: a full column and plume. A state play reaches the same way as M16's SUV at 32 (a
+  car the pursuit hit down to 15); the crash itself is not staged. Traffic side 3.2 m (> 3.1): the
+  eastbound lane never brakes for it; spawns, the shared random and the walkers are unchanged.
+- Candidates (out/m19/probe.mjs, 1280x800 PNG, JSON; measure.mjs counts the prescribed ffmpeg change
+  mask and raw RGB/gray at 1024x640 and 768x480, flags=area): W1 (heading PI/2 + 0.2) passed (a)-(c)
+  (flames 1,981 / 1,124 px, hood +111.5 / +101.2, CORAL 7 1.54%) but failed (d): the walker at
+  (-77.12, -22.5) stood 0.49 m from its footprint. W2 (PI/2 + 0.6) passed everything. The retry was
+  not needed (no state moved). The before probe gave a byte-identical PNG and JSON on a second launch.
+- HUD panels: the HUD draws on one canvas (no DOM rects or innerText), so the panel boxes were read
+  off the before frame at 1280 (mission 52-576 x 32-158, SPD 52-366 x 257-435, minimap 1033-1229 x
+  30-228, district, WANTED, two toasts, radio, condition, health/weapons, Mara) and scaled x 0.8; the
+  "HUD text unchanged" check is "0 changed pixels in every panel".
+- Probe, before -> after W2 (1024 / 768x480): (a) flame px (R >= 200, R-B >= 90, dY >= 20) in the
+  fire box 1,928 / 1,086; 24 px hood box Y +118.2 / +118.4; 13 flames alive, 1 glow, 1 pool, 12 puffs
+  (0 before). Fire point (1024) base (370.0, 269.5), 4.7 m (367.1, 204.0), 6.8 m (365.3, 164.0).
+  (b) 0 changed px in every panel and within 8 px of each but the minimap (72 / 40, two clusters: the
+  old blip (957-966, 99-107) and the new one (897, 90-92) at 1024); Albacore box, every light bar
+  and SKYLARK 1 0; CORAL 7 1.25% changed, |dY| 0.32 (the only cruiser touched); cone wedge 0%, 0.0;
+  0 changed px outside the allowed mask (car, shadow 10 m east, fire, glow, pool, +4 px). (c) camera
+  (-41.42, 5.2, -31), Albacore (-52.25, -31) 39.96 m/s, units 0-5, SKYLARK 1 (-99.83, 13.12, -33.33),
+  24 traffic cars, 32 walkers, tick 961, time 16.02 identical; draw calls 189 -> 196 (fire 4, the
+  Pipit's body, lights and shadow body 3), triangles 65,631 -> 65,971. (d) car px (> 8 and not
+  flame) 1,852 / 1,090; pole (-71.31, -23.35) 1.84 m from the footprint; no walker within 0.6 m.
+- A/B: out/ab/m19-chase-1024-before/after.jpg, m19-cover-before/after.jpg (judge sheet crop),
+  m19-fire3x-before/after.jpg. YAVG on the committed JPEG 98.06 -> 98.25 (1024), 98.12 -> 98.31
+  (768x480), sheet cover 97.74 -> 97.92 (probe PNGs 100.21 -> 100.37 / 100.32 -> 100.48).
+  Before: the Albacore centre, two Beacons' bars, SKYLARK 1's cone into the sunset, the HUD. After:
+  the same, plus a cream Pipit nosed into the left kerb ahead, flames over its hood and grey smoke.
+  Cover: the same; the fire is small but sits on a pale car at the kerb. Verdict: kept.
+- Shots: 1-chase 185,294 bytes (181.0 KiB) at q76 (quality unchanged); 2-seafront, 3-map, 4-title
+  sha256 equal to before_m19 after every shoot (172.5 q88 / 173.3 q84 / 187.0 q88 KiB).
+- Gates: SELFTEST PASS 31/31 (no test added or changed; burn 13 flames, share 3; perf HIGH 172 /
+  2.1 ms, LOW 112 / 3.2 ms; 22:00 173 / 113; market view 196 / 2.8 ms: counts as M18), originality
+  PASS (37 files), main.ts twice byte-identical (45 entries, dossier 1,142,338 bytes; shots 185,294 /
+  176,592 / 177,412 / 191,496 bytes), outline rows unchanged, cut inside weapons-and-damage.js with 19
+  files left out (screenshot-scenes.js among them, so the left-out bytes grow 235,977 -> 236,544).
+- Weak spots: the crash happens off screen (the scene re-parks the Pipit at 15); the lamp pole
+  (-71.31, -23.35) stands at the column's left edge; the fire is small in the cover; fire reads
+  weaker by day and the grey plume darkens the sunset a little; walkers stand calmly beside it (they
+  flee only moving cars) and two are now hidden behind it; the cream Pipit with its dark cabin looks
+  a little like a Beacon at cover size; the minimap shows one more blip; any later edit to the chase
+  timing, the burning look, Rua 5 or PARKED_SPOTS changes 1-chase.
+
 ## M18 the map shows the route and the city: steps 1-3 kept, only the optional items dropped (run of 2026-11-20 15:08-15:37 EET)
 - Baseline: out/ab/before_m18/ (four shots, judge sheet, sha256.txt, outline.txt, map-fresh.jpg equal
   to the committed 3-map). Start sha 9c21600. menus-and-map.js changed; main.js one line (step 3).
