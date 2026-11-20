@@ -1,5 +1,37 @@
 # PORT SOLARA build notes
 
+## M9 on-foot WIDE view: done; seafront reframe tried and not kept (run of 2026-11-20 06:12-06:35 EET)
+- (1) C on foot toggles SHOULDER / WIDE (`ChaseCamera.footView`, default 'shoulder', never in
+  `view`, not saved in settings); `cycleView` branches on mode, and C in a car still cycles NEAR /
+  HIGH with the old code. WIDE (`FOOT_WIDE`): 7.6 m back, 1.9 m right, 5 m up, looking at a point
+  16 m ahead of Wren at 1.2 m. The height does not follow the pitch; pitch (clamped to -0.35..0.9)
+  tilts the look point one radian per radian, so aimAt and mouse look still work. The spring arm
+  marches the WIDE arm and stops at buildings; a pulled-in arm blends height and side back toward
+  the shoulder values (by arm / reach), never high straight above her. RMB aim uses the old aim
+  view in both. SHOULDER numbers unchanged, so shot 3 and the perf views are the same.
+  CONTROLS row: "camera: shoulder / wide on foot · near / high in a car"; title strip unchanged.
+  **Note:** hip fire is measured from the camera, so the Hornet's effective reach is about 3 m
+  shorter in WIDE.
+- (2) Seafront reframe with WIDE (probe: camera 5.00 m up, arm 7.60 m at the frame). Tries: (a)
+  the M7 spot: Wren about a fifth of the frame height, left of centre, boulevard and palms, but
+  the sea is still a thin line on the right; (b) anchor (7.3, -2.1), looking west at the gunmen:
+  sea across the frame, but the sun straight into the lens and an SPD search starts; (c) anchor
+  (-3.2, 9.3), yaw 0.73: sea band across the width, lighthouse, gunmen and SUV side-lit, but
+  the sun clipped at the left edge, the SPD search box again and a big empty road in front.
+- (3) A/B (out/ab/before_m9/, pair out/ab/m9-seafront-*.jpg, try (c) kept as out/ab/m9-try3.jpg):
+  **not kept**. In the sheet's cell the sea is still a band of about 5 px and the gunmen become
+  dots; the old cell reads the fight better. The old 2-seafront.jpg and the scene (SEAFRONT, no
+  footView) restored; all four shots and the judge sheet byte-identical to before.
+  The sea lies under the sunset, so a wide sea band and side light pull against each other here.
+- Self-test (SwiftShader, 1280x800): SELFTEST PASS 26/26. Perf: HIGH 172 draw calls / median 1.9
+  ms / heap 40 MB; LOW 112 / 3.5 ms.
+- Originality PASS (34 files). main.ts run twice without ulimit: 42 files byte-identical (sha256
+  lists compared), dossier 1,116,277 bytes.
+- Shots: 1-chase.jpg 176.0 KiB, 2-seafront.jpg 162.1 KiB, 3-map.jpg 177.4 KiB, 4-title.jpg
+  179.1 KiB.
+- Next: a seafront frame with WIDE from the north side of the point (sea ahead, sun at the far
+  left) once something keeps the SPD from reacting to the fight there.
+
 ## M8 career stats + tabbed pause: done, SAVE tab included (run of 2026-11-20 05:48-06:31 EET)
 - (1) Career stats (story/career-stats.js owns `game.stats`; `zeroStats`, named `count*` functions,
   `careerFromSave`). Counted silently (no toast, sound or HUD line) at the event sites: cars stolen
