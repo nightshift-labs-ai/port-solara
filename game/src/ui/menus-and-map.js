@@ -33,6 +33,9 @@ const SPOT_PLAN = [
 
 // District names move off the story rings that sit near their middles (metres).
 const LABEL_NUDGE = { mercado: [-30, 75], coral: [0, 25], lantern: [40, 30] };
+// Map blocks and title card chips take their district's colour (Lantern Point has no blocks).
+export const DISTRICT_TINT = { palmline: '#9ed1a0', coral: '#97bfe6', mercado: '#e8a382', saltworks: '#a9b7c4', lantern: '#f1c86a' };
+const titleCase = (t) => t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
 export function citySpots(game) {
   if (!game.spots) {
@@ -218,10 +221,10 @@ export function drawPauseScreen(ctx, game, pause, items) {
   if (pause.view === 'controls') return drawControlsTab(ctx, full, s);
   if (pause.view === 'save') return drawSaveTab(ctx, pause, full, s);
   const area = { x: pad, y: top, w: W - colW - pad * 3, h: bodyH };
-  const legendH = Math.round(40 * s), gap = Math.round(8 * s);
+  const legendH = Math.round(70 * s), gap = Math.round(8 * s);
   const mapRect = { x: area.x, y: area.y, w: area.w, h: area.h - legendH - gap };
   drawCityMap(ctx, game, mapRect, s);
-  drawPlaceLegend(ctx, { x: area.x, y: mapRect.y + mapRect.h + gap, w: area.w, h: legendH }, s);
+  drawPlaceLegend(ctx, { x: area.x, y: mapRect.y + mapRect.h + gap, w: area.w, h: legendH }, s, game);
   drawCareerColumn(ctx, game, info, { x: W - colW - pad, y: top, w: colW, h: bodyH }, s);
   if (pause.view === 'settings') {
     ctx.fillStyle = 'rgba(10, 26, 44, 0.8)';
@@ -291,8 +294,10 @@ function drawCityMap(ctx, game, rect, s) {
   ctx.moveTo(roads.coastX(minZ - 200), minZ - 200);
   for (let z = minZ - 200; z <= maxZ + 200; z += 10) ctx.lineTo(roads.coastX(z), z);
   ctx.lineTo(maxX + 400, maxZ + 200); ctx.lineTo(maxX + 400, minZ - 200); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#c9c2b4';
-  for (const b of roads.blocks) ctx.fillRect(b.minX, b.minZ, b.maxX - b.minX, b.maxZ - b.minZ);
+  for (const b of roads.blocks) {
+    ctx.fillStyle = DISTRICT_TINT[districtAt(b.cx, b.cz)] || '#c9c2b4';
+    ctx.fillRect(b.minX, b.minZ, b.maxX - b.minX, b.maxZ - b.minZ);
+  }
   ctx.strokeStyle = '#ffffff';
   for (const r of roads.roads) {
     ctx.lineWidth = Math.max(r.width * 0.8, 3 / k);
@@ -330,6 +335,7 @@ function drawCityMap(ctx, game, rect, s) {
     ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2);
     ctx.fillStyle = st.state === 'done' ? '#8a8f96' : st.state === 'current' ? '#ffc21f' : '#7a6a3a';
     ctx.fill(); ctx.lineWidth = 3 * s; ctx.strokeStyle = st.state === 'current' ? '#fff8ec' : '#14304f'; ctx.stroke();
+    if (st.state === 'current') { ctx.beginPath(); ctx.arc(px, py, r + 2.5 * s, 0, Math.PI * 2); ctx.lineWidth = 2 * s; ctx.strokeStyle = NAVY; ctx.stroke(); }
     ctx.fillStyle = st.state === 'locked' ? '#e8d6ae' : '#14304f';
     ctx.font = `900 ${Math.round((st.state === 'current' ? 20 : 16) * s)}px ${FONT}`;
     ctx.fillText(st.state === 'done' ? '✓' : String(st.mission.number), px, py + 6 * s);
@@ -420,18 +426,33 @@ function drawPauseTabs(ctx, pause, r, s) {
   textAt(ctx, 'PORT SOLARA', r.x + r.w, r.y + r.h * 0.7, 26, s, GOLD, 900, 'right');
 }
 
-// The place marks under the map, one row.
-function drawPlaceLegend(ctx, r, s) {
+// The place marks under the map, then a key to the four block districts (dropped if it would crowd).
+function drawPlaceLegend(ctx, r, s, game) {
   ctx.fillStyle = 'rgba(10, 20, 44, 0.9)';
   ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 12 * s); ctx.fill();
   const legend = [['H', '#3fae6a', 'Safehouse'], ['$', '#f2b134', 'Quist Auto'], ['G', '#c2412d', 'Gun shop'], ['P', '#3b7bff', 'SPD station'], ['R', '#e07a2f', 'Respray'], ['F', NAVY, 'Races']];
-  // Measured labels, the spare width shared out between the six entries.
+  // Measured labels, the spare width shared out between the entries of each row.
   font(ctx, 700, 15, s);
+  const key = ['palmline', 'coral', 'mercado', 'saltworks'].map((id) => [id, titleCase(game.lore.districts[id])]);
+  const keyW = key.map(([, name]) => 21 * s + ctx.measureText(name).width);
+  const keySpare = (r.w - 24 * s - keyW.reduce((a, b) => a + b, 0)) / (key.length - 1);
+  const two = keySpare >= 28 * s, row1 = two ? r.y + r.h * 0.29 : r.y + r.h / 2;
+  if (two) {
+    let kx = r.x + 12 * s;
+    key.forEach(([id, name], i) => {
+      const ky = r.y + r.h * 0.72;
+      ctx.fillStyle = DISTRICT_TINT[id];
+      ctx.beginPath(); ctx.roundRect(kx, ky - 7 * s, 14 * s, 14 * s, 3.5 * s); ctx.fill();
+      ctx.lineWidth = 1.5 * s; ctx.strokeStyle = NAVY; ctx.stroke();
+      textAt(ctx, name, kx + 21 * s, ky + 5.5 * s, 15, s, CREAM, 700);
+      kx += keyW[i] + keySpare;
+    });
+  }
   const widths = legend.map(([, , label]) => 28 * s + ctx.measureText(label).width);
   const spare = (r.w - 24 * s - widths.reduce((a, b) => a + b, 0)) / (legend.length - 1);
   let lx = r.x + 12 * s + 11 * s;
   legend.forEach(([m, c, label], i) => {
-    const ly = r.y + r.h / 2;
+    const ly = row1;
     badge(ctx, lx, ly, 11 * s, c, m, s);
     textAt(ctx, label, lx + 17 * s, ly + 5.5 * s, 15, s, CREAM, 700);
     lx += widths[i] + spare;
