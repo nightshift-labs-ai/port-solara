@@ -7,6 +7,7 @@ export class ChaseCamera {
     this.camera = camera;
     this.mode = 'foot';
     this.view = 'near'; // the car view: 'near' or 'high' (C)
+    this.footView = 'shoulder'; // the on-foot view: 'shoulder' or 'wide' (C); never stored in view
     this.yaw = 0;
     this.pitch = 0.18;
     this.lookOffset = 0;
@@ -52,6 +53,29 @@ export class ChaseCamera {
       this.target.set(car.x - Math.sin(this.yaw) * ahead + car.vx * 0.08, view.aimY, car.z - Math.cos(this.yaw) * ahead + car.vz * 0.08);
       const fov = view.fov + Math.min(view.fovGain, speed * 0.24);
       cam.fov = this.lastMode !== 'car' || this.lastView !== this.view ? fov : cam.fov + (fov - cam.fov) * Math.min(1, dt * 2);
+    } else if (this.footView === 'wide' && !this.aiming) {
+      // WIDE on foot (C): a long, high arm off to the right, looking a little down past Wren at a
+      // point 16 m ahead near chest height, so the street (or sand and sea) shows round her and the
+      // hip-fire ray (the camera's forward) still crosses chest height at fight range. The height
+      // does not follow the pitch; pitch tilts the look point instead (one radian per radian).
+      const p = focus, W = FOOT_WIDE;
+      this.pitch = Math.max(-0.35, Math.min(0.9, this.pitch));
+      const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
+      const rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
+      // Spring arm: march back along the (blended) arm and stop short of any building.
+      let want = W.reach;
+      for (let s = 0.5; s <= W.reach; s += 0.35) {
+        const side = 0.7 + (W.side - 0.7) * (s / W.reach);
+        if (collide.pointInside(p.x + rx * side - fx * s, p.z + rz * side - fz * s)) { want = Math.max(0.6, s - 0.4); break; }
+      }
+      this.arm += (want - this.arm) * Math.min(1, dt * (want < this.arm ? 20 : 4));
+      // A pulled-in arm comes down and in toward the shoulder view, never high straight above her.
+      const k = Math.min(1, this.arm / W.reach);
+      const side = 0.7 + (W.side - 0.7) * k, up = 1.75 + (W.up - 1.75) * k;
+      this.pos.set(p.x + rx * side - fx * this.arm, up, p.z + rz * side - fz * this.arm);
+      const lookY = W.aimY - Math.tan(this.pitch - 0.18) * (this.arm + W.ahead);
+      this.target.set(p.x + rx * side + fx * W.ahead, lookY, p.z + rz * side + fz * W.ahead);
+      cam.fov += (W.fov - cam.fov) * Math.min(1, dt * 3);
     } else {
       const p = focus;
       // RMB shoulder aim: the arm pulls in to 2.4 m over the right shoulder and the lens narrows.
@@ -84,8 +108,13 @@ export class ChaseCamera {
 
   // C while driving: NEAR (8 m behind, 3.5 m up) or HIGH (10 m behind, 5.4 m up, looking down the
   // street over the roof, so both pavements and the cars round you show). The arm jumps to the new
-  // spot on the next frame (the position spring starts over).
+  // spot on the next frame (the position spring starts over). On foot it toggles SHOULDER / WIDE
+  // (footView only; the car view is left alone), and the arm grows or pulls in on its spring.
   cycleView() {
+    if (this.mode !== 'car') {
+      this.footView = this.footView === 'wide' ? 'shoulder' : 'wide';
+      return this.footView;
+    }
     this.view = this.view === 'high' ? 'near' : 'high';
     this.lastMode = null;
     return this.view;
@@ -97,4 +126,7 @@ export const CAR_VIEWS = {
   near: { back: 8, up: 3.5, aimY: 1.3, fov: 65, fovGain: 12 },
   high: { back: 9.5, up: 5.2, aimY: -0.2, fov: 50, fovGain: 4 },
 };
+// The WIDE on-foot arm: reach (m back, horizontal), side (m right), up (m), the look point `ahead`
+// of Wren at aimY, and the lens. RMB aim still uses the shoulder aim view.
+const FOOT_WIDE = { reach: 7.6, side: 1.9, up: 5.0, ahead: 16, aimY: 1.2, fov: 62 };
 const POSITION_SPRING = 12;

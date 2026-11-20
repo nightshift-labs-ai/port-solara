@@ -716,7 +716,7 @@ export const CONTROLS = [
   ['SPACE', 'handbrake'],
   ['F', 'enter / leave a car'],
   ['R', 'radio: Gull FM / Low Tide (Heat 96 at WANTED 3+)'],
-  ['C', 'car camera: near / high'],
+  ['C', 'camera: shoulder / wide on foot · near / high in a car'],
   ['GOLD RING', 'walk in to start a story mission'],
   ['E', 'save at Calloway Salvage · race flags · Quist Auto · gun shop · respray'],
   ['ESC', 'pause menu (resume, map, save, quit)'],

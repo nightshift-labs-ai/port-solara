@@ -181,7 +181,7 @@ export function bootPortSolara() {
     for (const code of presses) {
       if (code === 'KeyF' && !game.theft && !inCustody) game.enterOrExit();
       if (code === 'KeyR' && game.vehicle) game.radio.station = (game.radio.station + 1) % 2; // Gull FM / Low Tide
-      if (code === 'KeyC') game.chase.cycleView(); // car camera NEAR / HIGH
+      if (code === 'KeyC') game.chase.cycleView(); // SHOULDER / WIDE on foot, NEAR / HIGH in a car
       if (code === 'KeyE' && nearSafehouse(game)) game.saveNote = { text: game.saveGame('Calloway Salvage'), at: game.time };
       else if (code === 'KeyE') game.side.use(); // races, courier, Quist Auto, gun shop, respray
     }
