@@ -502,7 +502,8 @@ function drawCareerColumn(ctx, game, info, r, s) {
     y += 25 * s;
   }
   y = cy + R + 48 * s;
-  textAt(ctx, `STORY ${info.storyDone}/${info.missions.length}`, x, y, 25, s, CREAM, 900);
+  // Missions done (the title's CONTINUE line counts the step being played, one more).
+  textAt(ctx, `STORY ${info.storyDone}/${info.missions.length} DONE`, x, y, 25, s, CREAM, 900);
   textAt(ctx, 'PAYOUT', right, y, 14, s, 'rgba(255, 248, 236, 0.6)', 800, 'right');
   y += 30 * s;
   const status = storyStatus(game);

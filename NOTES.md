@@ -1,5 +1,52 @@
 # PORT SOLARA build notes
 
+## M8 career stats + tabbed pause: done, SAVE tab included (run of 2026-11-20 05:48-06:31 EET)
+- (1) Career stats (story/career-stats.js owns `game.stats`; `zeroStats`, named `count*` functions,
+  `careerFromSave`). Counted silently (no toast, sound or HUD line) at the event sites: cars stolen
+  in takeTheWheel's unowned branch (jacks and mission steals), gang members downed in `hurt()`,
+  cars blown up in `explode()`, races won and courier jobs in side-activities `finish`, times
+  booked (custody), clinic visits, cars sold, Hornet bought, resprays. Police escapes only when
+  the escape timer takes the last pip (`had` before `wantedLevel.update` in game.step), never in
+  `clear()`; highest wanted is the max after that update; metres driven / on foot are speed x dt
+  in the driving and walking branches; time played is `+= dt` after the play gate. No wall clock.
+  Saves: a new `career` record key (the old `stats` key untouched, VERSION still 1); applyState
+  always sets `game.stats = careerFromSave(s.career)`, so pre-M8 saves and NEW GAME get zeros.
+- (2) `completionOf(game)` (story/completion-percentage.js): one % from saved progress only.
+  Weights: story 60 (12 each), races 16 (4 each), courier 10, Hornet SMG unlocked 6, first car
+  sold 4, first respray 4. Payouts from `mission.reward.cash` ($53,500 in all). The shot save is
+  31% (24 + 4 + 3).
+- (3) Tabbed pause (ui/menus-and-map.js): Q · MAP · STORY · STATS · CONTROLS · SETTINGS · SAVE · E
+  across the top (gold active tab), PORT SOLARA at the right. Esc from play still opens the
+  PAUSED list (same items and places) under an unlit tab row; Esc in a tab returns to it, Esc in
+  it resumes; Tab/M as before; Q/E step and wrap (from the list E opens MAP, Q opens SAVE).
+  Clicks test `pause.tabRects` first; `pause.rects` holds the current view only and only the list
+  runs items (SAVE's one box is SAVE NOW). MAP: the map shrinks for the tab row and a legend strip
+  under it; the career column (38% of the width) is the completion ring (80-unit %), its six
+  rows, STORY n/5 DONE with done / next / locked and payouts, six headline career numbers
+  (highest wanted as stars), cash and REP rank. STORY: five mission cards (giver, payout, REP,
+  DONE / NEXT / LOCKED). STATS: the ring with weighted rows and bars, and all 15 career rows.
+  CONTROLS: the CONTROLS list. SAVE: the three slots from `readAllSlots` and SAVE NOW (shows the
+  note from `game.saveGame('Pause menu')`).
+- (4) Shot 3 (3-map.jpg, same scene key and shots.json): MAP tab with the ring at 31%.
+  `SHOT_CAREER` (9 stolen, 2 escapes, wanted 3, 11.4 km driven, 1.9 km on foot, 3 downed, 1 blown
+  up, 1 race, 3 courier, booked once, 0:58 played, no Hornet, sale or respray) goes through
+  `careerFromSave` after the play hold, right before the pause opens. A/B (out/ab/before_m8/,
+  pairs in out/ab/m8-map-*.jpg and m8-sheet-*.jpg): **kept**. In the sheet's 256x160 cell, the gold
+  MAP tab, the ring with its big %, the map and the column blocks read; the old cell was a map
+  and a text column. Shots 1, 2 and 4 byte-identical to before.
+- Self-test (SwiftShader, 1280x800): SELFTEST PASS 26/26 (new: career, pause-tabs, completion;
+  the save check round-trips carsStolen). Perf: HIGH 172 draw calls / median 1.7 ms / heap 38 MB;
+  LOW 112 / 1.7 ms (the pause is 2D canvas).
+- Originality PASS (34 files). main.ts run twice without ulimit: 42 files byte-identical (sha256
+  lists compared), dossier 1,116,254 bytes.
+- Shots: 1-chase.jpg 176.0 KiB, 2-seafront.jpg 162.1 KiB, 3-map.jpg 177.4 KiB, 4-title.jpg
+  179.1 KiB.
+- Weak spots: at 50% the column's 16-unit rows are small (about 8 px), though the ring, tabs
+  and career numbers read. The column needs about 480 units of width, so below a 1.3 aspect
+  its rows would crowd. "HORNET SMG" counts as done when the Hornet is unlocked, which mission 4
+  also does (it does not have to be bought).
+- Next: a per-district completion strip on the map; career milestones on the STATS tab.
+
 ## M7 seafront shot + weapon strip: done (run of 2026-11-20 05:04-05:31 EET)
 - (1) Weapon strip (ui/hud.js, the play HUD, not only shots): the bottom-left panel is now 420 x
   144 units (`VITALS_HEIGHT`; its top is 17 px higher at 1280x800, and the cover's left cruiser,
