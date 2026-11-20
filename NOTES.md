@@ -51,6 +51,11 @@
   the x -60 zebras under GULL 11 and TIDE 14 any blue light turns cream stripes white, and the
   cone-wedge zone overlaps the units' pools; both rules would need a different frame or a looser gate
   before more light helps.
+- Gates (game/ at 16ebf5c): SELFTEST PASS 31/31 alone (perf HIGH 172 / 1.2 ms, LOW 112 / 1.1 ms;
+  22:00 173 / 113; market view as before), originality PASS (37 files), main.ts twice byte-identical
+  (45 entries, dossier 1,140,841 bytes), outline identical to before_m22 (19 files left out, cut at
+  163,840 inside weapons-and-damage.js); shots 179.9 q76 / 172.5 q88 / 173.3 q84 / 187.0 q88 KiB, all
+  four sha256 equal to the start.
 
 ## M21 the Albacore keeps its coral paint in the cover: kept with C1, nothing dropped (run of 2026-11-20 18:42-19:11 EET)
 - Baseline: out/ab/before_m21/ (four shots, judge sheet, sha256.txt, outline.txt, *-fresh.jpg). Start
