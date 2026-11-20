@@ -113,9 +113,8 @@ export function drawHud(ctx, game, drawMinimap) {
   ctx.fillStyle = '#9fe0a0'; ctx.font = font(28 * s);
   ctx.fillText('$' + game.cash.toLocaleString('en-US'), mapX + 14 * s, pipY + 122 * s + tagRow);
   // Weekday and clock from the game's own time of day (one game minute per second of play).
-  const clock = game.lore.clock, minutes = Math.floor(clock.startMinutes + game.time) % 1440;
   ctx.fillStyle = 'rgba(255,248,236,0.9)'; ctx.font = font(16 * s); ctx.textAlign = 'right';
-  ctx.fillText(`${clock.weekday} ${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, mapX + size - 14 * s, pipY + 29 * s);
+  ctx.fillText(clockText(game), mapX + size - 14 * s, pipY + 29 * s);
   ctx.textAlign = 'left';
 
   // Health, armour, the weapon strip and REP (bottom-left).
@@ -246,6 +245,13 @@ export const OUTLINE = 'rgba(255, 241, 214, 0.38)';
 export const HUD_SCALE = 0.85;
 
 export function font(px, weight = 800) { return `${weight} ${Math.round(px)}px "DejaVu Sans", Verdana, sans-serif`; }
+
+// "FRI 17:26" from the game's clock (game.clockMinutes, minutes since the first Friday's 00:00).
+export function clockText(game) {
+  const c = game.lore.clock, total = Math.floor(game.clockMinutes()), m = ((total % 1440) + 1440) % 1440;
+  const day = c.week[(((c.week.indexOf(c.weekday) + Math.floor(total / 1440)) % 7) + 7) % 7];
+  return `${day} ${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
 
 // Dark glass with a 1 px soft rim and a gold accent strip down the left edge.
 export function panel(ctx, x, y, w, h) {

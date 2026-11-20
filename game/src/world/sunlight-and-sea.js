@@ -93,7 +93,7 @@ export function createSunSoakedLighting(game) {
   }
 
   const light = {
-    sun, sunDir, sea, skyScale: 1,
+    sun, sunDir, sea, hemi, bounce, sky, sunDisc, glow, skyScale: 1,
     // The graphics preset's draw distance: the dome and sun disc shrink with the far plane.
     setDrawDistance(far) {
       light.skyScale = Math.min(1, (far - 20) / 460);

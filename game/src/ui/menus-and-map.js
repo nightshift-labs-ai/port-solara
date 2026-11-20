@@ -659,7 +659,7 @@ export function showTitleScreen(game, onNewGame) {
   const save = latestSave();
   const items = [
     ...(save ? [{ label: continueLabel(save), run: () => { root.hidden = true; game.loadSave?.(save); onNewGame(); } }] : []),
-    { label: 'NEW GAME', run: () => { root.hidden = true; if (game.mode !== 'title' || game.playedOnce) game.newGameState?.(); onNewGame(); } },
+    { label: 'NEW GAME', run: () => { root.hidden = true; if (game.mode !== 'title' || game.playedOnce) game.newGameState?.(); game.setClock(game.lore.clock.startMinutes); onNewGame(); } },
     { label: 'CONTROLS', run: () => { settingsPanel.hidden = true; controls.hidden = !controls.hidden; } },
     { label: 'SETTINGS', run: () => { controls.hidden = true; settingsPanel.hidden = !settingsPanel.hidden; fillSettings(); } },
   ];

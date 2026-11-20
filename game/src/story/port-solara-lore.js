@@ -16,8 +16,9 @@ export const PORT_SOLARA_NAMES = {
     'SALTWORKS DOCKS': 'Coral-red cranes and salt pyramids',
     'LANTERN POINT': 'A lighthouse on the headland',
   },
-  // The clock starts on a Friday at 17:20; one game minute passes per second of play.
-  clock: { weekday: 'FRI', day: 1, startMinutes: 17 * 60 + 20 },
+  // The clock starts on a Friday at 17:20; one game minute passes per second of play, and the
+  // weekday rolls over at midnight.
+  clock: { weekday: 'FRI', day: 1, startMinutes: 17 * 60 + 20, week: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] },
   streets: { boulevard: 'PALMLINE BOULEVARD', ring: 'SOLARA RING ROAD' },
   landmarks: ['Sundial Tower', 'Hotel Meridiana', 'Clock Arch', 'Gull Bridge', 'Lantern Point Lighthouse'],
   player: { name: 'Wren Calloway', look: 'saffron windbreaker' },

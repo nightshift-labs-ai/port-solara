@@ -24,6 +24,7 @@ export function captureState(game, place) {
     stats: { races: game.progress.races, courier: game.progress.courier, bestLaps: { ...(game.progress.bestLaps || {}) } },
     career: { ...(game.stats || zeroStats()) }, // career numbers (story/career-stats.js)
     time: Math.round(game.time * 100) / 100,
+    clock: Math.round(game.clockMinutes() * 100) / 100, // minutes since the first Friday's 00:00
     at: { x: Math.round(f.x * 10) / 10, z: Math.round(f.z * 10) / 10, facing: game.player.facing },
     place,
     settings: { ...(game.settings || DEFAULT_SETTINGS) },
@@ -48,6 +49,8 @@ export function applyState(game, s) {
   game.progress.courier = s.stats?.courier || 0;
   game.progress.bestLaps = { ...(s.stats?.bestLaps || {}) };
   game.stats = careerFromSave(s.career); // saves from before M8 load with zeros
+  // Saves from before M11 load with the clock their HUD showed (Friday, 17:20 + their sim time).
+  game.setClock(Number.isFinite(s.clock) ? s.clock : game.lore.clock.startMinutes + (s.time || 0));
   if (s.savedAt) game.progress.savedAt = { clock: clockOf(s.savedAt), place: s.place };
   if (s.settings) { applySettings(game, s.settings); writeSettings(game.settings); }
   if (game.vehicle) game.enterOrExit();

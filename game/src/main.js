@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { buildCityDistricts, districtAt, LANDMARKS } from './world/city-builder.js';
 import { buildRoadNetwork } from './world/road-network.js';
 import { createSunSoakedLighting } from './world/sunlight-and-sea.js';
+import { createDayNightCycle } from './world/day-night-cycle.js';
 import { DrivableCar } from './vehicles/car-physics.js';
 import { buildCarModel, createTailGlow, CAR_SPECS, PARKED_PAINTS, TRAFFIC_KINDS } from './vehicles/car-models.js';
 import { SkidMarksAndSmoke } from './vehicles/skid-marks-and-smoke.js';
@@ -54,6 +55,11 @@ export function bootPortSolara() {
     autoStep: !params.has('shot') && !params.has('test'),
   };
   game.random = createSeededRandom(game.seed);
+  // The clock: minutes since 00:00 of the first Friday, an offset over game.time (one game minute
+  // per sim second, so it holds still while paused). setClock is the only way to set it.
+  game.clockOffset = 0;
+  game.clockMinutes = () => game.lore.clock.startMinutes + game.time + game.clockOffset;
+  game.setClock = (minutes) => { game.clockOffset = minutes - game.lore.clock.startMinutes - game.time; };
 
   const t0 = performance.now();
   buildRoadNetwork(game);
@@ -61,6 +67,7 @@ export function bootPortSolara() {
   game.tailGlow = createTailGlow(game);
   buildCityDistricts(game);
   game.cityBuildMs = performance.now() - t0;
+  game.dayNight = createDayNightCycle(game);
 
   // Wren starts on the Palmline sidewalk next to the Albacore; Pipits and Promenades line the curbs.
   game.player = new PlayerOnFoot(scene, -168.6, 13);
@@ -236,6 +243,7 @@ export function bootPortSolara() {
   const v = new THREE.Vector3();
   game.render = () => {
     const hudCtx = hudCanvas.getContext('2d');
+    game.dayNight.update(); // the light follows the clock (golden hour on the title)
     if (game.mode === 'title') {
       // A slow drone swing 250 m east of the Sundial Tower, looking west over the city to the
       // low sun and the bay; the needle stays out past the right edge, clear of the wordmark.

@@ -291,6 +291,50 @@ await test('save', async () => {
   return { label, ...after };
 });
 
+// The clock: one game minute per 60 steps, still while paused, the weekday rolls at midnight, saves
+// round-trip it, a record from before the clock key loads with the clock its HUD showed, and after
+// a night the light comes back to exactly its boot values.
+await test('clock', async () => {
+  await reload();
+  const s = await call(() => {
+    const g = window.portSolara, T = window.__test;
+    localStorage.clear();
+    g.startPlay();
+    const start = T.clock().text, day0 = JSON.stringify(T.light());
+    T.setClock(17 * 60 + 30.5);
+    const a = T.clock().text;
+    for (let i = 0; i < 60; i++) g.step();
+    const b = T.clock().text;
+    g.mode = 'paused';
+    for (let i = 0; i < 120; i++) g.step();
+    const paused = T.clock().text;
+    g.mode = 'play';
+    T.setClock(23 * 60 + 59.5);
+    for (let i = 0; i < 60; i++) g.step();
+    const midnight = T.clock().text;
+    T.setClock(22 * 60 + 0.5);
+    const level = T.clock().level, nightDiffers = JSON.stringify(T.light()) !== day0;
+    const rec = g.captureSave('Test');
+    T.setClock(17 * 60 + 20.5); g.loadSave(rec);
+    const loaded = T.clock().text;
+    const old = { ...rec, time: 125 };
+    delete old.clock;
+    g.loadSave(old);
+    const oldText = T.clock().text;
+    T.setClock(17 * 60 + 30.5);
+    const back = JSON.stringify(T.light()) === day0;
+    return { start, a, b, paused, midnight, level, nightDiffers, saved: rec.clock, loaded, oldText, back };
+  });
+  ok(s.start === 'FRI 17:20', `boot clock ${s.start}`);
+  ok(s.a === 'FRI 17:30' && s.b === 'FRI 17:31', `60 steps: ${s.a} -> ${s.b}`);
+  ok(s.paused === 'FRI 17:31', `paused clock moved to ${s.paused}`);
+  ok(s.midnight === 'SAT 00:00', `midnight rolled to ${s.midnight}`);
+  ok(s.level === 1 && s.nightDiffers, `22:00 night level ${s.level}, light changed ${s.nightDiffers}`);
+  ok(s.loaded === 'FRI 22:00' && s.oldText === 'FRI 19:25', `loads: ${s.loaded}, old record ${s.oldText}`);
+  ok(s.back, 'the light after a night is not the boot light');
+  return s;
+});
+
 await test('settings', async () => {
   await call(() => { const g = window.portSolara; g.changeSetting('master', 4); g.changeSetting('sensitivity', 1.5); g.changeSetting('graphics', 'low'); });
   await reload();

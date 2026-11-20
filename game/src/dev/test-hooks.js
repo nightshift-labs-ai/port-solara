@@ -1,10 +1,15 @@
 // Exposes window.__test for tools/selftest.mjs: snapshot, step(n), simulated keys, teleport, perf.
 import { countWitnesses } from '../police/wanted-level.js';
 import { completionOf } from '../story/completion-percentage.js';
+import { clockText } from '../ui/hud.js';
 
 export function exposeTestHooks(game) {
   window.__test = {
     start() { game.startPlay(); return this.snapshot(); },
+    // The clock: set it (minutes since the first Friday's 00:00) and read it back as the HUD does.
+    setClock(minutes) { game.setClock(minutes); return this.clock(); },
+    clock() { return { minutes: game.clockMinutes(), text: clockText(game), level: game.dayNight.levelNow(), lit: game.dayNight.level }; },
+    light() { game.render(); return game.dayNight.readout(); },
     // Starts a mission (a step list) and returns what the mission panel shows.
     startMission(mission) { game.missions.start(mission); return game.missions.panel(); },
     missionState() { const r = game.missions; return { panel: r.panel(), result: r.result, target: r.target, subtitle: r.subtitle, route: game.route }; },
