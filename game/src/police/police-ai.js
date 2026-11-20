@@ -121,6 +121,7 @@ export function dispatchPoliceUnits(game, makeCar) {
     c.sync();
     u.model.visible = true;
     u.active = true; u.path = []; u.repathIn = 0; u.stuckFor = 0; u.reverseFor = 0; u.awayFor = 0;
+    u.fireIn = 0; u.shootingFor = 0; u.seed = (u.index + 1) * 0x9e37; // gunfire timers, aim seed
   }
 
   function deactivate(u) {
@@ -162,6 +163,7 @@ export function dispatchPoliceUnits(game, makeCar) {
     const c = u.car, p = game.focus, v = game.vehicle;
     const pvx = v ? v.vx : 0, pvz = v ? v.vz : 0, pSpeed = Math.hypot(pvx, pvz);
     u.dist = Math.hypot(p.x - c.x, p.z - c.z);
+    u.fireIn -= dt; u.shootingFor -= dt;
     u.bumpCooldown = Math.max(0, u.bumpCooldown - dt);
     if (c.health <= 0) { game.wantedLevel.commit('cruiserWrecked', c.x, c.z); police.toast(`${u.call} WRECKED`); deactivate(u); return; }
     if (u.state === 'ROADBLOCK') { c.update(dt, { throttle: 0, steer: 0, handbrake: true }, game.collide); return; }
@@ -210,6 +212,31 @@ export function dispatchPoliceUnits(game, makeCar) {
     else u.stuckFor = 0;
     c.update(dt, { throttle, steer, handbrake }, game.collide);
     contact(u, v);
+    // WANTED 3+: a Beacon in pursuit fires on Wren's moving car from inside 30 m (after the move).
+    if (u.kind === 'beacon' && u.state === 'PURSUIT' && pips >= 3 && v && Math.abs(v.speed) > 8 && u.dist < FIRE_RANGE &&
+      u.fireIn <= 0 && clearLine(game.collide, c.x, c.z, v.x, v.z)) openFire(u, v);
+  }
+
+  // A round from the door on Wren's side, through game.arms: it owns the flash, tracer and spark
+  // pools Wren and the crews share. Another car in the line holds it back.
+  function openFire(u, v) {
+    const c = u.car, f = c.forward, sx = Math.cos(c.heading), sz = -Math.sin(c.heading);
+    const out = (Math.sign((v.x - c.x) * sx + (v.z - c.z) * sz) || 1) * (c.spec.width / 2 + MUZZLE_OUT);
+    const m = { x: c.x + f.x * 0.7 + sx * out, y: 1.3, z: c.z + f.z * 0.7 + sz * out };
+    const d = Math.hypot(v.x - m.x, 0.5, v.z - m.z), dir = { x: (v.x - m.x) / d + jitter(u), y: -0.5 / d + jitter(u), z: (v.z - m.z) / d + jitter(u) };
+    const n = Math.hypot(dir.x, dir.y, dir.z);
+    dir.x /= n; dir.y /= n; dir.z /= n;
+    u.fireIn = FIRE_EVERY;
+    const hit = game.arms?.policeRound(m, dir, d + 4, c);
+    if (!hit || hit.held) return;
+    u.shootingFor = SHOOTING_FOR;
+    // Rounds alone can make the car smoke, never burn: no damage under 30.
+    if (hit.what === v) v.health = Math.max(Math.min(v.health, 30), v.health - 2);
+  }
+
+  function jitter(u) {
+    u.seed = (u.seed * 1664525 + 1013904223) >>> 0;
+    return (u.seed / 4294967296 - 0.5) * 0.024;
   }
 
   // Lane-graph A* from the unit's crossing to the goal's, re-planned once a second.
@@ -340,6 +367,8 @@ export const HELI_SCALE = 2;
 // Searchlight radius on the ground: small enough that the low chase camera stays outside the cone.
 export const SPOT_RADIUS = 2.6;
 export const ARREST_RANGE = 6, CUSTODY_SECONDS = 2.5, CUSTODY_CARD = 4.2, BAIL = 400;
+// Beacon gunfire: range, cadence, SHOOTING tag seconds, muzzle out from the door.
+const FIRE_RANGE = 30, FIRE_EVERY = 0.6, SHOOTING_FOR = 1.2, MUZZLE_OUT = 0.35;
 // Where the SPD books Wren: sidewalk spots beside two posts (the nearest one is used).
 export const SPD_POSTS = [
   { name: 'SPD PALMLINE POST', x: -168.6, z: 13, facing: 0 },
